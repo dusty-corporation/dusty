@@ -40,7 +40,7 @@ cd "$out_dir"
   --enable-encoder=pcm_s16le \
   --enable-muxer=wav \
   --extra-ldflags=-static
-make -j"$(nproc)" ffmpeg ffprobe
+make -j"$(nproc)" ffmpeg.exe ffprobe.exe
 mkdir -p "$out_dir/package"
 cp ffmpeg.exe ffprobe.exe "$out_dir/package/"
-./ffmpeg.exe -buildconf > "$out_dir/buildconf.txt" 2>&1 || true
+WINEDEBUG=-all wine ./ffmpeg.exe -buildconf > "$out_dir/buildconf.txt" 2>&1

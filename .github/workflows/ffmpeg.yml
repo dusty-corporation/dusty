@@ -24,7 +24,7 @@ jobs:
       - name: Install pinned toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-mingw-w64-x86-64-posix=13.2.0-6ubuntu1+26.1 mingw-w64-x86-64-dev=11.0.1-3build1 wine64
+          sudo apt-get install -y gcc-mingw-w64-x86-64-posix=13.2.0-6ubuntu1+26.1 mingw-w64-x86-64-dev=11.0.1-3build1 wine
       - name: Check out FFmpeg source
         run: |
           git clone --depth 1 --branch n9.0.2 https://github.com/FFmpeg/FFmpeg.git build/upstream-ffmpeg
