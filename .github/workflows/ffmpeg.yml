@@ -1,0 +1,56 @@
+name: Minimal FFmpeg build
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - native/**
+      - tests/fixtures/audio/**
+      - .github/workflows/ffmpeg.yml
+  pull_request:
+    paths:
+      - native/**
+      - tests/fixtures/audio/**
+      - .github/workflows/ffmpeg.yml
+
+permissions:
+  contents: read
+
+jobs:
+  ffmpeg:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install pinned toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64-x86-64-posix=13.2.0-6ubuntu1+26.1 mingw-w64-x86-64-dev=11.0.1-3build1 wine64
+      - name: Check out FFmpeg source
+        run: |
+          git clone --depth 1 --branch n9.0.2 https://github.com/FFmpeg/FFmpeg.git build/upstream-ffmpeg
+          test "$(git -C build/upstream-ffmpeg rev-parse HEAD)" = ce8f11b9fac4cd7ccfb41ca7c01bc17f5cda8cc3
+      - name: Build minimal FFmpeg
+        run: bash native/build_ffmpeg.sh
+      - name: Check configuration
+        run: |
+          cat build/ffmpeg/buildconf.txt
+          for flag in --disable-network --disable-gpl --disable-nonfree; do grep -F -- "$flag" build/ffmpeg/buildconf.txt; done
+          objdump -p build/ffmpeg/package/ffmpeg.exe | grep 'DLL Name:'
+      - name: Decode all supported formats
+        run: |
+          for file in tests/fixtures/audio/formats/*; do
+            case "$file" in *.txt|*.md) continue ;; esac
+            timeout 30s wine build/ffmpeg/package/ffmpeg.exe -nostdin -hide_banner -loglevel error -protocol_whitelist file,pipe -i "$file" -vn -map 0:a:0 -ac 1 -ar 16000 -c:a pcm_s16le -f wav /tmp/decoded.wav -y
+          done
+          for file in tests/fixtures/audio/bad/*; do
+            if timeout 30s wine build/ffmpeg/package/ffmpeg.exe -nostdin -hide_banner -loglevel error -i "$file" -vn -map 0:a:0 -ac 1 -ar 16000 -c:a pcm_s16le -f wav /tmp/decoded.wav -y; then
+              echo "Bad fixture unexpectedly decoded" >&2
+              exit 1
+            fi
+          done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: minimal-ffmpeg
+          path: |
+            build/ffmpeg/package/
+            build/ffmpeg/buildconf.txt
