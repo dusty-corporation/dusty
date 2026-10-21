@@ -42,6 +42,9 @@ jobs:
             case "$file" in *.txt|*.md) continue ;; esac
             timeout 30s wine build/ffmpeg/package/ffmpeg.exe -nostdin -hide_banner -loglevel error -protocol_whitelist file,pipe -i "$file" -vn -map 0:a:0 -ac 1 -ar 16000 -c:a pcm_s16le -f wav /tmp/decoded.wav -y
           done
+          for file in $(find tests/fixtures/audio/long-path -type f -name '*.m4a'); do
+            timeout 30s wine build/ffmpeg/package/ffmpeg.exe -nostdin -hide_banner -loglevel error -protocol_whitelist file,pipe -i "$file" -vn -map 0:a:0 -ac 1 -ar 16000 -c:a pcm_s16le -f wav /tmp/decoded.wav -y
+          done
           for file in tests/fixtures/audio/bad/*; do
             if timeout 30s wine build/ffmpeg/package/ffmpeg.exe -nostdin -hide_banner -loglevel error -i "$file" -vn -map 0:a:0 -ac 1 -ar 16000 -c:a pcm_s16le -f wav /tmp/decoded.wav -y; then
               echo "Bad fixture unexpectedly decoded" >&2
