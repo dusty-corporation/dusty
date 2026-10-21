@@ -8,3 +8,5 @@ __pycache__/
 *.pyc
 dist/
 build/
+desktop.ini
+Thumbs.db
