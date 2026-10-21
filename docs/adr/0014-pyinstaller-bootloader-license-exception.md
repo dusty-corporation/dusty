@@ -1,4 +1,4 @@
-# 0014 — PyInstaller bootloader license exception
+# 0014 - PyInstaller bootloader license exception
 - Status: Accepted by PM
 - Date: 2026-10-21
 ## Context

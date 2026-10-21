@@ -1,4 +1,4 @@
-# 0012 — License
+# 0012 - License
 - Status: Accepted
 - Date: 2026-10-21
 ## Context

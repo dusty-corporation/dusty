@@ -1,4 +1,4 @@
-# 0006 — GUI toolkit
+# 0006 - GUI toolkit
 - Status: Accepted
 - Date: 2026-10-21
 ## Context

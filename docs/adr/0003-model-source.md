@@ -1,4 +1,4 @@
-# 0003 — Model source
+# 0003 - Model source
 - Status: Accepted
 - Date: 2026-10-21
 ## Context

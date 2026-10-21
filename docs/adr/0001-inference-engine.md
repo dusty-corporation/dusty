@@ -1,4 +1,4 @@
-# 0001 — Inference engine
+# 0001 - Inference engine
 - Status: Accepted
 - Date: 2026-10-21
 ## Context

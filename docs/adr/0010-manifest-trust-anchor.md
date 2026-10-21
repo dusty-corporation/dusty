@@ -1,4 +1,4 @@
-# 0010 — Manifest trust anchor
+# 0010 - Manifest trust anchor
 - Status: Accepted
 - Date: 2026-10-21
 ## Context

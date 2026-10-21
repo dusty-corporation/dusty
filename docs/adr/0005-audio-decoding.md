@@ -1,4 +1,4 @@
-# 0005 — Audio decoding
+# 0005 - Audio decoding
 - Status: Accepted
 - Date: 2026-10-21
 ## Context

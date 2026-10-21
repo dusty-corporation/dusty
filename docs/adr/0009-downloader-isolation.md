@@ -1,4 +1,4 @@
-# 0009 — Downloader isolation
+# 0009 - Downloader isolation
 - Status: Accepted
 - Date: 2026-10-21
 ## Context

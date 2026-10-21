@@ -1,4 +1,4 @@
-# 0008 — Installer
+# 0008 - Installer
 - Status: Accepted
 - Date: 2026-10-21
 ## Context

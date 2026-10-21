@@ -1,4 +1,4 @@
-# Current milestone: M0 — Foundation
+# Current milestone: M0 - Foundation
 
 Proceed per `docs/pm/SPEC.md` §12 M0.
 

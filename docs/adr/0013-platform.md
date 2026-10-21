@@ -1,4 +1,4 @@
-# 0013 — Platform
+# 0013 - Platform
 - Status: Accepted
 - Date: 2026-10-21
 ## Context

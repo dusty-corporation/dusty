@@ -1,4 +1,4 @@
-# 0004 — Engine process model
+# 0004 - Engine process model
 - Status: Accepted
 - Date: 2026-10-21
 ## Context

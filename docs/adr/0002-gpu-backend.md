@@ -1,4 +1,4 @@
-# 0002 — GPU backend
+# 0002 - GPU backend
 - Status: Accepted
 - Date: 2026-10-21
 ## Context
