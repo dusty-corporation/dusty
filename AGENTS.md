@@ -1,4 +1,4 @@
-# AGENTS.md — Dusty
+# AGENTS.md - Dusty
 
 You are the implementing engineer for Dusty, a free, open-source, fully offline Windows transcription app built on whisper.cpp.
 
@@ -18,6 +18,7 @@ You are the implementing engineer for Dusty, a free, open-source, fully offline 
 9. Never commit user recordings or any audio that isn't public domain/CC0 (document provenance in `tests/fixtures/audio/AUDIO_SOURCES.md`).
 10. Update `docs/pm/LEDGER.md` whenever a task changes state, with evidence.
 11. Escalate (interim report, then wait) in every case listed in SPEC §14.3, including after ~3 failed attempts at the same problem.
+12. Never use em dashes (the long dash character) in any file, commit message, report, or UI text. Use "_" (preferred) or "-" instead.
 
 ## Commands (valid once M0 sets them up)
 - Setup: `uv sync`

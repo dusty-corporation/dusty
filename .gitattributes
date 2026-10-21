@@ -1,0 +1,31 @@
+# Keep repository text stable across Windows and CI checkouts.
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.iss text eol=crlf
+*.iss.template text eol=crlf
+*.wav binary
+*.mp3 binary
+*.m4a binary
+*.aac binary
+*.flac binary
+*.ogg binary
+*.oga binary
+*.opus binary
+*.wma binary
+*.webm binary
+*.mp4 binary
+*.m4v binary
+*.mov binary
+*.mkv binary
+*.avi binary
+*.3gp binary
+*.amr binary
+*.bin binary
+*.pt binary
+*.png binary
+*.ico binary
+*.jpg binary
+*.jpeg binary
+*.dll binary
+*.exe binary
+*.zip binary

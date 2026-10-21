@@ -1,4 +1,4 @@
-# Dusty — Master Engineering Specification (V1)
+# Dusty - Master Engineering Specification (V1)
 
 > **Audience:** Codex (model: Sol, reasoning effort: Medium), acting as the sole implementing engineer.
 > **Authority:** This document is the source of truth. The Project Manager (PM) issues milestone briefs and reviews your reports. The Owner (the human maintainer) relays messages between you and the PM, runs hardware tests you cannot run, and makes final product decisions.
@@ -13,7 +13,8 @@
 3. Each milestone (§12) has tasks, deliverables and acceptance criteria. A milestone is done only when every acceptance criterion has evidence (§13.4).
 4. When this document says **MUST**, it is non-negotiable. **SHOULD** means do it unless you file an ADR explaining why not. **MAY** is optional.
 5. When this document says **VERIFY**, do not trust the stated detail: confirm it against the pinned upstream version and record what you found in `docs/dev/`. Upstream tools change flags and formats. Never assume.
-6. Because you run at Medium reasoning effort, keep tasks small. If a task needs a large design decision this spec does not settle, **stop and escalate** rather than improvise (§14.3).
+6. Style rule: never use em dashes or en dashes anywhere (files, filenames, commit messages, reports, UI text). Use "_" (preferred) or "-".
+7. Because you run at Medium reasoning effort, keep tasks small. If a task needs a large design decision this spec does not settle, **stop and escalate** rather than improvise (§14.3).
 
 ---
 
@@ -160,7 +161,7 @@ dusty/
 ├── pyproject.toml
 ├── uv.lock
 ├── src/
-│   ├── dusty/                     # main app — MUST NOT import networking modules or dusty_fetch
+│   ├── dusty/                     # main app - MUST NOT import networking modules or dusty_fetch
 │   │   ├── __init__.py            # __version__
 │   │   ├── __main__.py            # entry: GUI by default; --self-test; --version
 │   │   ├── app/                   # Qt GUI (windows, dialogs, widgets, view-models)
@@ -264,7 +265,7 @@ ffmpeg.exe -nostdin -hide_banner -loglevel error -protocol_whitelist file,pipe
 | progress on stderr | `-pp` |
 | disable GPU | `-ng` / `--no-gpu` |
 | VAD on + model | `--vad --vad-model <path>` |
-| suppress console transcript print | `-np` (no prints) — confirm it doesn't suppress progress |
+| suppress console transcript print | `-np` (no prints) - confirm it doesn't suppress progress |
 
 - Dusty generates **all** user-facing outputs itself from the parsed JSON (§7). Do not use whisper-cli's own TXT/SRT/VTT writers, so formatting is identical across backends.
 - The vocabulary-hint text is passed as a single argument (no shell). Never pass it through a shell or log it.
@@ -280,9 +281,9 @@ ffmpeg.exe -nostdin -hide_banner -loglevel error -protocol_whitelist file,pipe
 - **Probe:** on first launch and when the setting changes, run the Vulkan engine with a probe (VERIFY in M1 how whisper-cli reports available Vulkan devices, e.g., via its startup log or a tiny self-test). Cache the result (device name, OK/failed) in settings with the engine version. Re-probe if the engine version or GPU driver signature changes.
 - **Auto:** use Vulkan if the probe succeeded, otherwise CPU.
 - **Runtime fallback:** if a Vulkan run fails with a backend/device error, automatically retry **that file once on CPU**, mark the job "Completed on CPU (GPU failed)," and show a non-blocking notice. Do not switch the setting permanently.
-- **Threads:** default = physical core count, capped at 8. Advanced setting allows 1–logical cores.
+- **Threads:** default = physical core count, capped at 8. Advanced setting allows 1-logical cores.
 - **Vulkan loader:** `vulkan-1.dll` comes from the GPU driver. Never bundle it. If it is absent, Auto → CPU.
-- M1 decides whether one Vulkan-enabled build (which can also run on CPU) suffices, or whether separate CPU and Vulkan builds are needed (e.g., for CPU instruction-set dispatch via ggml's `GGML_BACKEND_DL` / `GGML_CPU_ALL_VARIANTS` options — VERIFY these exist and work on Windows for the pinned version).
+- M1 decides whether one Vulkan-enabled build (which can also run on CPU) suffices, or whether separate CPU and Vulkan builds are needed (e.g., for CPU instruction-set dispatch via ggml's `GGML_BACKEND_DL` / `GGML_CPU_ALL_VARIANTS` options - VERIFY these exist and work on Windows for the pinned version).
 
 ### 5.6 Data model (`dusty/core`)
 
@@ -483,7 +484,7 @@ Standard SubRip: 1-based cue numbers, `HH:MM:SS,mmm --> HH:MM:SS,mmm`, max 42 ch
 ### 7.6 DOCX (python-docx)
 - Title paragraph: the file stem. Subtitle line: date, duration, model, language.
 - Body: paragraphs grouped as in TXT; option (setting, default on) to prefix each paragraph with `[HH:MM:SS]`.
-- Core properties: set `author`, `last_modified_by`, `comments`, etc. to empty strings (python-docx defaults to "python-docx" — override it).
+- Core properties: set `author`, `last_modified_by`, `comments`, etc. to empty strings (python-docx defaults to "python-docx" - override it).
 - Calibri 11 pt body, readable spacing.
 
 ---
@@ -531,7 +532,7 @@ Keyboard navigable, sensible tab order, accessible names on controls, no informa
 1. **Static check** (`tools/check_no_network.py`, runs in CI): AST-scan `src/dusty/**` and fail if any module imports `socket`, `ssl`, `http`, `urllib`, `ftplib`, `smtplib`, `requests`, `httpx`, `aiohttp`, `websocket*`, `PySide6.QtNetwork`, `PySide6.QtWebEngine*`, or `dusty_fetch`. Only `src/dusty_fetch/**` may import networking modules.
 2. **Bundle check:** the PyInstaller build for `dusty.exe` MUST exclude `PySide6.QtNetwork`, `QtWebEngine*`, and other unneeded Qt modules; CI verifies the corresponding DLLs (`Qt6Network.dll`, `Qt6WebEngine*.dll`) are absent from the `dusty` bundle.
 3. **Runtime guard:** at the very start of `dusty.exe` (and `--self-test`), replace `socket.socket`, `socket.create_connection`, and `socket.getaddrinfo` with functions that raise `NetworkBlockedError` and write a redacted log entry. This is defense in depth; it MUST be covered by a unit test.
-4. **Native binaries:** ship only `whisper-cli.exe` (plus its DLLs) from whisper.cpp — never `whisper-server`, `talk`, `stream`, or download scripts. FFmpeg is built with `--disable-network` (VERIFY in the configure output) and always invoked with `-protocol_whitelist file,pipe`.
+4. **Native binaries:** ship only `whisper-cli.exe` (plus its DLLs) from whisper.cpp - never `whisper-server`, `talk`, `stream`, or download scripts. FFmpeg is built with `--disable-network` (VERIFY in the configure output) and always invoked with `-protocol_whitelist file,pipe`.
 5. **Dynamic test:** §11.5.
 
 ### 9.3 Logging (enforces NN-6)
@@ -578,7 +579,7 @@ Forbidden: GPL (any version) in shipped artifacts, AGPL, SSPL, proprietary/EULA-
 - SBOM: CycloneDX JSON (`dusty-<version>-sbom.json`) covering Python packages and native components, attached to each release.
 
 ### 10.5 Model pipeline (`.github/workflows/models.yml`, manual dispatch, Linux runner)
-1. Check out `openai/whisper` at the pinned commit; extract each model's URL from its source (the SHA-256 is embedded in the URL path — VERIFY); write/compare `modelpipeline/model_sources.json`.
+1. Check out `openai/whisper` at the pinned commit; extract each model's URL from its source (the SHA-256 is embedded in the URL path - VERIFY); write/compare `modelpipeline/model_sources.json`.
 2. Download each `.pt`, verify SHA-256. Fail on mismatch.
 3. Build whisper.cpp at the pinned commit (for `whisper-quantize`); install pinned CPU-only PyTorch **in the CI job only**; run whisper.cpp's `models/convert-pt-to-ggml.py` (with the openai/whisper checkout for assets).
 4. Quantize where specified (list decided in M1).
@@ -634,11 +635,11 @@ Clean install with model selection → self-test passes → shortcuts work → t
 
 Work strictly in order. After each milestone, write the report (§15.5) and **stop**.
 
-### M0 — Foundation
+### M0 - Foundation
 **Tasks**
 1. Create the repo structure (§5.2), MIT LICENSE, README stub, CHANGELOG.
 2. `pyproject.toml` with uv; pin Python 3.12; add PySide6, python-docx; dev deps: pytest, pytest-qt, ruff, mypy, pyinstaller, cyclonedx tooling, pip-licenses (or equivalent). Commit `uv.lock`.
-3. Write `AGENTS.md` (§15.1), `docs/pm/LEDGER.md` (§15.2), ADRs 0001–0013 (§4).
+3. Write `AGENTS.md` (§15.1), `docs/pm/LEDGER.md` (§15.2), ADRs 0001-0013 (§4).
 4. Implement `tools/check_no_network.py`, `check_no_huggingface.py`, `check_licenses.py` (with tests).
 5. `ci.yml`: on push/PR (Windows runner): ruff, mypy, pytest, the three checks.
 6. A minimal `dusty` entry point that opens an empty Qt window titled "Dusty" and supports `--version`.
@@ -647,7 +648,7 @@ Work strictly in order. After each milestone, write the report (§15.5) and **st
 - Each checker demonstrably fails on a deliberately bad sample (include those negative tests).
 - `uv run python -m dusty` opens the window on the Owner's machine (Owner confirms).
 
-### M1 — Engine and model pipeline spike (GO / NO-GO GATE)
+### M1 - Engine and model pipeline spike (GO / NO-GO GATE)
 **Tasks**
 1. `native/build_whisper.ps1`: build whisper.cpp (pinned) on Windows for CPU and Vulkan; decide single vs split builds (§5.5); document in `docs/dev/build-native.md`.
 2. `native/build_ffmpeg.sh`: minimal LGPL FFmpeg cross-compiled (MinGW-w64) on Linux: `--disable-network --disable-everything --disable-autodetect --disable-gpl --disable-nonfree`, then enable only: `file`/`pipe` protocols; demuxers for the extensions in §6.1; the needed audio decoders (aac, mp3*, opus, vorbis, flac, alac, pcm_*, wmav1/2, amrnb/amrwb, ac3/eac3); parsers; `aresample`/`pan` filters as needed; WAV muxer + `pcm_s16le` encoder. Build `ffprobe` too if cheap. Record the full configure line and `ffmpeg -buildconf` in `docs/dev/ffmpeg-build.md`. Fallback ONLY with PM approval: a pinned third-party LGPL build verified by hash.
@@ -663,7 +664,7 @@ Work strictly in order. After each milestone, write the report (§15.5) and **st
 - Benchmark report includes RTF for every candidate on both machines.
 - **Report must include a proposed final model catalog** (which models/quantizations ship, which is the default "Recommended" for CPU-only and for GPU machines) with evidence. The PM decides GO/NO-GO and the catalog. Targets: on the Surface, at least one model at the accuracy level of `small` or better runs at RTF ≤ 1.0; on the desktop, Large-v3-Turbo on Vulkan runs at RTF ≤ 0.15.
 
-### M2 — Headless core pipeline
+### M2 - Headless core pipeline
 **Tasks**
 `core/` types; `engine/` runners (FFmpeg, whisper-cli, Job Objects, progress parsing, backend probe + fallback); `models/` (manifest, registry, verification); `export/` (all five formats); `queue/` coordinator with persistence and collision handling; `privacy/` (network guard, log redaction, sync detection); `selftest.py`; a dev-only CLI `python -m dusty.devcli transcribe <files...> --model ... --out ...` that drives the same coordinator.
 **Acceptance**
@@ -671,7 +672,7 @@ Work strictly in order. After each milestone, write the report (§15.5) and **st
 - Offline/network test (§11.5) passes against `python -m dusty --self-test` on the CI runner (pre-packaging variant).
 - Canary log test passes.
 
-### M3 — GUI (single file and batch)
+### M3 - GUI (single file and batch)
 **Tasks**
 Main window (§8.2), settings panel (§6.2), queue table, drag-and-drop, folder scan dialog, progress/ETA, cancel, collision dialog, summary dialog, resume prompt, first-run screens (§6.8), sync-folder warning, error messages (§8.6), light/dark, scaling. The GUI calls the M2 coordinator only (no business logic in widgets). Coordinator runs off the UI thread (QThread / worker) and communicates via signals.
 **Acceptance**
@@ -679,16 +680,16 @@ Main window (§8.2), settings panel (§6.2), queue table, drag-and-drop, folder 
 - The Owner completes a scripted UI walkthrough (provide it in the report as a checklist) on the desktop and reports pass/fail per step.
 - UI responsive (no freezes > 200 ms) during a batch.
 
-### M4 — Model Manager and `dusty-fetch`
+### M4 - Model Manager and `dusty-fetch`
 **Tasks**
 `dusty_fetch`: CLI `dusty-fetch download --id <model> --dest <dir> --manifest <path>`; HTTPS only, host allowlist = `github.com` and GitHub's release-asset CDN host(s) (VERIFY the redirect hosts); resumable (HTTP Range); `.part` files; SHA-256 verification against the bundled manifest; machine-readable progress on stdout (JSON lines); exit codes. Model Manager dialog (§6.6) driving it as a child process.
 **Acceptance**
 - Tests: successful download, resume after interruption, hash mismatch rejected and `.part` deleted, disallowed host rejected, disk-full handled.
 - `dusty` package still passes `check_no_network.py` (it only spawns `dusty-fetch.exe`).
 
-### M5 — Packaging, installer, release pipeline
+### M5 - Packaging, installer, release pipeline
 **Tasks**
-1. PyInstaller specs: `dusty` (windowed, onedir, Qt networking/WebEngine excluded) and `dusty-fetch` (console, onedir or merged into the same dir — VERIFY the cleanest layout); bundle `bin\` native binaries and `resources\`.
+1. PyInstaller specs: `dusty` (windowed, onedir, Qt networking/WebEngine excluded) and `dusty-fetch` (console, onedir or merged into the same dir - VERIFY the cleanest layout); bundle `bin\` native binaries and `resources\`.
 2. Inno Setup script generated from `models.json` (`installer/generate_iss.py`): Welcome → License (MIT + notices) → **Choose model** page (catalog with sizes; pre-selects the M1 recommendation based on detected Vulkan GPU and RAM; user can pick one or more) → install dir (default `%LOCALAPPDATA%\Programs\Dusty`) → shortcuts (Start Menu; optional Desktop) → **download page using Inno Setup's built-in downloader with SHA-256 checks** (VERIFY the API for the pinned Inno version) → run `dusty.exe --self-test --model <id>` → finish. **Installation MUST report failure if download, verification, or self-test fails**, with retry.
 3. Upgrade behavior: detect existing install; keep models; skip downloads for models that verify.
 4. Uninstaller: removes app files, settings, state, logs, work dirs; checkbox "Also remove downloaded models (X GB)" default checked; never touches user output folders.
@@ -699,14 +700,14 @@ Main window (§8.2), settings panel (§6.2), queue table, drag-and-drop, folder 
 - §11.6 installer tests pass on a fresh Windows 11 VM (Owner runs; provide a checklist).
 - Installer size reported in the milestone report.
 
-### M6 — Hardening and documentation
+### M6 - Hardening and documentation
 **Tasks**
 Fix all open S1/S2 issues; full offline manual test (§11.5 manual) on both machines; long-file test (≥ 2 h recording) on the Surface (memory and temp-disk behavior); `docs/user/` (install, first run, batch how-to, choosing a model, vocabulary hints, troubleshooting, FAQ incl. HIPAA wording), `docs/privacy.md` (exactly what is stored where, what touches the network and when), `docs/dev/` (build from source, release process, reproducing model conversion), CONTRIBUTING.md.
 **Acceptance**
 - Zero open S0/S1 issues.
 - All checklists passed with Owner sign-off.
 
-### M7 — Release candidate → v1.0
+### M7 - Release candidate → v1.0
 **Tasks**
 Tag `v1.0.0-rc.1`; the primary user installs and uses it on the Surface with the Owner present; collect issues; fix; tag `v1.0.0`.
 **Acceptance**
@@ -762,7 +763,7 @@ For S0/S1 issues, the issue file MUST include a root-cause analysis (what failed
 
 ### 15.1 `AGENTS.md` (create in M0; keep it short and current)
 ```markdown
-# AGENTS.md — Dusty
+# AGENTS.md - Dusty
 
 You are the implementing engineer for Dusty. Source of truth: docs/pm/SPEC.md. Current assignment: docs/pm/CURRENT_MILESTONE.md.
 
@@ -777,6 +778,8 @@ You are the implementing engineer for Dusty. Source of truth: docs/pm/SPEC.md. C
 8. Never log file names, paths, transcript text, or prompts.
 9. Never commit user recordings or any non-public-domain/CC0 audio.
 10. Update docs/pm/LEDGER.md as tasks change state, with evidence.
+11. Escalate per SPEC §14.3, including after ~3 failed attempts at the same problem.
+12. Never use em dashes (the long dash character) in any file, commit message, report, or UI text. Use "_" (preferred) or "-" instead.
 
 ## Commands
 - Setup: uv sync
@@ -795,12 +798,12 @@ Write docs/pm/reports/M<N>-interim-<n>.md (SPEC §15.5), then stop.
 # Task Ledger
 | ID | Milestone | Task | Status (todo/doing/blocked/done) | Evidence | Issues |
 |----|-----------|------|----------------------------------|----------|--------|
-| M0-01 | M0 | Repo structure | done | commit abc123; tree in report | — |
+| M0-01 | M0 | Repo structure | done | commit abc123; tree in report | - |
 ```
 
 ### 15.3 ADR (`docs/adr/NNNN-title.md`)
 ```markdown
-# NNNN — Title
+# NNNN - Title
 - Status: Proposed | Accepted | Superseded by NNNN
 - Date: YYYY-MM-DD
 ## Context
@@ -811,7 +814,7 @@ Write docs/pm/reports/M<N>-interim-<n>.md (SPEC §15.5), then stop.
 
 ### 15.4 Issue (`docs/pm/issues/ISSUE-NNN-title.md`)
 ```markdown
-# ISSUE-NNN — Title
+# ISSUE-NNN - Title
 - Severity: S0 | S1 | S2 | S3
 - Milestone: M<N>
 - Status: Open | In progress | Resolved | Won't fix (PM approval required)
@@ -825,10 +828,10 @@ Write docs/pm/reports/M<N>-interim-<n>.md (SPEC §15.5), then stop.
 ## Regression test added
 ```
 
-### 15.5 Milestone report (`docs/pm/reports/M<N>-report.md`) — the Owner pastes this to the PM
+### 15.5 Milestone report (`docs/pm/reports/M<N>-report.md`) - the Owner pastes this to the PM
 ```markdown
-# M<N> Report — <title>
-## 1. Summary (3–5 sentences: what works now, what doesn't)
+# M<N> Report - <title>
+## 1. Summary (3-5 sentences: what works now, what doesn't)
 ## 2. Acceptance criteria
 | Criterion | Status (met / not met / partial) | Evidence |
 ## 3. What was built (files/modules, brief)
@@ -846,22 +849,22 @@ Keep reports factual and concise. Do not pad. Bad news goes in section 1, not bu
 
 ## 16. Working agreement with the PM
 
-1. The Owner places this file at `docs/pm/SPEC.md` and the first brief at `docs/pm/CURRENT_MILESTONE.md` (initially: "M0 — Foundation. Proceed per SPEC §12 M0.").
+1. The Owner places this file at `docs/pm/SPEC.md` and the first brief at `docs/pm/CURRENT_MILESTONE.md` (initially: "M0 - Foundation. Proceed per SPEC §12 M0.").
 2. You execute the milestone autonomously, escalating only per §14.3.
 3. At milestone end you produce the report and stop.
 4. The Owner pastes the report to the PM. The PM reviews, may request fixes (as a revised CURRENT_MILESTONE.md), and then issues the next brief.
-5. Disagreements: if you believe the PM's instruction is technically wrong, say so in the report with evidence and a recommendation — then follow the PM's final decision.
+5. Disagreements: if you believe the PM's instruction is technically wrong, say so in the report with evidence and a recommendation - then follow the PM's final decision.
 
 ---
 
-## Appendix A — Hardware reference
+## Appendix A - Hardware reference
 
 | Machine | CPU | RAM | GPU | Role |
 |---------|-----|-----|-----|------|
-| Owner desktop | AMD Ryzen | — | NVIDIA RTX 3080 Ti (12 GB) | Dev machine; Vulkan/NVIDIA test target |
+| Owner desktop | AMD Ryzen | - | NVIDIA RTX 3080 Ti (12 GB) | Dev machine; Vulkan/NVIDIA test target |
 | Primary user laptop | Intel Core i5-1235U (10C/12T) | 16 GB | Intel Iris Xe (integrated) | CPU and Vulkan/iGPU test target; design target for defaults |
 
-## Appendix B — Glossary
+## Appendix B - Glossary
 - **RTF (real-time factor):** processing time ÷ audio duration. RTF 0.5 = a 60-min file takes 30 min.
 - **GGML:** the model file format whisper.cpp uses.
 - **Quantization (q8_0, q5_0):** smaller, faster model files with slightly lower precision.
