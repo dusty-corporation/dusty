@@ -2,6 +2,12 @@ name: Convert benchmark models
 
 on:
   workflow_dispatch:
+  push:
+    branches: [m1-engine-spike]
+    paths:
+      - .github/workflows/models.yml
+      - modelpipeline/**
+      - native/versions.toml
 
 permissions:
   contents: write

@@ -27,6 +27,7 @@ cd "$out_dir"
   --disable-nonfree \
   --disable-doc \
   --disable-debug \
+  --disable-x86asm \
   --disable-shared \
   --enable-static \
   --enable-ffmpeg \
