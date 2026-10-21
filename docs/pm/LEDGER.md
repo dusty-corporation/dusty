@@ -11,8 +11,8 @@
 | M1-HK | M1 | Housekeeping | done | `9a65509`, `d0f1407`; M0 accepted per Owner | - |
 | M1-A1 | M1 | Pin and verify versions | done | `native/versions.toml`, `docs/dev/build-native.md`; pinned upstream source and SDK checks | - |
 | M1-A2 | M1 | Native whisper.cpp CI build | done | CI run 39692634372; Owner's independent Vulkan and Haswell desktop retest exited 0 | ISSUE-003 (resolved) |
-| M1-A3 | M1 | Minimal FFmpeg and fixtures | doing | CI run 39692158489; decoded 17 formats, rejected three invalid inputs; path fixtures added | - |
+| M1-A3 | M1 | Minimal FFmpeg and fixtures | done | CI run 39693880471; 17 formats plus Unicode and long path passed, three invalid inputs rejected | - |
 | M1-A4 | M1 | Model conversion pipeline | done | CI run 39691863874; ten candidates, VAD, and manifest uploaded to draft `models-v1` | - |
-| M1-A5 | M1 | Verify engine flags and output | doing | Desktop CLI tests; real JSON and stderr samples recorded in `tests/fixtures/engine/` | - |
-| M1-A6 | M1 | Bench tooling and accuracy reference | doing | Tiny model public and private smoke tests; reference final listening check pending | - |
-| M1-A7 | M1 | Bench kit draft prerelease | doing | 46,253,549-byte local zip built; draft upload pending | - |
+| M1-A5 | M1 | Verify engine flags and output | done | Desktop CPU, Vulkan, VAD, JSON, progress, and prompt limit documented in `docs/dev/engine-cli.md` | - |
+| M1-A6 | M1 | Bench tooling and accuracy reference | doing | Extracted kit tiny-model public test passed; private metric-only smoke test passed; final human listening check pending | - |
+| M1-A7 | M1 | Bench kit draft prerelease | done | Draft `bench-kit-m1` uploaded, 46,253,549 bytes, SHA-256 `19e5764c1848bfb944d930bbc614bf560b40ed788ebaa852fde88d3f8fce4da1` | - |

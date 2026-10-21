@@ -7,6 +7,10 @@ bytes). The workflow decoded all 17 supported extensions from the public
 domain JFK fixture and rejected the no-audio, zero-byte, and corrupt
 fixtures. The format list and provenance are in
 `tests/fixtures/AUDIO_SOURCES.md`.
+The later [run 39693880471](https://github.com/dusty-corporation/dusty/actions/runs/39693880471)
+also passed after Unicode and long-path fixtures were added. The nested
+path fixture has a 242-character absolute path on the desktop and was
+also decoded there with the packaged binary.
 
 `native/build_ffmpeg.sh` is the reproducible command. The full configure
 invocation, as reported by `ffmpeg.exe -buildconf`, was:
