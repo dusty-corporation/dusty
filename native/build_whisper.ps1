@@ -24,6 +24,7 @@ $args = @('-S', $sourcePath, '-B', $buildPath, '-A', 'x64',
     '-DWHISPER_BUILD_EXAMPLES=ON',
     '-DWHISPER_SDL2=OFF',
     '-DGGML_CUDA=OFF',
+    '-DGGML_OPENMP=OFF',
     '-DGGML_BACKEND_DL=OFF',
     '-DGGML_CPU_ALL_VARIANTS=OFF')
 if ($Backend -eq 'vulkan') {

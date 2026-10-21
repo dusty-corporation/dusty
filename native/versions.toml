@@ -11,7 +11,7 @@ windows_installer_sha256 = "94a82d378f7a5e3e54c9db7d2fb7016af136e14ac0a18dbf0f2f
 
 [ffmpeg]
 tag = "n9.0.2"
-commit = "ce8f11b9fac4cd7ccfb41ca7c01bc17f5cda8cc3"
+commit = "946fcce07b6dcd0331c8cc609192aeff5e1924f8"
 
 [mingw_w64]
 ubuntu = "24.04"

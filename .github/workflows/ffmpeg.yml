@@ -28,7 +28,7 @@ jobs:
       - name: Check out FFmpeg source
         run: |
           git clone --depth 1 --branch n9.0.2 https://github.com/FFmpeg/FFmpeg.git build/upstream-ffmpeg
-          test "$(git -C build/upstream-ffmpeg rev-parse HEAD)" = ce8f11b9fac4cd7ccfb41ca7c01bc17f5cda8cc3
+          test "$(git -C build/upstream-ffmpeg rev-parse HEAD)" = 946fcce07b6dcd0331c8cc609192aeff5e1924f8
       - name: Build minimal FFmpeg
         run: bash native/build_ffmpeg.sh
       - name: Check configuration

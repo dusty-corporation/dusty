@@ -41,7 +41,8 @@ https://sdk.lunarg.com/sdk/sha/1.4.363.0/windows/vulkan_sdk.exe.json
 CI must verify the downloaded installer before running it.
 
 FFmpeg `n9.0.2` is the current stable release, resolving to
-`ce8f11b9fac4cd7ccfb41ca7c01bc17f5cda8cc3`. Its source is built with
+`946fcce07b6dcd0331c8cc609192aeff5e1924f8` (the tag object is
+`ce8f11b9fac4cd7ccfb41ca7c01bc17f5cda8cc3`). Its source is built with
 networking, GPL, and nonfree features disabled. Source:
 https://ffmpeg.org/download.html
 
