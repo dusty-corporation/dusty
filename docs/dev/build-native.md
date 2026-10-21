@@ -13,8 +13,12 @@ the checked-out commit, installed SDK, or toolchain differs from these values.
 `whisper-quantize` targets. Source:
 https://github.com/ggml-org/whisper.cpp/releases/tag/v1.9.5
 
-The CPU and Vulkan builds will initially be separate, static-library builds.
-The final layout requires the M1 CI import and runtime evidence and ADR 0015.
+The first CPU and Vulkan static-library builds passed CI import checks but
+used `GGML_NATIVE=ON`. The runner selected AVX-512, and the Owner desktop
+raised `0xc000001d`. ISSUE-003 records the regression. ADR 0015 switches
+both packages to runtime CPU backend dispatch with `GGML_NATIVE=OFF`,
+`GGML_BACKEND_DL=ON`, and `GGML_CPU_ALL_VARIANTS=ON`. CI must prove that
+each packaged DLL is present and that no developer runtime is imported.
 
 ## Model conversion sources
 

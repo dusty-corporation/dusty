@@ -10,7 +10,7 @@
 | M0-06 | M0 | Empty Qt window and --version | done | `6324f8c`; `--version` printed `Dusty 0.0.1`; Owner confirmed window on 2026-10-21 | - |
 | M1-HK | M1 | Housekeeping | done | `9a65509`, `d0f1407`; M0 accepted per Owner | - |
 | M1-A1 | M1 | Pin and verify versions | doing | `native/versions.toml`; upstream tag, SDK hash, and source options checked | - |
-| M1-A2 | M1 | Native whisper.cpp CI build | todo | - | - |
+| M1-A2 | M1 | Native whisper.cpp CI build | doing | CI run 39691606062 exposed AVX-512 target; portable dispatch rebuild pending | ISSUE-003 (open) |
 | M1-A3 | M1 | Minimal FFmpeg and fixtures | todo | - | - |
 | M1-A4 | M1 | Model conversion pipeline | todo | - | - |
 | M1-A5 | M1 | Verify engine flags and output | todo | - | - |

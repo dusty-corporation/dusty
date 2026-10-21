@@ -64,12 +64,18 @@ jobs:
           $dumpbin = Get-ChildItem (Join-Path $vs 'VC/Tools/MSVC') -Filter dumpbin.exe -Recurse | Where-Object FullName -Match '\\Hostx64\\x64\\' | Select-Object -First 1 -ExpandProperty FullName
           if (-not $dumpbin) { throw 'dumpbin missing' }
           $package = "build/native/package/${{ matrix.backend }}"
-          foreach ($exe in Get-ChildItem $package -Filter *.exe) {
-            $deps = & $dumpbin /dependents $exe.FullName
+          $bundled = @(Get-ChildItem $package -Filter *.dll | ForEach-Object { $_.Name.ToLowerInvariant() })
+          foreach ($binary in Get-ChildItem $package | Where-Object { $_.Extension -in @('.exe', '.dll') }) {
+            $deps = & $dumpbin /dependents $binary.FullName
             if ($LASTEXITCODE -ne 0) { throw 'dumpbin failed' }
-            $deps | Out-File -Encoding utf8 "$($exe.FullName).imports.txt"
+            $deps | Out-File -Encoding utf8 "$($binary.FullName).imports.txt"
             $dlls = @($deps | Select-String -Pattern '^\s+([\w.-]+\.dll)\s*$' | ForEach-Object { $_.Matches[0].Groups[1].Value.ToLowerInvariant() })
-            $unexpected = @($dlls | Where-Object { $_ -notmatch '^(api-ms-win-|ext-ms-win-|kernel32|user32|advapi32|shell32|ole32|oleaut32|gdi32|ntdll|bcrypt|ws2_32|shlwapi|version|comdlg32|comctl32|secur32|crypt32|rpcrt4|imm32|winmm|setupapi|cfgmgr32|d3d|dxgi|vulkan-1)\.dll$' })
+            $unexpected = @($dlls | Where-Object {
+              $_ -notin $bundled -and
+              -not (Test-Path (Join-Path $env:SystemRoot "System32/$_")) -and
+              $_ -notmatch '^(api-ms-win-|ext-ms-win-)' -and
+              -not ('${{ matrix.backend }}' -eq 'vulkan' -and $_ -eq 'vulkan-1.dll')
+            })
             if ($unexpected.Count) { throw "Unexpected external DLLs: $($unexpected -join ', ')" }
             if ('${{ matrix.backend }}' -eq 'cpu' -and $dlls -contains 'vulkan-1.dll') { throw 'CPU binary imports Vulkan' }
           }

@@ -19,14 +19,15 @@ $buildPath = Join-Path $outputPath $Backend
 $args = @('-S', $sourcePath, '-B', $buildPath, '-A', 'x64',
     '-DCMAKE_POLICY_DEFAULT_CMP0091=NEW',
     '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded',
-    '-DBUILD_SHARED_LIBS=OFF',
+    '-DBUILD_SHARED_LIBS=ON',
     '-DWHISPER_BUILD_TESTS=OFF',
     '-DWHISPER_BUILD_EXAMPLES=ON',
     '-DWHISPER_SDL2=OFF',
     '-DGGML_CUDA=OFF',
     '-DGGML_OPENMP=OFF',
-    '-DGGML_BACKEND_DL=OFF',
-    '-DGGML_CPU_ALL_VARIANTS=OFF')
+    '-DGGML_NATIVE=OFF',
+    '-DGGML_BACKEND_DL=ON',
+    '-DGGML_CPU_ALL_VARIANTS=ON')
 if ($Backend -eq 'vulkan') {
     if (-not $env:VULKAN_SDK) { throw 'VULKAN_SDK is required for Vulkan build' }
     $args += '-DGGML_VULKAN=ON'
@@ -35,6 +36,12 @@ if ($Backend -eq 'vulkan') {
 }
 & cmake @args
 if ($LASTEXITCODE -ne 0) { throw 'CMake configure failed' }
+$cache = Get-Content (Join-Path $buildPath 'CMakeCache.txt')
+$cache | Where-Object { $_ -match '^GGML_[^:]+:' } | Write-Output
+foreach ($required in @('GGML_NATIVE:BOOL=OFF', 'GGML_BACKEND_DL:BOOL=ON', 'GGML_CPU_ALL_VARIANTS:BOOL=ON')) {
+    if ($cache -notcontains $required) { throw "Unsafe CMake cache: $required missing" }
+}
+if ($cache -contains 'GGML_NATIVE:BOOL=ON') { throw 'GGML_NATIVE must be OFF' }
 & cmake --build $buildPath --config Release --target whisper-cli whisper-bench --parallel 4
 if ($LASTEXITCODE -ne 0) { throw 'CMake build failed' }
 
@@ -44,5 +51,11 @@ foreach ($name in @('whisper-cli.exe', 'whisper-bench.exe')) {
     $candidate = Join-Path $buildPath "bin/Release/$name"
     if (-not (Test-Path $candidate)) { throw "Missing $name" }
     Copy-Item $candidate $package
+}
+$runtime = Join-Path $buildPath 'bin/Release'
+Get-ChildItem $runtime -Filter '*.dll' | Copy-Item -Destination $package
+if (-not (Get-ChildItem $package -Filter 'ggml-cpu-*.dll')) { throw 'Runtime CPU variants missing' }
+foreach ($name in @('ggml-cpu-x64.dll', 'ggml-cpu-haswell.dll')) {
+    if (-not (Test-Path (Join-Path $package $name))) { throw "Missing CPU variant $name" }
 }
 Write-Output $package
