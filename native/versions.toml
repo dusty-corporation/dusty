@@ -1,0 +1,24 @@
+[whisper_cpp]
+tag = "v1.9.5"
+commit = "d1be6fde11ac6e0407606b4e42fe72d34add8037"
+
+[openai_whisper]
+commit = "86098128c0b4f24f0e2aa2994de830614b474227"
+
+[vulkan_sdk]
+version = "1.4.363.0"
+windows_installer_sha256 = "94a82d378f7a5e3e54c9db7d2fb7016af136e14ac0a18dbf0f2f67a36352d141"
+
+[ffmpeg]
+tag = "n9.0.2"
+commit = "ce8f11b9fac4cd7ccfb41ca7c01bc17f5cda8cc3"
+
+[mingw_w64]
+ubuntu = "24.04"
+gcc_posix_package = "13.2.0-6ubuntu1+26.1"
+headers_package = "11.0.1-3build1"
+
+[silero_vad]
+version = "6.2.3"
+tag = "v6.2.3"
+commit = "5cd7945676eb32225748052e2e6a0580e4686a08"
