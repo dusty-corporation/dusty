@@ -1,7 +1,7 @@
 # ISSUE-003 - CI native binaries use unsupported CPU instructions
 - Severity: S1
 - Milestone: M1
-- Status: Open
+- Status: Resolved 2026-10-21
 - Environment: CI Windows 2022 runner; Owner desktop Ryzen and target Surface AVX2 CPUs
 
 ## Steps to reproduce
@@ -35,4 +35,15 @@ the Owner desktop rerun before resolving this issue. ADR 0015 records the
 portable backend layout.
 
 ## Regression test
-Pending CI and Owner verification of the rebuilt binaries.
+CI run 39692634372 passed CPU and Vulkan builds. It printed all GGML
+cache values, including `GGML_NATIVE:BOOL=OFF`, and checked imports of
+both executables and all backend DLLs. The implementing engineer ran
+both replacement binaries on the desktop against the public-domain JFK
+fixture. Both exited 0 and loaded `ggml-cpu-haswell.dll`; Vulkan also
+loaded `ggml-vulkan.dll` and selected the RTX 3080 Ti. The Owner's
+independent rerun succeeded. The Owner downloaded run 39692634372's
+`whisper-vulkan` artifact and the draft `ggml-tiny.bin` model, then ran the
+public-domain JFK fixture on the Ryzen desktop. The process loaded
+`ggml-vulkan.dll` and `ggml-cpu-haswell.dll`, reported `using Vulkan0 backend`,
+transcribed the clip, and exited 0. This confirms the replacement binary
+works on the machine that crashed with the original artifact.

@@ -33,9 +33,17 @@ with `dumpbin /dependents`.
 The first static CPU package imported only `KERNEL32.dll` and
 `ADVAPI32.dll`; the first Vulkan package additionally imported
 `vulkan-1.dll`. Those binaries were not portable because their compiled
-CPU backend required AVX-512. The dispatch build's imports, runtime
-variant selection, and Owner test remain pending and must be recorded
-before ISSUE-003 is resolved.
+CPU backend required AVX-512. CI run 39692634372 then built both dispatch
+packages. Its log has `GGML_NATIVE:BOOL=OFF`, `GGML_BACKEND_DL:BOOL=ON`,
+and `GGML_CPU_ALL_VARIANTS:BOOL=ON`, and shows all nine MSVC x64 variants.
+The packaged import check passed for both executables and every DLL.
+On the desktop, the new CPU binary loaded `ggml-cpu-haswell.dll`; the
+new Vulkan binary loaded both `ggml-vulkan.dll` and
+`ggml-cpu-haswell.dll`, selected the RTX 3080 Ti Vulkan backend, and
+transcribed the public-domain JFK fixture with exit code 0. The Owner's
+independent rerun succeeded: the replacement CI Vulkan artifact loaded
+the Vulkan and Haswell CPU DLLs, selected Vulkan0, transcribed the
+public-domain JFK clip, and exited 0. ISSUE-003 is resolved.
 
 ## Consequences
 The package includes more DLLs and is larger. Every backend DLL must be
