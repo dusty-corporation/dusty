@@ -1,4 +1,4 @@
-# M0 Interim Report — Foundation
+# M0 Interim Report - Foundation
 
 ## 1. Summary
 M0 local implementation is largely committed, but the required `uv run pytest` command failed with a temporary-directory permission error even under approved escalation. The command reported 7 passed and 6 setup errors; no tests were skipped or weakened. Other uv verification commands passed. Work stopped under the Owner's instruction to stop if an approved escalation still fails.
@@ -12,7 +12,7 @@ M0 local implementation is largely committed, but the required `uv run pytest` c
 | Window opens on Owner's machine | not met | `--version` works and a Qt window test passed locally; Owner confirmation pending. |
 
 ## 3. What was built
-The foundation, locked dependencies, `.gitattributes`, ADRs 0001–0014, three policy checks and negative tests, minimal Qt entry point, Windows CI workflow, and repository directories are committed on `m0-foundation`. ISSUE-001 is resolved in its issue file. ISSUE-002 records the new test environment blocker.
+The foundation, locked dependencies, `.gitattributes`, ADRs 0001-0014, three policy checks and negative tests, minimal Qt entry point, Windows CI workflow, and repository directories are committed on `m0-foundation`. ISSUE-001 is resolved in its issue file. ISSUE-002 records the new test environment blocker.
 
 ## 4. Test results
 `uv sync --locked --python 3.12`: success, 60 packages resolved. `uv run ruff check .`: passed. `uv run ruff format --check .`: 11 files formatted. `uv run mypy`: no issues in 8 source files. The three `uv run python tools/check_*.py` commands passed. `uv run python -m dusty --version`: `Dusty 0.0.1`. `uv run pytest`: **7 passed, 6 errors**, all reporting `PermissionError: [WinError 5] Access is denied: 'C:\\Users\\kdash\\AppData\\Local\\Temp\\pytest-of-kdash'`; it also could not write `.pytest_cache`. Earlier direct `.venv\\Scripts\\pytest.exe -q` reported 13 passed. No CI run ID exists.

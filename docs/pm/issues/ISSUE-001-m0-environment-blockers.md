@@ -1,4 +1,4 @@
-# ISSUE-001 — M0 environment blocks dependency setup and Git commits
+# ISSUE-001 - M0 environment blocks dependency setup and Git commits
 - Severity: S1
 - Milestone: M0
 - Status: Resolved

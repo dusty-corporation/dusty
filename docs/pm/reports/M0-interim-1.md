@@ -1,4 +1,4 @@
-# M0 Interim Report — Foundation
+# M0 Interim Report - Foundation
 
 ## 1. Summary
 M0 is blocked. The repository was initialized locally and a partial scaffold, license, project metadata, and minimal Qt entry point were written, but the environment cannot download the prescribed dependencies or write Git metadata. No lockfile, test results, CI run, or Owner window confirmation exists. Work stopped under SPEC §14.3.

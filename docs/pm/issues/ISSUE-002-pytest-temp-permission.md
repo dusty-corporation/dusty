@@ -1,4 +1,4 @@
-# ISSUE-002 — Escalated pytest cannot access temporary directory
+# ISSUE-002 - Escalated pytest cannot access temporary directory
 - Severity: S1
 - Milestone: M0
 - Status: Resolved
