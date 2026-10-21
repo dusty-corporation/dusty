@@ -10,8 +10,8 @@
 | M0-06 | M0 | Empty Qt window and --version | done | `6324f8c`; `--version` printed `Dusty 0.0.1`; Owner confirmed window on 2026-10-21 | - |
 | M1-HK | M1 | Housekeeping | done | `9a65509`, `d0f1407`; M0 accepted per Owner | - |
 | M1-A1 | M1 | Pin and verify versions | done | `native/versions.toml`, `docs/dev/build-native.md`; pinned upstream source and SDK checks | - |
-| M1-A2 | M1 | Native whisper.cpp CI build | done | CI run 39692634372; Owner's independent Vulkan and Haswell desktop retest exited 0 | ISSUE-003 (resolved) |
-| M1-A3 | M1 | Minimal FFmpeg and fixtures | done | CI run 39693880471; 17 formats plus Unicode and long path passed, three invalid inputs rejected | - |
+| M1-A2 | M1 | Native whisper.cpp CI build | done | CI runs 39692634372 and PR #2 run 39694259471 passed; Owner's independent Vulkan and Haswell desktop retest exited 0 | ISSUE-003 (resolved) |
+| M1-A3 | M1 | Minimal FFmpeg and fixtures | done | CI runs 39693880471 and PR #2 run 39694259434 passed; 17 formats plus Unicode and long path passed, three invalid inputs rejected | - |
 | M1-A4 | M1 | Model conversion pipeline | done | CI run 39691863874; ten candidates, VAD, and manifest uploaded to draft `models-v1` | - |
 | M1-A5 | M1 | Verify engine flags and output | done | Desktop CPU, Vulkan, VAD, JSON, progress, and prompt limit documented in `docs/dev/engine-cli.md` | - |
 | M1-A6 | M1 | Bench tooling and accuracy reference | doing | Extracted kit tiny-model public test passed; private metric-only smoke test passed; final human listening check pending | - |
