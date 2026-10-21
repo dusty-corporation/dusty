@@ -26,6 +26,11 @@ The Owner's Ryzen and target Surface support AVX2 but not AVX-512. This
 establishes the incompatible CI CPU compilation target as the cause of the
 illegal instruction.
 
+The initial CI checks inspected imports and built the executable, but did
+not inspect CMake's CPU target or execute it on an AVX2-only machine. The
+Windows CI runner could execute its own native build, so a runner-only
+smoke test would also have missed this portability fault.
+
 ## Fix
 Build with `GGML_NATIVE=OFF`, `GGML_BACKEND_DL=ON`, and
 `GGML_CPU_ALL_VARIANTS=ON`, with shared backend DLLs packaged beside both
