@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from dusty.core import FailureCode, Job
+from dusty.core import FailureCode, Job, JobStatus
 
 from . import messages as M
 from .presentation import counts
@@ -102,7 +102,7 @@ class SummaryDialog(TextDialog):
     def __init__(self, jobs: list[Job], parent=None):
         super().__init__(M.SUMMARY, (M.SUMMARY_COUNTS.format(**counts(jobs)),), parent)
         self.retry = self.button(M.RETRY, lambda: self.done(2))
-        self.retry.setEnabled(any(job.failure for job in jobs))
+        self.retry.setEnabled(any(job.status == JobStatus.FAILED for job in jobs))
         self.open_folder = self.button(M.OPEN_FOLDER, lambda: None)
         self.button(M.DISMISS, self.accept, default=True)
 

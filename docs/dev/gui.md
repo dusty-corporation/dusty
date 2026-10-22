@@ -52,6 +52,12 @@ Actual processing and event-loop timing are tested separately with public
 fixtures. Outputs stay in ignored build storage and are uploaded as a draft
 release for review.
 
+The WFP CI harness additionally starts the real Qt window via
+`tests/offline/gui_batch.py`, completes a public-fixture batch through its
+normal Start/worker path, and includes that process in the same zero-connection
+audit window as self-test and headless batch. It runs only on the disposable
+Windows CI host; local smoke runs do not change firewall or audit settings.
+
 ## Test data confinement
 
 The approved real backend_probe cleanup was completed before M3. An audit hook

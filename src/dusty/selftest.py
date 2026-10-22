@@ -28,7 +28,7 @@ def run_selftest(paths: RuntimePaths, model_id: str, *, backend: str = "auto") -
         if backend in {"auto", "vulkan"}:
             from dusty.engine.backend import probe_vulkan
 
-            if probe_vulkan(paths, registry):
+            if probe_vulkan(paths, registry, model_id=model_id):
                 backends.append("vulkan")
             elif backend == "vulkan":
                 return "GPU_ERROR"

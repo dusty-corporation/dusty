@@ -38,6 +38,20 @@ def test_output_collision_policies(tmp_path: Path) -> None:
     assert (tmp_path / "clip.txt").read_bytes() == b"Hello\r\n"
 
 
+def test_same_folder_does_not_repeat_preserved_subfolders(tmp_path: Path) -> None:
+    folder = tmp_path / "nested"
+    folder.mkdir()
+    source = folder / "clip.wav"
+    source.write_bytes(b"original")
+    job = Job(source, relative_dir=Path("nested"))
+    options = BatchOptions(
+        "tiny", tmp_path / "unused", formats=("txt",), same_folder=True, keep_structure=True
+    )
+    outputs = write_outputs(job, options, _transcript())
+    assert outputs == [folder / "clip.txt"]
+    assert source.read_bytes() == b"original"
+
+
 def test_queue_recovers_unfinished_and_preserves_done(tmp_path: Path) -> None:
     path = tmp_path / "state/queue.json"
     output = tmp_path / "clip.txt"

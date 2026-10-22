@@ -255,6 +255,7 @@ class MainWindow(QMainWindow):
         self.prompt.setAccessibleName(M.PROMPT)
         self.prompt.setPlaceholderText(M.PROMPT_EXAMPLE)
         self.prompt.setMaximumHeight(72)
+        self.prompt.setTabChangesFocus(True)
         form.addRow(M.PROMPT, self.prompt)
         form.addRow(self._label(M.PROMPT_HELP))
         self.prompt_warning = self._label(M.PROMPT_WARNING, warning=True)
@@ -604,6 +605,9 @@ class MainWindow(QMainWindow):
                 and not invalid
                 and not self.running
                 and self.model.jobs
+                and any(
+                    job.status not in {JobStatus.DONE, JobStatus.SKIPPED} for job in self.model.jobs
+                )
                 and (self.output_dir or self.same_folder.isChecked())
                 and any(box.isChecked() for box in self.formats.values())
                 and not (self.scanner and self.scanner.isRunning())
