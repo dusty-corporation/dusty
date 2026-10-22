@@ -1,7 +1,7 @@
-# M2 local startup probe validation
+# M2 desktop startup probe
 
-Date: 2026-10-22. This is local kit validation, not the requested independent
-ThinkPad and desktop evidence. Pinned whisper.cpp v1.9.5, tiny, four threads,
+Date: 2026-10-22. The Owner confirmed these runs were on the Owner desktop and
+count as the desktop measurement. Pinned whisper.cpp v1.9.5, tiny, four threads,
 public 11-second JFK clip, VAD off. All ten processes exited 0. Vulkan was
 explicitly selected for every Vulkan row; CPU dispatch selected Haswell.
 
@@ -21,6 +21,7 @@ Command: `pwsh -NoProfile -File build/probe-package-1/startup-probe-m2/tools/ben
 | Vulkan | 5 | 0.518 | 153.1 | 16.5 | 0.0 | 323.3 | 0.565 |
 
 The first Vulkan run was slower than the later runs in this session. These
-numbers do not identify the driver-internal cause and do not resolve ISSUE-004.
+numbers do not identify the driver-internal cause. ThinkPad evidence remains
+pending before resolving ISSUE-004.
 No cache was cleared before the test. First progress on this short clip arrives
 near completion and is not a direct shader-compilation timer.
