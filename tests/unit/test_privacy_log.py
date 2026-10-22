@@ -47,3 +47,11 @@ def test_sync_root_discovery(tmp_path: Path) -> None:
     assert google.resolve() in roots
     info.write_text("invalid", encoding="utf-8")
     assert dropbox.resolve() not in sync_roots(env)
+    local = tmp_path / "localappdata"
+    local_info = local / "Dropbox/info.json"
+    local_info.parent.mkdir(parents=True)
+    local_info.write_text('{"business":{"path":"' + dropbox.as_posix() + '"}}', encoding="utf-8")
+    env["LOCALAPPDATA"] = str(local)
+    assert dropbox.resolve() in sync_roots(env)
+    local_info.write_text('["malformed"]', encoding="utf-8")
+    assert dropbox.resolve() not in sync_roots(env)

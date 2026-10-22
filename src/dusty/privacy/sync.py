@@ -13,12 +13,16 @@ def sync_roots(environment: dict[str, str] | None = None) -> tuple[Path, ...]:
         for key in ("OneDrive", "OneDriveCommercial", "OneDriveConsumer")
         if (value := env.get(key))
     ]
-    appdata = env.get("APPDATA")
-    if appdata:
-        info = Path(appdata) / "Dropbox/info.json"
+    for appdata in {env.get("APPDATA"), env.get("LOCALAPPDATA")} - {None, ""}:
+        info = Path(str(appdata)) / "Dropbox/info.json"
         try:
             data = json.loads(info.read_text(encoding="utf-8"))
-            roots.extend(Path(item["path"]) for item in data.values() if "path" in item)
+            if isinstance(data, dict):
+                roots.extend(
+                    Path(item["path"])
+                    for item in data.values()
+                    if isinstance(item, dict) and isinstance(item.get("path"), str)
+                )
         except (OSError, ValueError, TypeError):
             pass
     profile = env.get("USERPROFILE")
