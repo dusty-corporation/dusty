@@ -1,7 +1,7 @@
 # ISSUE-004 - Iris Xe per-run startup cost
 - Severity: S2
 - Milestone: M1
-- Status: Open
+- Status: Resolved
 - Environment: ThinkPad X1 Carbon proxy, i7-1365U, Iris Xe 96EU, Windows, pinned whisper.cpp v1.9.5 Vulkan package
 
 ## Steps to reproduce
@@ -32,5 +32,30 @@ and the offline, crash isolation, and cancellation requirements. Any change
 to ADR 0004 needs PM approval before implementation.
 
 ## Regression test added
-None yet. M2 should add a repeatable short-file batch timing test after
-the root cause is known.
+`tools/bench/startup-probe.ps1` runs five CPU and five Vulkan tiny processes,
+checks actual Vulkan selection, and records first progress and engine timings.
+`setup-startup-probe.ps1` verifies the published engine archives and tiny model.
+The standalone kit is available in draft `startup-probe-m2`.
+
+Desktop kit validation on 2026-10-22 completed all ten runs: Vulkan run 1 took
+13.935 seconds, and runs 2-5 took 0.558-0.579 seconds. This is not the requested
+ThinkPad evidence and does not establish the driver-internal cause. The Owner
+confirmed this is the desktop measurement, so no desktop rerun is needed.
+See `docs/pm/benchmarks/m2/startup-probe-local.md`. The ThinkPad measurement
+was subsequently supplied and resolves this issue as recorded below.
+
+## Resolution
+
+PM decision, 2026-10-22: close this issue. Owner's ThinkPad probe exited 0
+with Tiny, four threads, VAD off, and alderlake CPU dispatch. CPU wall times
+were 0.940 / 0.760 / 0.750 / 0.751 / 0.752 s; Vulkan wall times were
+1.000 / 0.627 / 0.617 / 0.633 / 0.644 s. Vulkan load was approximately
+85-93 ms and encode 85-92 ms. See `startup-probe-thinkpad.md` in the M2
+benchmark folder.
+
+There is no significant per-run startup cost on Iris Xe. The M1 fixed-cost
+claim was an inference from total transcription times, not a measured
+startup overhead. ADR 0004 remains unchanged: one engine process per file.
+A fresh machine likely pays a one-time Vulkan shader compile, approximately
+13 s on the desktop's first observed run; the installer self-test will absorb
+that cost. This is the PM's interpretation, not a direct driver trace.

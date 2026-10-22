@@ -11,8 +11,15 @@ All notable changes to Dusty will be documented here. This project follows Keep 
   draft release, and offline benchmark kits.
 - Public benchmark WER scoring over Gutenberg-only spans and a focused
   CPU/Vulkan thread sweep.
+- M2 offline headless pipeline, five export formats, verified model catalog,
+  persistent batch recovery, collision policies, cancellation and progress.
+- Runtime audit-hook network guard, redacted logs, Windows firewall/WFP CI
+  acceptance, public Persian translation fixture and strict package coverage.
+- Repository-local test app data and a PM backlog for deferred work.
 
 ### Fixed
 
 - Portable CPU backend dispatch after the CI-native instruction failure.
 - Distinct public and private benchmark summary names with overwrite checks.
+- Segment and word timestamps across VAD-removed silence, using the approved
+  minimal native patch in the published engine-v2 prerelease.

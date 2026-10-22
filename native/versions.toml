@@ -1,6 +1,8 @@
 [whisper_cpp]
 tag = "v1.9.5"
 commit = "d1be6fde11ac6e0407606b4e42fe72d34add8037"
+patch = "native/patches/0001-vad-timestamp-mapping.patch"
+patch_sha256 = "5dea476a89b6a7ac725cffeb72e2d80a33dc04ac0f0635dfe28cc4a25d911d1b"
 
 [openai_whisper]
 commit = "86098128c0b4f24f0e2aa2994de830614b474227"
@@ -22,3 +24,16 @@ headers_package = "11.0.1-3build1"
 version = "6.2.3"
 tag = "v6.2.3"
 commit = "5cd7945676eb32225748052e2e6a0580e4686a08"
+
+[engine_release]
+tag = "engine-v2"
+source_commit = "c560048bbf0ec7d01fcc3074c61957982fc255dd"
+native_run_id = 39804070663
+ffmpeg_run_id = 39718973892
+whisper_cpu_zip_sha256 = "a8c0630616b70a00e40b9534f594cd525885cd10ef45e492aa82378ea9a325b6"
+whisper_vulkan_zip_sha256 = "2a4aeae6789391c7cc2fa8bbe01648e0d36c499ca1233cbdcf58d127c47fc6a0"
+minimal_ffmpeg_zip_sha256 = "d687eb1e7403b6ab9c444118c055ac99521ea34782f52538787690d1e53da40c"
+
+[models_release]
+tag = "models-v1"
+manifest_sha256 = "6f8e4afd9665c18a14ff38d5541d9160110dc82ca47b6862918d86257c16277e"

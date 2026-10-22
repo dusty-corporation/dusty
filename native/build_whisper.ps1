@@ -14,6 +14,20 @@ $outputPath = [IO.Path]::GetFullPath((Join-Path $repo $Output))
 if (-not (Test-Path (Join-Path $sourcePath 'CMakeLists.txt'))) { throw 'whisper.cpp source is missing' }
 $actual = (& git -C $sourcePath rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $actual -ne $commit) { throw 'whisper.cpp commit does not match pin' }
+$patchName = [regex]::Match($pins, '(?s)\[whisper_cpp\].*?patch = "([^"]+)"').Groups[1].Value
+$patchHash = [regex]::Match($pins, '(?s)\[whisper_cpp\].*?patch_sha256 = "([0-9a-f]{64})"').Groups[1].Value
+if (-not $patchName -or -not $patchHash) { throw 'Missing approved native patch pin' }
+$patchPath = Join-Path $repo $patchName
+if ((Get-FileHash -LiteralPath $patchPath -Algorithm SHA256).Hash -ne $patchHash) { throw 'Native patch hash mismatch' }
+& git -C $sourcePath apply --check $patchPath 2>$null
+if ($LASTEXITCODE -eq 0) {
+    & git -C $sourcePath apply $patchPath
+    if ($LASTEXITCODE -ne 0) { throw 'Native patch application failed' }
+} else {
+    & git -C $sourcePath apply --reverse --check $patchPath 2>$null
+    if ($LASTEXITCODE -ne 0) { throw 'Source does not match the approved native patch' }
+}
+Write-Output "Applied native patch SHA-256=$patchHash"
 
 $buildPath = Join-Path $outputPath $Backend
 $args = @('-S', $sourcePath, '-B', $buildPath, '-A', 'x64',
@@ -47,6 +61,7 @@ if ($LASTEXITCODE -ne 0) { throw 'CMake build failed' }
 
 $package = Join-Path $outputPath "package/$Backend"
 New-Item -ItemType Directory -Force $package | Out-Null
+Copy-Item -LiteralPath (Join-Path $sourcePath 'LICENSE') -Destination (Join-Path $package 'LICENSE.txt')
 foreach ($name in @('whisper-cli.exe', 'whisper-bench.exe')) {
     $candidate = Join-Path $buildPath "bin/Release/$name"
     if (-not (Test-Path $candidate)) { throw "Missing $name" }
@@ -55,7 +70,8 @@ foreach ($name in @('whisper-cli.exe', 'whisper-bench.exe')) {
 $runtime = Join-Path $buildPath 'bin/Release'
 Get-ChildItem $runtime -Filter '*.dll' | Copy-Item -Destination $package
 if (-not (Get-ChildItem $package -Filter 'ggml-cpu-*.dll')) { throw 'Runtime CPU variants missing' }
-foreach ($name in @('ggml-cpu-x64.dll', 'ggml-cpu-haswell.dll')) {
+foreach ($variant in @('x64', 'sse42', 'sandybridge', 'haswell', 'skylakex', 'cannonlake', 'cascadelake', 'icelake', 'alderlake')) {
+    $name = "ggml-cpu-$variant.dll"
     if (-not (Test-Path (Join-Path $package $name))) { throw "Missing CPU variant $name" }
 }
 Write-Output $package

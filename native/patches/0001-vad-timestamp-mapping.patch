@@ -1,0 +1,137 @@
+diff --git a/examples/cli/cli.cpp b/examples/cli/cli.cpp
+index b015319..8cc31c4 100644
+--- a/examples/cli/cli.cpp
++++ b/examples/cli/cli.cpp
+@@ -766,10 +766,14 @@ static void output_json(
+                         merged.reserve(n);
+                         for (int j = 0; j < n; ) {
+                             auto tok = whisper_full_get_token_data(ctx, i, j);
++                            tok.t0 = whisper_full_get_token_t0(ctx, i, j);
++                            tok.t1 = whisper_full_get_token_t1(ctx, i, j);
+                             merged_token m{ whisper_token_to_str(ctx, tok.id), tok, tok.t1 };
+                             ++j;
+                             while (j < n && utf8_trailing_bytes_needed(m.text) > 0) {
+                                 auto tok_next = whisper_full_get_token_data(ctx, i, j);
++                                tok_next.t0 = whisper_full_get_token_t0(ctx, i, j);
++                                tok_next.t1 = whisper_full_get_token_t1(ctx, i, j);
+                                 m.text += whisper_token_to_str(ctx, tok_next.id);
+                                 if (tok_next.t1 > -1) {
+                                     m.t1 = tok_next.t1;
+diff --git a/src/whisper.cpp b/src/whisper.cpp
+index 1675f33..162eb8c 100644
+--- a/src/whisper.cpp
++++ b/src/whisper.cpp
+@@ -8117,45 +8117,31 @@ int whisper_full_lang_id(struct whisper_context * ctx) {
+     return ctx->state->lang_id;
+ }
+ 
+-static int64_t map_processed_to_original_time(int64_t processed_time, const std::vector<vad_time_mapping> & mapping_table) {
+-    if (mapping_table.empty()) {
+-        return processed_time;
+-    }
+-
+-    if (processed_time <= mapping_table.front().processed_time) {
+-        return mapping_table.front().original_time; // Before first mapping point
++// Map within speech only. A boundary inside a removed gap must snap to
++// the next speech start or previous speech end, never interpolate across it.
++static int64_t map_processed_to_original_time(
++        int64_t t,
++        const std::vector<whisper_state::vad_segment_info> & segments,
++        bool is_start) {
++    if (segments.empty()) {
++        return t;
+     }
+-
+-    if (processed_time >= mapping_table.back().processed_time) {
+-        return mapping_table.back().original_time; // After last mapping point
++    if (t <= segments.front().vad_start) {
++        return segments.front().orig_start;
+     }
+-
+-    // Binary search over the time map that finds the first entry that has a
+-    // processed time greater than or equal to the current processed time.
+-    auto upper = std::lower_bound(mapping_table.begin(), mapping_table.end(), processed_time,
+-        [](const vad_time_mapping & entry, int64_t time) {
+-            return entry.processed_time < time;
++    for (size_t i = 0; i < segments.size(); ++i) {
++        const auto & s = segments[i];
++        if (t <= s.vad_end) {
++            const int64_t duration = s.vad_end - s.vad_start;
++            return duration > 0
++                ? s.orig_start + (t - s.vad_start) * (s.orig_end - s.orig_start) / duration
++                : s.orig_start;
++        }
++        if (i + 1 < segments.size() && t < segments[i + 1].vad_start) {
++            return is_start ? segments[i + 1].orig_start : s.orig_end;
+         }
+-    );
+-
+-    // If exact match found
+-    if (upper->processed_time == processed_time) {
+-        return upper->original_time;
+-    }
+-
+-    // Need to interpolate between two points
+-    auto lower = upper - 1;
+-
+-    int64_t processed_diff = upper->processed_time - lower->processed_time;
+-    int64_t original_diff = upper->original_time - lower->original_time;
+-    int64_t offset = processed_time - lower->processed_time;
+-
+-    if (processed_diff == 0) {
+-        return lower->original_time;
+     }
+-
+-    // Perform linear interpolation
+-    return lower->original_time + (offset * original_diff) / processed_diff;
++    return segments.back().orig_end;
+ }
+ 
+ // Function to get the starting timestamp of a segment
+@@ -8169,7 +8155,7 @@ int64_t whisper_full_get_segment_t0_from_state(struct whisper_state * state, int
+     int64_t t0 = state->result_all[i_segment].t0;
+ 
+     // Map to original time using the mapping table
+-    return map_processed_to_original_time(t0, state->vad_mapping_table);
++    return map_processed_to_original_time(t0, state->vad_segments, true);
+ }
+ 
+ // Function to get the ending timestamp of a segment
+@@ -8183,7 +8169,7 @@ int64_t whisper_full_get_segment_t1_from_state(struct whisper_state * state, int
+     int64_t t1 = state->result_all[i_segment].t1;
+ 
+     // Map to original time using the mapping table
+-    int64_t orig_t1 = map_processed_to_original_time(t1, state->vad_mapping_table);
++    int64_t orig_t1 = map_processed_to_original_time(t1, state->vad_segments, false);
+ 
+     // Get the corresponding t0 for this segment
+     int64_t orig_t0 = whisper_full_get_segment_t0_from_state(state, i_segment);
+@@ -8294,7 +8280,13 @@ int64_t whisper_full_get_token_t0_from_state(struct whisper_state * state, int i
+     if (!state->has_vad_segments || state->vad_segments.empty()) {
+         return t0;
+     }
+-    return whisper_map_token_time_segment_aware(t0, state->vad_segments);
++    if (t0 < 0) {
++        return t0;
++    }
++    const int64_t mapped = whisper_map_token_time_segment_aware(t0, state->vad_segments);
++    // A token estimated in a synthetic gap still belongs to its text segment.
++    return std::max(whisper_full_get_segment_t0_from_state(state, i_segment),
++            std::min(mapped, whisper_full_get_segment_t1_from_state(state, i_segment)));
+ }
+ 
+ int64_t whisper_full_get_token_t0(struct whisper_context * ctx, int i_segment, int i_token) {
+@@ -8306,8 +8298,12 @@ int64_t whisper_full_get_token_t1_from_state(struct whisper_state * state, int i
+     if (!state->has_vad_segments || state->vad_segments.empty()) {
+         return t1;
+     }
++    if (t1 < 0) {
++        return t1;
++    }
+     const int64_t orig_t0 = whisper_full_get_token_t0_from_state(state, i_segment, i_token);
+-    int64_t orig_t1 = whisper_map_token_time_segment_aware(t1, state->vad_segments);
++    int64_t orig_t1 = std::min(whisper_map_token_time_segment_aware(t1, state->vad_segments),
++            whisper_full_get_segment_t1_from_state(state, i_segment));
+     if (orig_t1 < orig_t0 + 1) {
+         orig_t1 = orig_t0 + 1; // keep a strictly positive duration after snapping
+     }

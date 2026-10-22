@@ -20,6 +20,40 @@ both packages to runtime CPU backend dispatch with `GGML_NATIVE=OFF`,
 `GGML_BACKEND_DL=ON`, and `GGML_CPU_ALL_VARIANTS=ON`. CI must prove that
 each packaged DLL is present and that no developer runtime is imported.
 
+## M2 VAD patch for engine-v2
+
+An upstream review on 2026-10-22 found no stable release newer than v1.9.5 and
+no VAD timestamp fix in commits after that tag. Related issue 4046 and PR 4068
+remain open. ADR 0018 records the PM-approved patch path and review links.
+
+`native/build_whisper.ps1` checks the patch SHA-256 in `native/versions.toml`
+and applies `native/patches/0001-vad-timestamp-mapping.patch` before CMake.
+A second build accepts an already applied identical patch; a partial or
+incompatible patch fails. Both native CI matrix jobs use this build script.
+
+The correction prevents a boundary between two speech passages from becoming
+a time in the long silence between them. Starts move to the next speech
+boundary, ends move to the previous one. JSON token times use the library's
+VAD-aware accessors and stay within their text segment, rather than retaining
+the compressed audio times. No stderr reconstruction is used.
+
+The CPU native job runs JFK and the ten-minute fixture with segment and word
+timestamps checked against known speech windows within 0.5 s. The Windows
+build still prints every GGML cache setting, rejects GGML_NATIVE=ON, and checks
+all nine CPU dispatch DLLs. Vulkan runtime tests and startup measurements run
+on the Owner desktop because hosted runners do not provide its Vulkan GPU.
+
+Native run 39804070663 passed both corrected builds. Desktop JFK, segment/word
+regressions on both backends, and the startup probe also passed; see
+`docs/pm/benchmarks/m2/engine-v2-desktop.md`. Release archives contain
+whisper-cli, its runtime DLLs, and the upstream MIT notice; whisper-bench is
+a build tool and is excluded from engine-v2.
+
+`engine_release_candidate` in `native/versions.toml` records engine-v2 hashes.
+The public fetcher's active `engine_release` remains the published engine-v1
+until the Owner publishes engine-v2. Promote the candidate on resume and rerun
+PR CI; draft assets are not yet public download dependencies.
+
 ## Model conversion sources
 
 `openai/whisper` is pinned to

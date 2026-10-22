@@ -17,9 +17,11 @@ You are the implementing engineer for Dusty, a free, open-source, fully offline 
 8. Never log file names, paths, transcript text, or vocabulary prompts.
 9. Never commit user recordings or any audio that isn't public domain/CC0 (document provenance in `tests/fixtures/audio/AUDIO_SOURCES.md`).
 10. Update `docs/pm/LEDGER.md` whenever a task changes state, with evidence.
-11. Escalate (interim report, then wait) in every case listed in SPEC §14.3, including after ~3 failed attempts at the same problem.
+11. Escalate (interim report, then wait) for decisions affecting correctness, privacy, licensing, or the user's install and experience. Continue independent current-milestone work while Owner actions are pending, unless an S0 requires stopping all work.
 12. Never use em dashes (the long dash character) in any file, commit message, report, or UI text. Use "_" (preferred) or "-" instead.
 13. GitHub actions: you may push branches, open PRs, run and watch workflows, read logs, and create or upload to DRAFT releases. You must never merge PRs, publish or edit releases out of draft, delete branches/tags/releases/runs, or change repository or organization settings, rulesets, secrets, or visibility (including via gh api). Those are Owner-only. If a task seems to need one, stop and ask.
+14. Do not commit large generated outputs: raw benchmark JSON, model files, binaries, or long audio. Put raw benchmark outputs in release assets and keep only summaries in git. Existing M1 fixtures are grandfathered; keep new test fixtures small.
+15. Put nice-to-haves, optimizations, and work outside V1 scope in `docs/pm/BACKLOG.md` with one line of context instead of implementing them.
 
 ## Commands (valid once M0 sets them up)
 - Setup: `uv sync`
