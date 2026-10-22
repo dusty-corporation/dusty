@@ -38,8 +38,8 @@
 | M2-10 | M2 | Confine test application state to the repository | done | `d49be69`; fixed explicit test RuntimePaths and autouse LOCALAPPDATA isolation under repo-local pytest temp; 8 focused tests and full suite 76 passed after isolation; existing external probe cache left untouched pending Owner approval | - |
 | M2-11 | M2 | Required V2 interface stubs and changelog | done | SPEC 5.9 interfaces only, no dependencies or implementations; pipeline hook documented after parsing; ruff, formatting, mypy (43 files), and all policy checks passed | - |
 | M3-01 | M3 | Archive brief and protect real app data in tests | done | M2 accepted and merged as 8b9ecab; briefs committed unchanged in 325973b; approved backend_probe cleanup completed and verified in prior turn; guard rejects protected reads, writes, listing, mkdir and unlink before access; 3 focused tests passed | - |
-| M3-02 | M3 | Simple-mode window, options and model rules | todo | M3 brief and SPEC M3 reviewed | - |
-| M3-03 | M3 | Worker, progress, cancellation, collision and recovery UI | todo | Reuse M2 coordinator and storage | - |
-| M3-04 | M3 | Qt acceptance tests and real-batch responsiveness | todo | Required event-loop gap <= 200 ms | - |
-| M3-05 | M3 | Screenshot matrix and draft release | todo | Light/dark at 100% and 150%, no screenshots committed | - |
+| M3-02 | M3 | Simple-mode window, options and model rules | doing | Implemented centralized copy, verified 100-language list, installed-model defaults, translation constraints, vocabulary and slow warnings; GUI tests pass locally | - |
+| M3-03 | M3 | Worker, progress, cancellation, collision and recovery UI | doing | Native work stays on QThreads; real batch, cancel-current, apply-all collisions, close/save/resume tested; 11 GUI tests passed | - |
+| M3-04 | M3 | Qt acceptance tests and real-batch responsiveness | doing | 11 GUI tests passed; font-correct actual batch maximum event-loop gap 11.576 ms versus 200 ms limit; full suite and CI pending | - |
+| M3-05 | M3 | Screenshot matrix and draft release | doing | 104 synthetic screens rendered, light/dark at 100%/150%; font glyph check added after initial offscreen font discovery failure; key images visually inspected, upload pending | - |
 | M3-06 | M3 | Owner walkthrough and M3 report | todo | 15-20 steps with expected outcomes required | - |
