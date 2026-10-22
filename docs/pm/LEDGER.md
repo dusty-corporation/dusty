@@ -21,4 +21,4 @@
 | M1-B3 | M1 | Distinct result names and Quick mode | done | `fa17ee9`; public/private smoke tests and overwrite rejection passed; local Quick check ran both backends | - |
 | M1-B4 | M1 | Record Iris Xe startup concern | done | `docs/pm/issues/ISSUE-004-iris-xe-startup-cost.md`; M2 investigation proposed | ISSUE-004 (open) |
 | M1-B5 | M1 | Revised draft bench kit | done | `bench-kit-m1b` uploaded as draft and verified; original draft retained | - |
-| M1-B6 | M1 | ThinkPad results and final gate report | doing | Awaiting ThinkPad public CPU results and any remaining public Vulkan files | - |
+| M1-B6 | M1 | ThinkPad results and final gate report | blocked | `thinkpad-public/` is empty as of the Phase B check; Owner needs to supply CPU CSV and public JSON, plus pending Vulkan files; see `M1-interim-2.md` | - |
