@@ -1,6 +1,7 @@
 """Run irreversible audit-hook tests in fresh Python processes."""
 
 import ast
+import os
 import subprocess
 import sys
 import textwrap
@@ -113,3 +114,35 @@ def test_dusty_fetch_process_does_not_inherit_guard() -> None:
         """
     )
     assert result.stdout.strip() == "fetch unguarded"
+
+
+def test_selftest_entrypoint_starts_with_guard(tmp_path: Path) -> None:
+    script = """
+        import runpy
+        import sys
+        from dusty.privacy.network_guard import NetworkBlockedError, is_installed
+        sys.argv = ["dusty", "--self-test", "--backend", "cpu", "--model", "tiny"]
+        try:
+            runpy.run_module("dusty", run_name="__main__")
+        except SystemExit as exc:
+            assert exc.code == 0
+        assert is_installed()
+        try:
+            sys.audit("socket.connect", "CANARY_HOSTNAME_SECRET")
+        except NetworkBlockedError:
+            print("selftest guarded")
+        else:
+            raise AssertionError("Self-test did not install guard")
+    """
+    result = subprocess.run(
+        [sys.executable, "-c", textwrap.dedent(script)],
+        cwd=ROOT,
+        env={**os.environ, "LOCALAPPDATA": str(tmp_path)},
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=30,
+    )
+    assert "OK" in result.stdout
+    assert "selftest guarded" in result.stdout
+    assert "CANARY_HOSTNAME_SECRET" not in result.stderr

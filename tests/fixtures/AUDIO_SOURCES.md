@@ -2,6 +2,10 @@
 
 ## JFK speech excerpt
 
+`resources/selftest.wav` is a byte-identical copy of `audio/formats/jfk.wav`
+for the offline installed-app self-test. It has the same public-domain
+provenance and expected text below.
+
 - Source: `samples/jfk.wav` from pinned whisper.cpp v1.9.5,
   https://github.com/ggml-org/whisper.cpp/blob/v1.9.5/samples/jfk.wav .
 - Underlying work: President John F. Kennedy's 1961 inaugural address, a

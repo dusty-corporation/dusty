@@ -19,6 +19,7 @@ class ProgressState:
     progress: float = 0.0
     first_progress_sec: float | None = None
     backend: Literal["cpu", "vulkan"] | None = None
+    device_name: str | None = None
     gpu_error: bool = False
     text_context: int | None = None
     timings_ms: dict[str, float] = field(default_factory=dict)
@@ -32,6 +33,8 @@ class ProgressState:
                 self.first_progress_sec = time.monotonic() - self.started_at
         if "whisper_backend_init_gpu: using Vulkan" in line:
             self.backend = "vulkan"
+        if line.startswith("ggml_vulkan: 0 = "):
+            self.device_name = line.removeprefix("ggml_vulkan: 0 = ").split(" (")[0][:120]
         elif "whisper_backend_init_gpu: no GPU found" in line and self.backend is None:
             self.backend = "cpu"
         if "vulkan" in line.lower() and ("error" in line.lower() or "failed" in line.lower()):

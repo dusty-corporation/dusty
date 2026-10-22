@@ -29,6 +29,7 @@ class EngineRun:
     first_progress_sec: float | None
     timings_ms: dict[str, float]
     text_context: int | None
+    device_name: str | None
 
 
 def parse_whisper_json(
@@ -132,4 +133,5 @@ def run_whisper(
         first_progress_sec=state.first_progress_sec,
         timings_ms=state.timings_ms,
         text_context=state.text_context,
+        device_name=state.device_name,
     )
