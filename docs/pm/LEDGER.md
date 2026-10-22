@@ -45,3 +45,4 @@
 | M3-06 | M3 | Owner walkthrough and M3 report | blocked | M3-report.md written with 20-step checklist; Owner pass/fail requested but not received; implementation and automated evidence complete, human acceptance pending; stop before M4 | - |
 | M3-07 | M3 | Sync warning privacy review | done | Read-only documented Google Drive mount detection and injected-reader tests; final local and PR CI passed, advisory limits documented | ISSUE-009 (resolved) |
 | M3-08 | M3 | PM screenshot corrections before walkthrough | done | b1d9552, d728563, 26cf74b, 3df3cae; all requested changes, 99 local tests, green PR 39840103768 / push 39840090723 with WFP zero connections; new screenshots uploaded, report/checklist revised | ISSUE-010 (resolved) |
+| M3-09 | M3 | ThinkPad walkthrough corrections | doing | Owner passed steps 2-5, 7, 9-16, 18-20; failed 1/8; step 6 and 17 unreported; AMR root cause confirmed, fixes underway | ISSUE-011 |

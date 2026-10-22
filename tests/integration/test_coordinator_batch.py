@@ -210,3 +210,31 @@ def test_cancel_current_continues_remaining_files(tmp_path: Path) -> None:
     assert not jobs[0].outputs
     assert jobs[1].outputs[0].is_file()
     assert list((paths.user_dir / "work").iterdir()) == []
+
+
+def test_amr_unknown_duration_and_same_run_stems_use_real_pipeline(tmp_path: Path) -> None:
+    from dusty.engine import probe_audio
+
+    dev = resolve_paths(repo_root=ROOT, frozen=False)
+    paths = RuntimePaths(dev.bin_dir, dev.models_dir, dev.resources_dir, tmp_path / "user")
+    registry = ModelRegistry(load_manifest(paths.resources_dir / "models.json"), paths.models_dir)
+    folder = ROOT / "tests/fixtures/audio/formats"
+    assert probe_audio(paths.bin_dir / "ffmpeg/ffprobe.exe", folder / "jfk.amr").duration_sec == 0
+    jobs = [Job(folder / "jfk.wav"), Job(folder / "jfk.amr")]
+    asked = []
+    options = BatchOptions("tiny", tmp_path / "out", formats=("txt", "docx"), backend="cpu")
+    Coordinator(paths, registry).run_batch(
+        jobs, options, vulkan_ok=False, on_collision=lambda job: asked.append(job) or "keep_both"
+    )
+    assert all(job.status == JobStatus.DONE for job in jobs)
+    assert not asked
+    assert jobs[1].duration_sec > 10
+    assert (tmp_path / "out/jfk (1).docx").is_file()
+    assert "Americans" in (tmp_path / "out/jfk (1).txt").read_text(encoding="utf-8")
+    # A second run must ask about the file that really predates it.
+    again = Job(folder / "jfk.amr")
+    Coordinator(paths, registry).run_batch(
+        [again], options, vulkan_ok=False, on_collision=lambda job: asked.append(job) or "skip"
+    )
+    assert again.status == JobStatus.SKIPPED
+    assert asked[0].outputs[0].name == "jfk.txt"

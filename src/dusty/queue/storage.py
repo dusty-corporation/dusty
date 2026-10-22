@@ -112,6 +112,7 @@ def load_batch(path: Path) -> tuple[BatchOptions, list[Job]] | None:
                 job.status = JobStatus.QUEUED
                 job.failure = None
                 job.progress = 0.0
+                job.elapsed_sec = 0.0
                 job.outputs = []
             jobs.append(job)
         return options, jobs

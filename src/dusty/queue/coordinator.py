@@ -75,6 +75,13 @@ class Coordinator:
             raise ValueError("Threads must be positive")
         self.work_root.mkdir(parents=True, exist_ok=True)
         save_batch(self.state_path, options, jobs)
+        preexisting = {
+            target.resolve()
+            for entry in jobs
+            for target in output_targets(entry, replace(options, collision="overwrite"))
+            if target.exists()
+        }
+        produced: set[Path] = set()
         for job in jobs:
             if job.status in {JobStatus.DONE, JobStatus.SKIPPED}:
                 continue
@@ -93,21 +100,29 @@ class Coordinator:
                 tuple(event for event in (cancel, cancel_current) if event)
             )
             current_options = options
-            if options.collision == "ask" and on_collision:
-                try:
-                    output_targets(job, options)
-                except OutputExistsError:
-                    decision = on_collision(job)
-                    current_options = replace(options, collision=decision)
-                if cancel and cancel.is_set():
-                    job.status = JobStatus.CANCELLED
-                    changed()
-                    continue
+            nominal = output_targets(job, replace(options, collision="overwrite"))
+            existing = [target for target in nominal if target.exists()]
+            prior = [
+                target
+                for target in existing
+                if target.resolve() in preexisting and target.resolve() not in produced
+            ]
+            if existing and not prior:
+                current_options = replace(options, collision="keep_both")
+            elif prior and options.collision == "ask" and on_collision:
+                decision = on_collision(replace(job, outputs=prior))
+                current_options = replace(options, collision=decision)
+            if cancel and cancel.is_set():
+                job.status = JobStatus.CANCELLED
+                changed()
+                continue
             try:
                 job.failure = None
                 job.progress = 0.0
                 job.gpu_fallback = False
                 self._run_one(job, current_options, signals, vulkan_ok, changed)
+                if job.status == JobStatus.DONE:
+                    produced.update(path.resolve() for path in job.outputs)
             finally:
                 if cancel_current:
                     cancel_current.clear()
@@ -178,6 +193,9 @@ class Coordinator:
             decode_sec = transcode_audio(
                 self.paths.bin_dir / "ffmpeg/ffmpeg.exe", job.source, wav, cancel=cancel
             )
+            if probe.duration_sec == 0:
+                probe = probe_audio(self.paths.bin_dir / "ffmpeg/ffprobe.exe", wav, cancel=cancel)
+                job.duration_sec = probe.duration_sec
             job.status = JobStatus.TRANSCRIBING
             changed()
             backend: Literal["cpu", "vulkan"] = (
