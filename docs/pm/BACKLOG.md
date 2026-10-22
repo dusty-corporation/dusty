@@ -1,0 +1,27 @@
+# Backlog
+
+Record optional improvements, optimizations, and work outside V1 here instead of implementing them during the current milestone. Each item has one line of context. Inclusion does not approve a dependency, architecture change, or prohibited feature. Required acceptance work remains in `LEDGER.md`.
+
+## Optimizations and optional improvements
+
+- Vulkan pipeline caching: consider after the ThinkPad startup probe establishes whether ISSUE-004 persists beyond the first run; no cache implementation is assigned to M2.
+- Persistent engine per batch: possible alternative for ISSUE-004 startup overhead, requiring PM approval to change ADR 0004 and preserve cancellation and crash isolation.
+- Exact vocabulary token counting: consider replacing the documented approximate prompt warning if an approved tokenizer becomes available.
+- Additional model variants: reconsider models cut by ADR 0016 only with fresh accuracy and performance evidence and PM approval.
+
+## After V1 (SPEC section 3.2)
+
+- Speaker diarization: V2 feature; V1 retains only the specified interface stub.
+- Arbitrary language-to-language translation: V2 feature; V1 uses Whisper's Translate to English task only.
+- Transcript editor: defer editing transcripts inside the app to V2.
+- Audio recording: defer recording inside the app to V2.
+- Live transcription: defer streaming or real-time transcription to V2 or later.
+- Code signing: evaluate after V1; V1 documents the unsigned installer experience.
+- macOS and Linux builds: defer platform delivery while preserving the specified portable core.
+- Fully offline installer: defer bundling model files into the installer until after V1.
+- Microsoft Store and winget distribution: defer additional distribution channels until after V1.
+
+## Not planned under current requirements
+
+- CUDA backend: proprietary runtime redistribution conflicts with NN-5; backlog inclusion does not authorize it.
+- Automatic updates or update checks: conflicts with NN-4; retain explicit manual updates.
