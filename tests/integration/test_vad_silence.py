@@ -31,7 +31,8 @@ def word_spans(raw: dict) -> list[tuple[float, float]]:
         current = ""
         start = end = 0.0
         for token in segment["tokens"]:
-            if token["text"].startswith("<|"):
+            # The pinned multilingual tiny vocabulary reserves IDs >= 50257.
+            if token["id"] >= 50257:
                 continue
             for piece in re.split(r"(\s+)", token["text"]):
                 if not piece:
@@ -101,6 +102,7 @@ def test_vad_limits_hallucination_in_ten_minutes_of_silence(tmp_path: Path) -> N
                 assert abs(segment.start - start) <= TIMESTAMP_TOLERANCE
                 assert abs(segment.end - end) <= TIMESTAMP_TOLERANCE
             assert len(word_times) >= 40
+            assert len(word_times) == words
     (tmp_path / "vad-summary.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
     print("vad_summary=" + json.dumps(results, sort_keys=True))
     assert results["on"]["words"] <= MAX_VAD_WORDS
