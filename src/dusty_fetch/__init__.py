@@ -1,1 +1,1 @@
-"""Reserved for the isolated downloader in M4."""
+"""Explicit isolated downloads; never imported by dusty."""
