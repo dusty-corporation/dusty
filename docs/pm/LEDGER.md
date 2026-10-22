@@ -49,4 +49,4 @@
 | M3-09 | M3 | ThinkPad walkthrough corrections | done | d58e629, 62dc03d, b4c9ae5, 1ff2327; AMR root cause fixed, output/model/run-flow/copy/keyboard changes covered by 106 local tests; PR/push CI green; optional recommended-model fetch verified; screenshot/report/re-test checklist ready | ISSUE-011, ISSUE-012 (resolved) |
 
 | M3-10 | M3 | Final ThinkPad polish after eight functional passes | doing | Owner reports all eight re-tests PASS on ThinkPad i7-1365U/Iris Xe with recommended models installed; centered messages, single dialog titles, reason-only errors, simpler model copy and ordered welcome/recovery regressions pass (22 Qt tests); final screenshots/full CI pending | - |
-| M4-D1 | M4 | PM-authorized downloader-only prework | doing | Branch m4-downloader based on m3-gui 9efea1f; explicit PM scope overrides the still-current M3 brief for this branch only; no GUI work or PR to main | - |
+| M4-D1 | M4 | PM-authorized downloader-only prework | doing | Branch m4-downloader based on m3-gui 9efea1f; stdlib downloader implemented; exact GitHub/CDN chain verified; local HTTPS and boundary tests pass; full suite and CI pending; no GUI work or PR to main | - |
