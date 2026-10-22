@@ -38,3 +38,13 @@ this estimate with a tokenizer in a later milestone if approved.
 audit-hook exercise runs in a separate interpreter because hooks are
 irreversible. The script prints package-level coverage for the strict M2
 packages without adding a dependency.
+
+The native integration suite cancels an active transcription and checks work
+and output cleanup, exercises every collision policy, and compares normalized
+CPU and Vulkan text at similarity >= 0.9 when a usable Vulkan device exists.
+Its crash regression kills the actual coordinator interpreter with a live
+whisper-cli child, waits for child death using a Windows synchronization handle,
+then loads and resumes the persisted batch while preserving completed output.
+The Windows virtual-environment Python launcher can have a different PID from
+the actual interpreter; the test records and terminates the interpreter PID.
+The resume dialog belongs to M3; M2 verifies the recovery data and coordinator.

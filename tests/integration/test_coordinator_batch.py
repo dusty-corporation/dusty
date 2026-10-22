@@ -2,6 +2,7 @@
 
 import sys
 import threading
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -105,3 +106,67 @@ def test_gpu_failure_retries_same_file_on_cpu(
     assert job.status == JobStatus.DONE
     assert job.backend_used == "cpu"
     assert job.gpu_fallback
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Pinned binaries target Windows")
+def test_cancel_during_native_transcription_removes_work(tmp_path: Path) -> None:
+    dev = resolve_paths(repo_root=ROOT, frozen=False)
+    paths = RuntimePaths(dev.bin_dir, dev.models_dir, dev.resources_dir, tmp_path / "user")
+    registry = ModelRegistry(load_manifest(paths.resources_dir / "models.json"), paths.models_dir)
+    jobs = [
+        Job(ROOT / "tests/fixtures/audio/vad/mostly-silence-10min.m4a"),
+        Job(ROOT / "tests/fixtures/audio/formats/jfk.wav"),
+    ]
+    cancel = threading.Event()
+    timers = []
+
+    def changed(job: Job) -> None:
+        if job.status == JobStatus.TRANSCRIBING:
+            timer = threading.Timer(0.25, cancel.set)
+            timers.append(timer)
+            timer.start()
+
+    options = BatchOptions("tiny", tmp_path / "out", backend="cpu", vad=False)
+    try:
+        Coordinator(paths, registry).run_batch(
+            jobs, options, cancel=cancel, on_change=changed, vulkan_ok=False
+        )
+    finally:
+        for timer in timers:
+            timer.cancel()
+            timer.join()
+    assert timers, "Cancellation must occur after native transcription starts"
+    assert all(job.status == JobStatus.CANCELLED for job in jobs)
+    assert all(not job.outputs for job in jobs)
+    assert not list((tmp_path / "out").glob("*"))
+    assert list((paths.user_dir / "work").iterdir()) == []
+
+
+@pytest.mark.parametrize("policy", ["ask", "skip", "keep_both", "overwrite"])
+@pytest.mark.skipif(sys.platform != "win32", reason="Pinned binaries target Windows")
+def test_real_pipeline_collision_policies(tmp_path: Path, policy: str) -> None:
+    dev = resolve_paths(repo_root=ROOT, frozen=False)
+    paths = RuntimePaths(dev.bin_dir, dev.models_dir, dev.resources_dir, tmp_path / "user")
+    registry = ModelRegistry(load_manifest(paths.resources_dir / "models.json"), paths.models_dir)
+    source = ROOT / "tests/fixtures/audio/formats/jfk.wav"
+    original = source.read_bytes()
+    output = tmp_path / "out/jfk.txt"
+    output.parent.mkdir()
+    output.write_bytes(b"existing transcript")
+    options = BatchOptions("tiny", output.parent, formats=("txt",), backend="cpu")
+    options = replace(options, collision=policy)
+    job = Job(source)
+    Coordinator(paths, registry).run_batch([job], options, vulkan_ok=False)
+    if policy in {"ask", "skip"}:
+        assert job.status == JobStatus.SKIPPED
+        assert job.failure == FailureCode.OUTPUT_EXISTS_SKIPPED
+        assert output.read_bytes() == b"existing transcript"
+    else:
+        assert job.status == JobStatus.DONE
+        target = output.with_name("jfk (1).txt") if policy == "keep_both" else output
+        assert job.outputs == [target]
+        assert "fellow Americans" in target.read_text(encoding="utf-8")
+        if policy == "keep_both":
+            assert output.read_bytes() == b"existing transcript"
+    assert source.read_bytes() == original
+    assert list((paths.user_dir / "work").iterdir()) == []
