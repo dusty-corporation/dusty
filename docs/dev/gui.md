@@ -72,3 +72,20 @@ LOCALAPPDATA, inherited by its subprocesses. The guard test deliberately tries
 protected operations against an unused temporary root and verifies rejection
 before any file is created. GUI tests inject RuntimePaths rooted inside the
 repository. No real app settings are used for tests or screenshots.
+
+## PM screenshot review corrections
+
+Options is a modal dialog with live choices, saved when it closes; the main
+window never inserts or expands a settings panel. Text/Word remain on the main
+screen; other persisted formats are under More formats. Move actions use a
+right-click menu and Alt+Up/Alt+Down. Translation help appears only for an
+incompatible selected Translate task. Row and bottom phase labels share one
+formatter, including initial zero-progress preparation.
+
+Collision/error/summary names are shown as plain text in the UI, never logged.
+Collision radio buttons retain an explicit safe choice, and summaries show
+nonzero counts and each failed recording's reason. A Qt Fusion proxy style
+paints clear check/radio indicators; stylesheet control boundaries use measured
+sRGB contrast. Regression tests inspect actual painted borders for check/radio,
+push/tool buttons, combo/spin boxes, text entry, table and scroll area in both
+themes. Native operating-system file pickers remain subject to desktop review.

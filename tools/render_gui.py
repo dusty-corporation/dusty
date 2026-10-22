@@ -4,6 +4,7 @@ import argparse
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -16,7 +17,6 @@ def render(output: Path, theme: str) -> None:
     from PySide6.QtGui import QFont, QRawFont
     from PySide6.QtWidgets import QApplication
 
-    from dusty.app import messages as M
     from dusty.app.dialogs import (
         CollisionDialog,
         ErrorDialog,
@@ -63,43 +63,60 @@ def render(output: Path, theme: str) -> None:
     window.model.set_jobs(jobs)
     window._refresh()
     capture(window, "02-queued")
-    window.options_toggle.setChecked(True)
-    capture(window, "03-options")
+    window.options_dialog.show()
+    capture(window.options_dialog, "03-options")
+    window._set_combo(window.task_choice, "translate")
+    capture(window.options_dialog, "03b-translation-choice")
+    window._set_combo(window.task_choice, "transcribe")
     window.options_scroll.verticalScrollBar().setValue(
         window.options_scroll.verticalScrollBar().maximum() // 2
     )
-    capture(window, "04-vocabulary")
+    capture(window.options_dialog, "04-vocabulary")
     window.advanced_toggle.setChecked(True)
     app.processEvents()
     window.options_scroll.verticalScrollBar().setValue(
         window.options_scroll.verticalScrollBar().maximum()
     )
-    capture(window, "05-advanced")
-    window.options_toggle.setChecked(False)
+    capture(window.options_dialog, "05-advanced")
+    window.options_dialog.hide()
     window.model.jobs[0].status = JobStatus.TRANSCRIBING
     window.model.jobs[0].progress = 0.62
     window.model.jobs[0].elapsed_sec = 74
     window.running = True
     window._refresh()
-    window.status.setText(
-        M.FILE_COUNT.format(current=1, total=2) + " | " + M.ETA.format(time=M.time_label(86))
-    )
+    window._active_id = window.model.jobs[0].id
+    window._batch_started = time.monotonic() - 74
+    window._active_received = time.monotonic()
+    window._active_elapsed = 74
+    window._timed_ids = {job.id for job in window.model.jobs}
+    window._tick()
     window.overall.setValue(310)
     capture(window, "06-running")
+    window.model.jobs[0].progress = 0
+    window._tick()
+    capture(window, "06a-preparing")
+    window.model.jobs[0].status = JobStatus.EXPORTING
+    window.model.jobs[0].progress = 0.95
+    window._tick()
+    capture(window, "06b-saving")
     window.running = False
     window.model.jobs[0].status = JobStatus.DONE
     window.model.jobs[1].status = JobStatus.FAILED
     window.model.jobs[1].failure = FailureCode.NO_AUDIO
     window._refresh()
     dialogs = [
-        (CollisionDialog(window), "07-collision"),
+        (CollisionDialog(window.model.jobs[0].source.name, window), "07-collision"),
         (SummaryDialog(window.model.jobs, window), "08-summary"),
         (ResumeDialog(2, window), "09-resume"),
         (WelcomeDialog(window), "10-welcome"),
         (SyncDialog(window), "11-sync-warning"),
     ]
     dialogs.extend(
-        (ErrorDialog(code, parent=window), "error-" + code.value.lower()) for code in FailureCode
+        (
+            ErrorDialog(code, filename=window.model.jobs[1].source.name, parent=window),
+            "error-" + code.value.lower(),
+        )
+        for code in FailureCode
     )
     for dialog, name in dialogs:
         dialog.adjustSize()

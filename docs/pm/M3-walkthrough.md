@@ -17,19 +17,19 @@ Use a fresh output folder under ignored `build/` for these public test outputs.
 | Step | Action | Expected result |
 |---|---|---|
 | 1 | Launch for the first time. | Welcome explains local processing and the exact accuracy disclaimer; choose an output folder to continue. If already welcomed, report that the welcome was previously completed. |
-| 2 | Inspect the empty window. | Large drop area with Add files/Add folder; Options collapsed; no crowded settings panel. |
+| 2 | Inspect the empty window. | Large drop area with Add files/Add folder; Options button visible; no crowded settings panel. |
 | 3 | Add `tests/fixtures/audio/formats/jfk.wav` using Add files. | One queued row; output location visible; Text and Word checked by default; Start available after preparation. |
 | 4 | Add the same file again. | No duplicate row; duplicate count shown. |
 | 5 | Add the formats folder, then try dropping a folder and using Include subfolders. | Folder options are shown; supported recordings are added, duplicates ignored, and counts reported. |
-| 6 | Select a row, move it up/down and remove it using the buttons; use Tab and Shift+Tab between controls. | Queue order/selection updates; removal does not delete the recording; keyboard focus is visible and can leave vocabulary hints. |
-| 7 | Expand Options. | Current choices remain summarized; only installed choices are selectable; Manage models is disabled with an explanation. |
+| 6 | Select a row, move it up/down using the right-click menu or Alt+Up/Alt+Down, and remove it using Remove; use Tab and Shift+Tab between controls. | Queue order/selection updates; removal does not delete the recording; keyboard focus is visible and can leave vocabulary hints. |
+| 7 | Open Options.... | A modal dialog opens without resizing or rearranging the main window; current choices remain summarized; only installed choices are selectable; Manage models is disabled with an explanation. |
 | 8 | Select Small English if installed, then inspect language/task. | Language is English and locked; incompatible translation is disabled with a plain explanation. |
 | 9 | Choose Use Medium instead if offered, or select Medium and Translate to English. | The valid combination is selected. On Processor only, the slow-choice warning appears without blocking Start. Return to Tiny and Transcribe for the remaining public English tests. |
 | 10 | Enter more than about 800 characters of harmless example vocabulary hints, then shorten them. | Soft warning appears and clears; field is multi-line with helper/example text. Do not send the field contents back. |
 | 11 | Choose Processor only, then Automatic. | The device choice survives preparation; Recommended labels update; preparation never reopens Welcome or Resume. |
-| 12 | Collapse Options and Start a batch. | Files process sequentially; Preparing is shown before progress, rows/overall progress update, and the window remains movable and responsive. |
+| 12 | Choose Done in Options and Start. | Files process sequentially; Preparing is shown before progress, rows/overall progress update, and the window remains movable and responsive. |
 | 13 | During an active file, click Cancel current file. | That row becomes Cancelled, remaining files continue, and the cancelled file leaves no partial output. |
-| 14 | Inspect the summary and Open output folder. | Counts agree with rows; Word/text outputs open normally; Done dismisses the saved batch history. No recording is modified. |
+| 14 | Inspect the summary and Open output folder. | Counts agree with rows; Only nonzero counts appear, failed recordings have names/reasons, and Open folder with transcripts is primary; Word/text outputs open normally; Done dismisses the saved batch history. No recording is modified. |
 | 15 | Clear the queue, add the same public files again, and Start. At the collision dialog choose Keep both with apply-to-all. | Existing transcripts remain; new outputs have matching numbered suffixes; one remembered choice covers remaining collisions. |
 | 16 | Clear/add `tests/fixtures/audio/bad/`, then Start. Inspect a failed row by double-clicking and try Retry failed files. | Bad files fail individually, batch finishes, plain error/action appears, and retry does not overwrite recordings. |
 | 17 | Clear/add the public mostly-silence fixture plus JFK; turn off Skip silent parts for time to interact. Start, then close during processing and choose Stop and save. Relaunch and Resume. | Close is asynchronous; unfinished batch is offered; completed outputs are retained; remaining files can finish. Restore Skip silent parts on afterwards. |
