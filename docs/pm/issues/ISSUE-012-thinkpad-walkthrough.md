@@ -2,7 +2,7 @@
 
 - Severity: S2
 - Milestone: M3
-- Status: In progress
+- Status: Resolved
 - Environment: Owner ThinkPad i7-1365U, Iris Xe, Tiny, Vulkan, 150% scaling
 
 ## Findings and cause
@@ -25,4 +25,7 @@ state; immediate resume with cleared unfinished elapsed; finished-list hint
 and Clear finished; zero-success summary; plural/duplicate highlighting; plain
 corrupt-file advice; one folder title; Tab exits list; optional recommended
 model fetch. GUI, native pipeline and fetch regressions cover these changes.
-Final full suite, screenshots and CI pending; Owner re-test is M3-retest.md.
+Final local suite: 106 passed. PR 39854200159 and push 39854194307 passed
+(105 tests, one unavailable-Vulkan skip); WFP GUI/headless processing recorded
+zero connections. 136 screenshots uploaded as a new draft asset with verified
+digest. The code correction is resolved; human re-test remains M3-retest.md.

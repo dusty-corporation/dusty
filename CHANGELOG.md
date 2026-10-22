@@ -31,3 +31,8 @@ All notable changes to Dusty will be documented here. This project follows Keep 
   Google Drive streaming mount detection for sync-folder warnings.
 - PM-reviewed modal options, simpler recording actions and formats, phase labels,
   named collision/error/summary dialogs, and measured light/dark control contrast.
+- Valid AMR with missing probe duration now transcribes; same-run names number
+  safely, output selection is always visible, model choices explain their
+  purpose and estimated speed, and resume starts unfinished recordings directly.
+- ThinkPad-reviewed list, duplicate, summary, error and keyboard improvements;
+  explicit development fetch option for the recommended Small and Turbo models.
