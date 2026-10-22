@@ -22,6 +22,11 @@ workers. The Vulkan probe can use a selected installed model when Tiny is not
 installed. Device re-probing preserves unsaved user choices and does not repeat
 first-run or resume dialogs.
 
+Resuming a batch whose original model is no longer installed requires an
+explicit choice of an installed replacement before Start is enabled. Startup
+also removes the known probe/self-test work areas, so interruption during
+graphics preparation cannot leave an old WAV that prevents the next probe.
+
 Qt's [QThread documentation](https://doc.qt.io/qtforpython-6/PySide6/QtCore/QThread.html)
 describes the worker thread and queued signal boundary. APIs were checked with
 the installed 6.9.2 bindings, including style hints, model/view data changes,

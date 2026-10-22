@@ -60,7 +60,7 @@ from .dialogs import (
 )
 from .presentation import TERMINAL, counts, eta_seconds, overall_progress
 from .table import ProgressDelegate, QueueModel
-from .theme import apply_theme
+from .theme import application_icon, apply_theme
 from .workers import BatchWorker, Prepared, PrepareWorker, ScanWorker, SelfTestWorker
 
 
@@ -81,6 +81,7 @@ class MainWindow(QMainWindow):
         self._applying = False
         self._recommendation = "small"
         self._follow_recommendation = False
+        self._missing_resume_model: str | None = None
         self.output_dir: Path | None = None
         self.batch: BatchWorker | None = None
         self.scanner: ScanWorker | None = None
@@ -93,12 +94,16 @@ class MainWindow(QMainWindow):
         self._active_elapsed = 0.0
         self._timed_ids: set[UUID] = set()
         self.setWindowTitle(M.APP_NAME)
+        self.setWindowIcon(application_icon())
         self.resize(1060, 780)
         self.setMinimumSize(800, 640)
         self.setAcceptDrops(True)
         self.model = QueueModel()
         self._build()
         self._menus()
+        app = QApplication.instance()
+        if isinstance(app, QApplication):
+            app.styleHints().colorSchemeChanged.connect(self._system_theme_changed)
         self.timer = QTimer(self)
         self.timer.setInterval(200)
         self.timer.timeout.connect(self._tick)
@@ -298,6 +303,8 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.options_scroll)
         self.warning = self._label(M.EMPTY_CELL, warning=True)
         layout.addWidget(self.warning)
+        self.resume_model_button = self._button(M.EMPTY_CELL, self._confirm_resume_model)
+        layout.addWidget(self.resume_model_button)
         self.status = self._label(M.PREPARING_HELP)
         layout.addWidget(self.status)
         bottom = QHBoxLayout()
@@ -317,6 +324,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(body)
         for combo in (self.model_choice, self.task_choice, self.language_choice):
             combo.currentIndexChanged.connect(self._rules)
+        self.model_choice.activated.connect(self._confirm_resume_model)
         self.same_folder.toggled.connect(self._rules)
         self.device_choice.currentIndexChanged.connect(self._device_changed)
         self.prompt.textChanged.connect(self._rules)
@@ -419,6 +427,9 @@ class MainWindow(QMainWindow):
         from dataclasses import asdict
 
         self.model.set_jobs(jobs)
+        self._missing_resume_model = (
+            options.model_id if options.model_id not in self.installed else None
+        )
         self._apply_settings(asdict(options))
         self._refresh()
 
@@ -513,6 +524,11 @@ class MainWindow(QMainWindow):
         if isinstance(app, QApplication):
             apply_theme(app, self.theme_choice.currentData() or "system")
 
+    @Slot()
+    def _system_theme_changed(self) -> None:
+        if self.theme_choice.currentData() == "system":
+            self._theme_changed()
+
     def _device_changed(self) -> None:
         if self._applying:
             return
@@ -582,6 +598,15 @@ class MainWindow(QMainWindow):
         if model and recommended not in self.installed:
             unavailable = M.MISSING_RECOMMENDATION.format(name=M.MODEL_NAMES[recommended])
             warning = unavailable + ("\n" + warning if warning else "")
+        if self._missing_resume_model:
+            warning = M.MISSING_BATCH_MODEL.format(
+                model=M.MODEL_NAMES.get(self._missing_resume_model, self._missing_resume_model)
+            )
+        self.resume_model_button.setVisible(bool(self._missing_resume_model))
+        self.resume_model_button.setText(
+            M.USE_INSTALLED.format(model=M.MODEL_NAMES.get(model_id, M.PREPARING))
+        )
+        self.resume_model_button.setEnabled(bool(model and not invalid and not self.running))
         self.warning.setText(warning or M.EMPTY_CELL)
         self.warning.setVisible(bool(warning))
         self.choices_summary.setText(
@@ -604,6 +629,7 @@ class MainWindow(QMainWindow):
                 self.ready
                 and model
                 and not invalid
+                and not self._missing_resume_model
                 and not self.running
                 and self.model.jobs
                 and any(
@@ -624,6 +650,11 @@ class MainWindow(QMainWindow):
         if previous and previous.english_only:
             self._set_combo(self.language_choice, "auto")
         self._set_combo(self.task_choice, "translate")
+        self._missing_resume_model = None
+        self._rules()
+
+    def _confirm_resume_model(self) -> None:
+        self._missing_resume_model = None
         self._rules()
 
     def _refresh(self) -> None:

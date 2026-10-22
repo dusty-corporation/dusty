@@ -3,8 +3,32 @@
 import os
 from pathlib import Path
 
-from PySide6.QtGui import QColor, QFont, QFontDatabase, QPalette
+from PySide6.QtCore import QRectF, Qt
+from PySide6.QtGui import QColor, QFont, QFontDatabase, QIcon, QPainter, QPalette, QPixmap
 from PySide6.QtWidgets import QApplication
+
+
+def application_icon() -> QIcon:
+    """Original waveform mark drawn with the already-used Qt GUI module."""
+    icon = QIcon()
+    for size in (16, 32, 64):
+        image = QPixmap(size, size)
+        image.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(image)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor("#256847"))
+        painter.drawRoundedRect(QRectF(0, 0, size, size), size / 4, size / 4)
+        painter.setBrush(QColor("#eff5e7"))
+        for x, height in ((0.24, 0.25), (0.41, 0.58), (0.58, 0.40), (0.75, 0.18)):
+            painter.drawRoundedRect(
+                QRectF(size * (x - 0.045), size * (1 - height) / 2, size * 0.09, size * height),
+                size * 0.04,
+                size * 0.04,
+            )
+        painter.end()
+        icon.addPixmap(image)
+    return icon
 
 
 def apply_theme(app: QApplication, mode: str = "system") -> None:
@@ -18,8 +42,6 @@ def apply_theme(app: QApplication, mode: str = "system") -> None:
     app.setStyle("Fusion")
     app.setFont(QFont("Segoe UI", 10))
     if mode == "system":
-        from PySide6.QtCore import Qt
-
         mode = "dark" if app.styleHints().colorScheme() == Qt.ColorScheme.Dark else "light"
     dark = mode == "dark"
     palette = QPalette()

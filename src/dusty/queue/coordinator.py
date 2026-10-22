@@ -30,17 +30,18 @@ class _CancellationGroup:
 
 
 def cleanup_orphaned_work(work_root: Path) -> None:
-    """Remove only UUID-shaped abandoned per-job work directories."""
+    """Remove abandoned job directories and the two named public self-test work areas."""
     from uuid import UUID
 
     if not work_root.is_dir():
         return
     for candidate in work_root.iterdir():
         if candidate.is_dir():
-            try:
-                UUID(candidate.name)
-            except ValueError:
-                continue
+            if candidate.name not in {"probe", "selftest"}:
+                try:
+                    UUID(candidate.name)
+                except ValueError:
+                    continue
             shutil.rmtree(candidate)
 
 

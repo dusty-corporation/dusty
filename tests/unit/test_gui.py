@@ -244,3 +244,14 @@ def test_device_reprobe_preserves_user_choice_and_relabels_default(
     assert window.model_choice.currentData() == "small"
     assert "Recommended" in window.model_choice.currentText()
     window.interactive = False
+
+
+def test_resume_never_silently_substitutes_an_uninstalled_model(window, qtbot, tmp_path) -> None:
+    window.apply_prepared(Prepared(("tiny",), False, {"schema_version": 1}))
+    window.restore_batch(BatchOptions("medium", tmp_path / "out"), [Job(tmp_path / "clip.wav")])
+    assert not window.start_button.isEnabled()
+    assert window.resume_model_button.isVisible()
+    assert "Medium" in window.warning.text()
+    qtbot.mouseClick(window.resume_model_button, Qt.MouseButton.LeftButton)
+    assert window.start_button.isEnabled()
+    assert window.model_choice.currentData() == "tiny"

@@ -69,6 +69,11 @@ TRANSLATE_DISABLED = (
     "This choice can transcribe, but cannot translate. Choose Medium to translate to English."
 )
 USE_MEDIUM = "Use Medium instead"
+MISSING_BATCH_MODEL = (
+    "This unfinished batch used {model}, which is not installed. "
+    "Choose an installed option to continue."
+)
+USE_INSTALLED = "Use {model} for this batch"
 PROMPT = "Vocabulary hints (optional)"
 PROMPT_HELP = "Names, medications, acronyms, separated by commas"
 PROMPT_EXAMPLE = "For example: Dr. Rahimi, metformin, HbA1c"

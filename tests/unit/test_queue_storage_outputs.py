@@ -2,10 +2,12 @@
 
 import json
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 
 from dusty.core import BatchOptions, Job, JobStatus, Segment, Transcript
+from dusty.queue import cleanup_orphaned_work
 from dusty.queue.outputs import OutputExistsError, write_outputs
 from dusty.queue.storage import (
     clear_history,
@@ -50,6 +52,15 @@ def test_same_folder_does_not_repeat_preserved_subfolders(tmp_path: Path) -> Non
     outputs = write_outputs(job, options, _transcript())
     assert outputs == [folder / "clip.txt"]
     assert source.read_bytes() == b"original"
+
+
+def test_startup_cleans_preparation_work_but_keeps_unknown_directories(tmp_path: Path) -> None:
+    for name in (str(uuid4()), "probe", "selftest", "unmanaged"):
+        directory = tmp_path / name
+        directory.mkdir()
+        (directory / "temporary").write_bytes(b"generated fixture")
+    cleanup_orphaned_work(tmp_path)
+    assert [path.name for path in tmp_path.iterdir()] == ["unmanaged"]
 
 
 def test_queue_recovers_unfinished_and_preserves_done(tmp_path: Path) -> None:
