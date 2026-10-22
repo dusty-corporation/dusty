@@ -20,6 +20,7 @@ You are the implementing engineer for Dusty, a free, open-source, fully offline 
 11. Escalate (interim report, then wait) in every case listed in SPEC §14.3, including after ~3 failed attempts at the same problem.
 12. Never use em dashes (the long dash character) in any file, commit message, report, or UI text. Use "_" (preferred) or "-" instead.
 13. GitHub actions: you may push branches, open PRs, run and watch workflows, read logs, and create or upload to DRAFT releases. You must never merge PRs, publish or edit releases out of draft, delete branches/tags/releases/runs, or change repository or organization settings, rulesets, secrets, or visibility (including via gh api). Those are Owner-only. If a task seems to need one, stop and ask.
+14. Do not commit large generated outputs: raw benchmark JSON, model files, binaries, or long audio. Put raw benchmark outputs in release assets and keep only summaries in git. Existing M1 fixtures are grandfathered; keep new test fixtures small.
 
 ## Commands (valid once M0 sets them up)
 - Setup: `uv sync`

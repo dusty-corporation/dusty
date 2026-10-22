@@ -23,3 +23,11 @@
 | M1-B5 | M1 | Revised draft bench kit | done | `bench-kit-m1b` uploaded as draft and verified; original draft retained | - |
 | M1-B6 | M1 | ThinkPad results and final gate report | done | 10 CPU and 10 Vulkan public runs at four threads, 20 matching JSON files; Gutenberg-only WER computed for all; `docs/pm/reports/M1-report.md`; PR #2 checks passed at runs 39718968447, 39718973895, 39718973892, and 39718973902 | - |
 | M1-B7 | M1 | Focused Quick thread sweep | done | `b1f3ac0`; local 4, 8, 10 thread smoke test produced three rows each on CPU and Vulkan; draft `bench-kit-m1c` verified | - |
+| M1-GATE | M1 | PM gate decision | done | Conditional GO per M2 brief; PR #2 merged as `d3a35f7`; `docs/adr/0016-v1-model-catalog.md` records accepted catalog | - |
+| PRE-M7-SURFACE | M7 | Real Surface Laptop 5 Vulkan smoke test | todo | Owner-owned M1 conditional GO item; required before M7, does not block M2-M6 | - |
+| M2-01 | M2 | Pinned engine and model assets for dev and CI | doing | `models-v1` published by Owner; `engine-v1` draft and fetch tooling in progress | - |
+| M2-02 | M2 | Headless core pipeline | todo | M2 brief task 2 | - |
+| M2-03 | M2 | ISSUE-004 startup probe and findings | todo | M2 brief task 3 | ISSUE-004 (open) |
+| M2-04 | M2 | VAD integration check | todo | M2 brief task 4 | - |
+| M2-05 | M2 | Persian translation fixture | todo | M2 brief task 5 | - |
+| M2-06 | M2 | CI offline and WFP network isolation | todo | M2 brief task 6 | - |
