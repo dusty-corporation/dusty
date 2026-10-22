@@ -1,0 +1,16 @@
+{
+  "schema": "dusty.transcript",
+  "schema_version": 1,
+  "app_version": "0.0.1",
+  "model_id": "tiny",
+  "backend": "cpu",
+  "task": "transcribe",
+  "language": "en",
+  "duration_sec": 4,
+  "source_file_name": "sample.wav",
+  "created_utc": "2026-10-22T00:00:00Z",
+  "segments": [
+    {"index": 0, "start": 0, "end": 1, "text": "Hello world."},
+    {"index": 1, "start": 3, "end": 4, "text": "سلام دنیا"}
+  ]
+}

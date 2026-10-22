@@ -10,6 +10,7 @@ from pathlib import Path
 from docx import Document
 from docx.shared import Pt
 
+from dusty import __version__
 from dusty.core import Segment, Transcript
 
 
@@ -80,15 +81,13 @@ def _captions(transcript: Transcript, *, vtt: bool) -> bytes:
             cue_index += 1
             if not vtt:
                 lines.append(str(cue_index))
-            lines.extend(
-                [
-                    f"{_timestamp(start, separator=separator)} --> "
-                    f"{_timestamp(end, separator=separator)}",
-                    text,
-                    "",
-                ]
+            lines.append(
+                f"{_timestamp(start, separator=separator)} --> "
+                f"{_timestamp(end, separator=separator)}"
             )
-    return "\r\n".join(lines).encode("utf-8")
+            lines.extend(text.split("\n"))
+            lines.append("")
+    return ("\r\n".join(lines) + ("\r\n" if lines else "")).encode("utf-8")
 
 
 def render_srt(transcript: Transcript) -> bytes:
@@ -106,7 +105,7 @@ def render_json(
     value = {
         "schema": "dusty.transcript",
         "schema_version": 1,
-        "app_version": "0.0.1",
+        "app_version": __version__,
         "model_id": transcript.model_id,
         "backend": transcript.backend,
         "task": transcript.task,
