@@ -99,7 +99,13 @@ class Coordinator:
         vulkan_ok: bool | None,
         changed: Callable[[], None],
     ) -> None:
-        from dusty.engine import DecoderError, EngineError, probe_audio, run_whisper, transcode_audio
+        from dusty.engine import (
+            DecoderError,
+            EngineError,
+            probe_audio,
+            run_whisper,
+            transcode_audio,
+        )
 
         work = self.work_root / str(job.id)
         work.mkdir(parents=True, exist_ok=False)

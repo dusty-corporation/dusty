@@ -27,13 +27,18 @@ def main() -> int:
     counts = tracer.results().counts
     child = subprocess.run(
         [sys.executable, str(ROOT / "tools/trace_network_guard.py")],
-        cwd=ROOT, capture_output=True, text=True, check=True, timeout=30,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=30,
     )
     guard = ROOT / "src/dusty/privacy/network_guard.py"
     for line in json.loads(child.stdout):
         counts[(str(guard), line)] = 1
     hit_total = 0
     executable_total = 0
+    below_target = False
     for package in PACKAGES:
         hit = 0
         executable = 0
@@ -46,8 +51,9 @@ def main() -> int:
         hit_total += hit
         executable_total += executable
         print(f"{package}: {hit}/{executable} = {hit / executable:.1%}")
+        below_target |= hit / executable < 0.85
     print(f"total: {hit_total}/{executable_total} = {hit_total / executable_total:.1%}")
-    return int(result)
+    return int(result) or int(below_target)
 
 
 if __name__ == "__main__":

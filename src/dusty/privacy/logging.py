@@ -40,9 +40,7 @@ def configure_logger(user_dir: Path) -> logging.Logger:
             logger.removeHandler(existing)
             existing.close()
     if not logger.handlers:
-        handler = RotatingFileHandler(
-            target, maxBytes=1024 * 1024, backupCount=4, encoding="utf-8"
-        )
+        handler = RotatingFileHandler(target, maxBytes=1024 * 1024, backupCount=4, encoding="utf-8")
         handler.addFilter(RedactionFilter())
         handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
         logger.addHandler(handler)

@@ -25,7 +25,8 @@ def main() -> None:
     tracer.runfunc(exercise)
     target = Path(__file__).resolve().parents[1] / "src/dusty/privacy/network_guard.py"
     hit = sorted(
-        line for (filename, line), count in tracer.results().counts.items()
+        line
+        for (filename, line), count in tracer.results().counts.items()
         if Path(filename).resolve() == target and count > 0
     )
     print(json.dumps(hit))

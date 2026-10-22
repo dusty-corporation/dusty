@@ -34,8 +34,8 @@ jobs:
         run: uv run ruff format --check .
       - name: Types
         run: uv run mypy
-      - name: Tests
-        run: uv run pytest
+      - name: Tests and strict-package coverage
+        run: uv run python tools/measure_coverage.py
         env:
           QT_QPA_PLATFORM: offscreen
       - name: Network isolation
