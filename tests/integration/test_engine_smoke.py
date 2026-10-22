@@ -11,7 +11,7 @@ import pytest
 from dusty.engine import probe_audio, run_whisper, transcode_audio
 from dusty.engine.backend import probe_vulkan
 from dusty.models import ModelRegistry, load_manifest
-from dusty.runtime_paths import resolve_paths
+from dusty.runtime_paths import RuntimePaths, resolve_paths
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -57,7 +57,8 @@ def test_decode_transcribe_with_vad(tmp_path: Path) -> None:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Pinned development binaries target Windows")
 def test_cpu_and_available_vulkan_agree(tmp_path: Path) -> None:
-    paths = resolve_paths(repo_root=ROOT, frozen=False)
+    dev = resolve_paths(repo_root=ROOT, frozen=False)
+    paths = RuntimePaths(dev.bin_dir, dev.models_dir, dev.resources_dir, tmp_path / "user")
     registry = ModelRegistry(load_manifest(paths.resources_dir / "models.json"), paths.models_dir)
     if not probe_vulkan(paths, registry):
         pytest.skip("No usable Vulkan device on this test host")
