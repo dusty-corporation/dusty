@@ -1,17 +1,22 @@
 """Small reviewable dialogs with centralized text and safe default choices."""
 
+from typing import cast
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
-    QComboBox,
     QDialog,
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QRadioButton,
+    QScrollArea,
     QVBoxLayout,
+    QWidget,
 )
 
 from dusty.core import FailureCode, Job, JobStatus
+from dusty.core.types import CollisionPolicy
 
 from . import messages as M
 from .presentation import counts
@@ -63,18 +68,24 @@ class FolderDialog(TextDialog):
 
 
 class CollisionDialog(TextDialog):
-    def __init__(self, parent=None):
-        super().__init__(M.COLLISION_TITLE, (M.COLLISION_HELP,), parent)
-        self.choice = QComboBox()
-        for key in ("keep_both", "skip", "overwrite"):
-            self.choice.addItem(M.COLLISIONS[key], key)
-        self.choice.setAccessibleName(M.COLLISION)
+    def __init__(self, filename: str, parent=None):
+        super().__init__(
+            M.COLLISION_TITLE, (M.RECORDING_NAME.format(name=filename), M.COLLISION_HELP), parent
+        )
+        self.choices: dict[CollisionPolicy, QRadioButton] = {}
+        for index, (key, text) in enumerate(M.COLLISION_CHOICES.items()):
+            radio = QRadioButton(text)
+            radio.setChecked(key == "keep_both")
+            self.choices[cast(CollisionPolicy, key)] = radio
+            self.body.insertWidget(3 + index, radio)
         self.apply_all = QCheckBox(M.APPLY_ALL)
         self.apply_all.setChecked(True)
-        self.body.insertWidget(2, self.choice)
-        self.body.insertWidget(3, self.apply_all)
+        self.body.insertWidget(6, self.apply_all)
         self.button(M.STOP_BATCH, self.reject)
         self.button(M.CONTINUE, self.accept, default=True)
+
+    def selected_policy(self) -> CollisionPolicy:
+        return next(key for key, radio in self.choices.items() if radio.isChecked())
 
 
 class ResumeDialog(TextDialog):
@@ -100,21 +111,49 @@ class CloseDialog(TextDialog):
 
 class SummaryDialog(TextDialog):
     def __init__(self, jobs: list[Job], parent=None):
-        super().__init__(M.SUMMARY, (M.SUMMARY_COUNTS.format(**counts(jobs)),), parent)
+        super().__init__(M.SUMMARY, (M.summary_counts(counts(jobs)),), parent)
+        failed = [job for job in jobs if job.status == JobStatus.FAILED]
+        if failed:
+            self.body.insertWidget(2, QLabel(M.FAILED_FILES))
+            area = QScrollArea()
+            area.setWidgetResizable(True)
+            area.setMaximumHeight(200)
+            content = QWidget()
+            layout = QVBoxLayout(content)
+            for job in failed:
+                reason = (
+                    M.FAILURE_MESSAGES[job.failure].message if job.failure else M.PREPARATION_ERROR
+                )
+                label = QLabel(M.NAMED_FAILURE.format(name=job.source.name, reason=reason))
+                label.setTextFormat(Qt.TextFormat.PlainText)
+                label.setWordWrap(True)
+                layout.addWidget(label)
+            area.setWidget(content)
+            self.body.insertWidget(3, area)
         self.retry = self.button(M.RETRY, lambda: self.done(2))
-        self.retry.setEnabled(any(job.status == JobStatus.FAILED for job in jobs))
-        self.open_folder = self.button(M.OPEN_FOLDER, lambda: None)
-        self.button(M.DISMISS, self.accept, default=True)
+        self.retry.setEnabled(bool(failed))
+        self.button(M.DISMISS, self.accept)
+        self.open_folder = self.button(M.OPEN_FOLDER, lambda: None, default=True)
+        self.open_folder.setObjectName("primaryButton")
 
 
 class ErrorDialog(TextDialog):
-    def __init__(self, code: FailureCode | None = None, *, text: str = "", parent=None):
-        paragraphs = (
+    def __init__(
+        self,
+        code: FailureCode | None = None,
+        *,
+        text: str = "",
+        filename: str | None = None,
+        parent=None,
+    ):
+        paragraphs: tuple[str, ...] = (
             (text,)
             if text
             else (M.FAILURE_MESSAGES[code].message, M.FAILURE_MESSAGES[code].action)
             if code
             else (M.PREPARATION_ERROR,)
         )
+        if filename:
+            paragraphs = (M.RECORDING_NAME.format(name=filename),) + paragraphs
         super().__init__(M.ERROR_TITLE, paragraphs, parent)
         self.button(M.OK, self.accept, default=True)

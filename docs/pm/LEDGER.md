@@ -44,3 +44,4 @@
 | M3-05 | M3 | Screenshot matrix and draft release | done | 104 synthetic screens rendered and reviewed, light/dark at 100%/150%; reviewed ZIP uploaded to draft m3-screenshots, SHA-256 598379f3b78743dd39206981f86dd8ced3bcfaa93268186378ce16490166db03 | - |
 | M3-06 | M3 | Owner walkthrough and M3 report | blocked | M3-report.md written with 20-step checklist; Owner pass/fail requested but not received; implementation and automated evidence complete, human acceptance pending; stop before M4 | - |
 | M3-07 | M3 | Sync warning privacy review | done | Read-only documented Google Drive mount detection and injected-reader tests; final local and PR CI passed, advisory limits documented | ISSUE-009 (resolved) |
+| M3-08 | M3 | PM screenshot corrections before walkthrough | doing | Modal options, task-specific translation warning, phase text, named dialogs, plain copy, formats and contrast revisions in progress; regression tests added | - |

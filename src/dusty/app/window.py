@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QLabel,
     QMainWindow,
+    QMenu,
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
@@ -170,8 +171,6 @@ class MainWindow(QMainWindow):
         self.queue_buttons = []
         for text, callback in (
             (M.REMOVE, self.remove_selected),
-            (M.MOVE_UP, lambda: self.move_selected(-1)),
-            (M.MOVE_DOWN, lambda: self.move_selected(1)),
             (M.CLEAR, self.clear_queue),
         ):
             button = self._button(text, callback)
@@ -195,6 +194,16 @@ class MainWindow(QMainWindow):
         self.table.setItemDelegateForColumn(3, ProgressDelegate(self.table))
         self.table.clicked.connect(self._table_clicked)
         self.table.doubleClicked.connect(self._table_details)
+        self.move_actions = []
+        for text, direction, shortcut in ((M.MOVE_UP, -1, "Alt+Up"), (M.MOVE_DOWN, 1, "Alt+Down")):
+            action = QAction(text, self.table)
+            action.setShortcut(shortcut)
+            action.setShortcutContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+            action.triggered.connect(lambda checked=False, step=direction: self.move_selected(step))
+            self.table.addAction(action)
+            self.move_actions.append(action)
+        self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self._list_context_menu)
         layout.addWidget(self.table, 1)
         self.output_row = QWidget()
         output_layout = QHBoxLayout(self.output_row)
@@ -214,23 +223,23 @@ class MainWindow(QMainWindow):
             checkbox.setChecked(key in {"txt", "docx"})
             checkbox.toggled.connect(self._rules)
             self.formats[key] = checkbox
-            formats_layout.addWidget(checkbox)
+            if key in {"txt", "docx"}:
+                formats_layout.addWidget(checkbox)
         formats_layout.addStretch()
         layout.addWidget(self.format_row)
         options_bar = QHBoxLayout()
-        self.options_toggle = QToolButton()
-        self.options_toggle.setText(M.OPTIONS)
-        self.options_toggle.setCheckable(True)
-        self.options_toggle.setArrowType(Qt.ArrowType.RightArrow)
-        self.options_toggle.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        self.options_toggle.toggled.connect(self._toggle_options)
-        options_bar.addWidget(self.options_toggle)
+        self.options_button = self._button(M.OPTIONS, self.open_options)
+        options_bar.addWidget(self.options_button)
         self.choices_summary = self._label(M.PREPARING)
         options_bar.addWidget(self.choices_summary, 1)
         layout.addLayout(options_bar)
         self.options_scroll = QScrollArea()
         self.options_scroll.setWidgetResizable(True)
-        self.options_scroll.setMaximumHeight(300)
+        self.options_dialog = TextDialog(M.OPTIONS_TITLE, (), self)
+        self.options_dialog.setModal(True)
+        self.options_dialog.resize(660, 650)
+        self.options_dialog.body.insertWidget(1, self.options_scroll, 1)
+        self.options_dialog.button(M.DISMISS, self.options_dialog.accept, default=True)
         options = QWidget()
         form = QFormLayout(options)
         self.model_choice = QComboBox()
@@ -268,6 +277,12 @@ class MainWindow(QMainWindow):
         form.addRow(self.prompt_warning)
         self.collision_choice = self._combo(M.COLLISIONS, M.COLLISION)
         form.addRow(M.COLLISION, self.collision_choice)
+        more_formats = QWidget()
+        more_layout = QHBoxLayout(more_formats)
+        more_layout.setContentsMargins(0, 0, 0, 0)
+        for key in ("srt", "vtt", "json"):
+            more_layout.addWidget(self.formats[key])
+        form.addRow(M.MORE_FORMATS, more_formats)
         self.same_folder = QCheckBox(M.SAME_FOLDER)
         self.keep_structure = QCheckBox(M.KEEP_STRUCTURE)
         form.addRow(self.same_folder)
@@ -299,18 +314,18 @@ class MainWindow(QMainWindow):
         self.advanced.hide()
         self.advanced_toggle.toggled.connect(self._toggle_advanced)
         self.options_scroll.setWidget(options)
-        self.options_scroll.hide()
-        layout.addWidget(self.options_scroll)
+
         self.warning = self._label(M.EMPTY_CELL, warning=True)
         layout.addWidget(self.warning)
         self.resume_model_button = self._button(M.EMPTY_CELL, self._confirm_resume_model)
         layout.addWidget(self.resume_model_button)
         self.status = self._label(M.PREPARING_HELP)
-        layout.addWidget(self.status)
+
         bottom = QHBoxLayout()
         self.overall = QProgressBar()
         self.overall.setRange(0, 1000)
         self.overall.setTextVisible(False)
+        bottom.addWidget(self.status, 1)
         bottom.addWidget(self.overall, 1)
         self.cancel_current_button = self._button(M.CANCEL_CURRENT, self.cancel_current)
         self.cancel_all_button = self._button(M.CANCEL_ALL, self.cancel_all)
@@ -507,11 +522,18 @@ class MainWindow(QMainWindow):
             self.show_error(text=M.SAVE_ERROR)
             return False
 
-    def _toggle_options(self, expanded: bool) -> None:
-        self.options_scroll.setVisible(expanded)
-        self.options_toggle.setArrowType(
-            Qt.ArrowType.DownArrow if expanded else Qt.ArrowType.RightArrow
-        )
+    def open_options(self) -> None:
+        self.options_dialog.exec()
+        if self.ready:
+            self._save_settings()
+
+    def _list_context_menu(self, point) -> None:
+        index = self.table.indexAt(point)
+        if index.isValid() and not self.table.selectionModel().isRowSelected(index.row()):
+            self.table.selectRow(index.row())
+        menu = QMenu(self.table)
+        menu.addActions(self.move_actions)
+        menu.exec(self.table.viewport().mapToGlobal(point))
 
     def _toggle_advanced(self, expanded: bool) -> None:
         self.advanced.setVisible(expanded)
@@ -576,8 +598,8 @@ class MainWindow(QMainWindow):
                 translate_item.setEnabled(not incompatible)
                 translate_item.setToolTip(M.TRANSLATE_DISABLED if incompatible else M.EMPTY_CELL)
         invalid = incompatible and self.task_choice.currentData() == "translate"
-        self.incompatible.setVisible(bool(incompatible))
-        self.use_medium.setVisible(bool(incompatible and "medium" in self.installed))
+        self.incompatible.setVisible(bool(invalid))
+        self.use_medium.setVisible(bool(invalid and "medium" in self.installed))
         self.prompt_warning.setVisible(len(self.prompt.toPlainText()) / 4 > 200)
         cpu_only = not self.vulkan_ok or self.device_choice.currentData() == "cpu"
         warning = M.SLOW if model and slow_warning(model, "cpu" if cpu_only else "vulkan") else None
@@ -676,7 +698,10 @@ class MainWindow(QMainWindow):
             button.setVisible(has_jobs)
         for action in self.edit_actions:
             action.setEnabled(editing)
+        self.options_button.setEnabled(self.ready and not self.running)
         self.options_scroll.setEnabled(self.ready and not self.running)
+        for action in self.move_actions:
+            action.setEnabled(editing)
         self.format_row.setEnabled(not self.running)
         self.selftest_action.setEnabled(
             self.ready
@@ -687,7 +712,7 @@ class MainWindow(QMainWindow):
         self.cancel_current_button.setVisible(self.running)
         self.cancel_all_button.setVisible(self.running)
         self.start_button.setVisible(has_jobs and not self.running)
-        self.overall.setVisible(has_jobs or not self.ready)
+        self.overall.setVisible(self.running)
         self._rules()
 
     def choose_files(self) -> None:
@@ -848,9 +873,9 @@ class MainWindow(QMainWindow):
     def _collision(self, job: Job) -> None:
         if not self.batch:
             return
-        dialog = CollisionDialog(self)
+        dialog = CollisionDialog(job.source.name, self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            self.batch.choose_collision(dialog.choice.currentData(), dialog.apply_all.isChecked())
+            self.batch.choose_collision(dialog.selected_policy(), dialog.apply_all.isChecked())
         else:
             self.cancel_all()
 
@@ -871,7 +896,7 @@ class MainWindow(QMainWindow):
             for job in self.batch.jobs:
                 self.model.update_job(replace(job, outputs=list(job.outputs)))
         self.overall.setValue(int(overall_progress(self.model.jobs) * 1000))
-        self.status.setText(M.SUMMARY_COUNTS.format(**counts(self.model.jobs)))
+        self.status.setText(M.summary_counts(counts(self.model.jobs)))
         self._refresh()
         if self.closing:
             self.close()
@@ -900,9 +925,7 @@ class MainWindow(QMainWindow):
         completed = sum(job.status in TERMINAL for job in self.model.jobs)
         active = next((job for job in self.model.jobs if job.id == self._active_id), None)
         phase = (
-            M.PREPARING
-            if active is None or (active.status == JobStatus.TRANSCRIBING and active.progress == 0)
-            else M.STATUSES[active.status.value]
+            M.PREPARING if active is None else M.phase_text(active.status.value, active.progress)
         )
         self.status.setText(
             M.FILE_COUNT.format(
@@ -928,7 +951,7 @@ class MainWindow(QMainWindow):
     def _table_details(self, index) -> None:
         job = self.model.jobs[index.row()]
         if job.failure:
-            self.show_error(job.failure)
+            self.show_error(job.failure, filename=job.source.name)
 
     def open_output(self) -> None:
         folder = next(
@@ -947,9 +970,11 @@ class MainWindow(QMainWindow):
         worker.start()
         self._refresh()
 
-    def show_error(self, code: FailureCode | None = None, *, text: str = "") -> None:
+    def show_error(
+        self, code: FailureCode | None = None, *, text: str = "", filename: str | None = None
+    ) -> None:
         if self.interactive:
-            ErrorDialog(code, text=text, parent=self).exec()
+            ErrorDialog(code, text=text, filename=filename, parent=self).exec()
         else:
             self.status.setText(
                 text or M.FAILURE_MESSAGES[code].message if code else text or M.PREPARATION_ERROR

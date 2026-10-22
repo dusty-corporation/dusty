@@ -4,9 +4,9 @@ import json
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QMimeData, QPoint, QPointF, Qt, QUrl
+from PySide6.QtCore import QMimeData, QPoint, QPointF, Qt, QTimer, QUrl
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
-from PySide6.QtWidgets import QApplication, QDialog, QFileDialog
+from PySide6.QtWidgets import QApplication, QDialog, QFileDialog, QLabel, QPushButton
 
 from dusty.app import messages as M
 from dusty.app.dialogs import (
@@ -95,11 +95,14 @@ def test_backend_defaults_language_translation_and_hint_rules(window, qtbot, tmp
     window.model.set_jobs([Job(tmp_path / "clip.wav")])
     window._refresh()
     assert window.start_button.isEnabled()
-    qtbot.mouseClick(window.options_toggle, Qt.MouseButton.LeftButton)
+    window.options_dialog.show()
     assert window.options_scroll.isVisible()
     assert not window.task_choice.model().item(1).isEnabled()
-    assert window.use_medium.isVisible()
+    assert not window.use_medium.isVisible()
+    assert not window.incompatible.isVisible()
     window._set_combo(window.task_choice, "translate")
+    assert window.incompatible.isVisible()
+    assert window.use_medium.isVisible()
     assert not window.start_button.isEnabled()
     window._use_medium()
     assert window.model_choice.currentData() == "medium"
@@ -161,9 +164,9 @@ def test_add_files_button_and_local_drop(window, qtbot, tmp_path, monkeypatch) -
 
 
 def test_dialog_defaults_and_every_error(window, qtbot) -> None:
-    collision = CollisionDialog(window)
+    collision = CollisionDialog("example.wav", window)
     qtbot.addWidget(collision)
-    assert collision.choice.currentData() == "keep_both"
+    assert collision.selected_policy() == "keep_both"
     assert collision.apply_all.isChecked()
     summary = SummaryDialog(
         [Job(Path("example.wav"), status=JobStatus.FAILED, failure=FailureCode.NO_AUDIO)], window
@@ -173,7 +176,8 @@ def test_dialog_defaults_and_every_error(window, qtbot) -> None:
     sync = SyncDialog(window)
     qtbot.addWidget(sync)
     for code in FailureCode:
-        dialog = ErrorDialog(code, parent=window)
+        dialog = ErrorDialog(code, filename="example.wav", parent=window)
+        assert any("example.wav" in label.text() for label in dialog.findChildren(QLabel))
         qtbot.addWidget(dialog)
         assert dialog.windowTitle() == M.ERROR_TITLE
         assert M.FAILURE_MESSAGES[code].action
@@ -255,3 +259,83 @@ def test_resume_never_silently_substitutes_an_uninstalled_model(window, qtbot, t
     qtbot.mouseClick(window.resume_model_button, Qt.MouseButton.LeftButton)
     assert window.start_button.isEnabled()
     assert window.model_choice.currentData() == "tiny"
+
+
+def test_options_are_modal_without_reflow_and_extra_formats_persist(window, qtbot) -> None:
+    window.model.set_jobs([Job(Path("one.wav"))])
+    window._refresh()
+    qtbot.wait(20)
+    geometry = window.table.geometry()
+    assert set(
+        box.text() for box in window.format_row.findChildren(type(window.formats["txt"]))
+    ) == {M.FORMATS["txt"], M.FORMATS["docx"]}
+    assert not window.overall.isVisible()
+    seen = []
+
+    def review():
+        seen.append(window.options_dialog.isModal() and window.options_dialog.isVisible())
+        assert window.table.geometry() == geometry
+        window.formats["json"].setChecked(True)
+        window.options_dialog.accept()
+
+    QTimer.singleShot(500, window.options_dialog.accept)
+    QTimer.singleShot(50, review)
+    qtbot.mouseClick(window.options_button, Qt.MouseButton.LeftButton)
+    assert seen == [True]
+    assert window.table.geometry() == geometry
+    saved = json.loads((window.paths.user_dir / "settings.json").read_text(encoding="utf-8"))
+    assert "json" in saved["formats"]
+    assert not any(
+        button.text() in {M.MOVE_UP, M.MOVE_DOWN} for button in window.findChildren(QPushButton)
+    )
+    window.model.set_jobs([Job(Path("one.wav")), Job(Path("two.wav"))])
+    window.table.selectRow(0)
+    window.move_actions[1].trigger()
+    assert window.model.jobs[1].source.name == "one.wav"
+    assert window.move_actions[0].shortcut().toString() == "Alt+Up"
+    window.table.setFocus()
+    qtbot.keyClick(window.table, Qt.Key.Key_Up, Qt.KeyboardModifier.AltModifier)
+    assert window.model.jobs[0].source.name == "one.wav"
+
+
+def test_phase_text_matches_active_row_including_zero_progress(window) -> None:
+    from dataclasses import replace
+
+    job = Job(Path("one.wav"))
+    window.model.set_jobs([job])
+    window.running = True
+    window._refresh()
+    assert window.overall.isVisible()
+    for phase in (
+        JobStatus.PREFLIGHT,
+        JobStatus.DECODING,
+        JobStatus.TRANSCRIBING,
+        JobStatus.EXPORTING,
+    ):
+        window._job_changed(replace(job, status=phase, progress=0))
+        assert M.phase_text(phase.value, 0) in window.status.text()
+        assert window.model.data(window.model.index(0, 2)) == M.phase_text(phase.value, 0)
+    window.running = False
+    window._refresh()
+    assert not window.overall.isVisible()
+
+
+def test_named_dialogs_radio_choices_and_nonzero_summary(window, qtbot) -> None:
+    collision = CollisionDialog("example.wav", window)
+    qtbot.addWidget(collision)
+    assert any("example.wav" in label.text() for label in collision.findChildren(QLabel))
+    assert list(collision.choices) == ["keep_both", "overwrite", "skip"]
+    collision.choices["overwrite"].click()
+    assert collision.selected_policy() == "overwrite"
+    assert not collision.choices["keep_both"].isChecked()
+    summary = SummaryDialog(
+        [Job(Path("bad.wav"), status=JobStatus.FAILED, failure=FailureCode.NO_AUDIO)], window
+    )
+    qtbot.addWidget(summary)
+    text = "\n".join(label.text() for label in summary.findChildren(QLabel))
+    assert "0 done" not in text and "0 skipped" not in text
+    assert "bad.wav" in text and M.FAILURE_MESSAGES[FailureCode.NO_AUDIO].message in text
+    assert summary.open_folder.isDefault()
+    dialog = ErrorDialog(FailureCode.NO_AUDIO, filename="bad.wav", parent=window)
+    qtbot.addWidget(dialog)
+    assert any("bad.wav" in label.text() for label in dialog.findChildren(QLabel))

@@ -29,11 +29,13 @@ ADD_FOLDER = "Add folder"
 REMOVE = "Remove"
 MOVE_UP = "Move up"
 MOVE_DOWN = "Move down"
-CLEAR = "Clear queue"
+CLEAR = "Clear list"
 START = "Start"
 CANCEL_CURRENT = "Cancel current file"
 CANCEL_ALL = "Cancel all"
-OPTIONS = "Options"
+OPTIONS = "Options..."
+OPTIONS_TITLE = "Options"
+MORE_FORMATS = "More formats"
 ADVANCED = "Advanced"
 OUTPUT = "Save transcripts to"
 CHOOSE_FOLDER = "Choose folder"
@@ -70,10 +72,10 @@ TRANSLATE_DISABLED = (
 )
 USE_MEDIUM = "Use Medium instead"
 MISSING_BATCH_MODEL = (
-    "This unfinished batch used {model}, which is not installed. "
+    "Your unfinished recordings used {model}, which is not installed. "
     "Choose an installed option to continue."
 )
-USE_INSTALLED = "Use {model} for this batch"
+USE_INSTALLED = "Use {model} for these recordings"
 PROMPT = "Vocabulary hints (optional)"
 PROMPT_HELP = "Names, medications, acronyms, separated by commas"
 PROMPT_EXAMPLE = "For example: Dr. Rahimi, metformin, HbA1c"
@@ -105,23 +107,34 @@ SCAN_COUNT = (
     "{added} files added, {unsupported} unsupported files skipped, {duplicates} duplicates skipped"
 )
 SCANNING = "Finding recordings..."
-SUMMARY = "Batch finished"
-SUMMARY_COUNTS = "{done} done, {failed} failed, {skipped} skipped, {cancelled} cancelled"
+SUMMARY = "All done"
+SUMMARY_ITEMS = {
+    "done": "{count} done",
+    "failed": "{count} failed",
+    "skipped": "{count} skipped",
+    "cancelled": "{count} cancelled",
+}
+FAILED_FILES = "Recordings that could not finish"
+NAMED_FAILURE = "{name}: {reason}"
+RECORDING_NAME = "Recording: {name}"
+COLLISION_CHOICES = {
+    "keep_both": "Keep both (the new one gets a number)",
+    "overwrite": "Replace the old transcript",
+    "skip": "Skip this recording",
+}
 DISMISS = "Done"
 RETRY = "Retry failed files"
-OPEN_FOLDER = "Open output folder"
+OPEN_FOLDER = "Open folder with transcripts"
 OPEN_RESULT = "Open folder"
 COLLISION_TITLE = "A transcript already exists"
 COLLISION_HELP = "Choose what to do with existing transcripts. Your recording will be kept."
-APPLY_ALL = "Use this choice for all remaining files in this batch"
+APPLY_ALL = "Use this choice for all remaining recordings"
 CONTINUE = "Continue"
-STOP_BATCH = "Cancel batch"
-RESUME_TITLE = "Resume unfinished batch?"
-RESUME_HELP = (
-    "You have an unfinished batch ({count} files remaining). Completed files will be kept."
-)
+STOP_BATCH = "Stop"
+RESUME_TITLE = "Pick up where you left off?"
+RESUME_HELP = "You have {count} recordings left to finish. Completed transcripts will be kept."
 RESUME = "Resume"
-DISCARD = "Discard batch"
+DISCARD = "Start over"
 WELCOME_TITLE = "Welcome to Dusty"
 WELCOME_HELP = "Drop recordings, press Start, and get text and Word documents."
 WELCOME_BUTTON = "Choose output folder and continue"
@@ -131,7 +144,7 @@ SYNC_HELP = (
     "sync service. Continue or choose another folder."
 )
 SYNC_CONTINUE = "Continue with this folder"
-CLOSE_TITLE = "Stop and save this batch?"
+CLOSE_TITLE = "Stop and save your progress?"
 CLOSE_HELP = (
     "The current file will stop. You can resume unfinished files the next time you open Dusty."
 )
@@ -166,9 +179,9 @@ PERCENT = "{value}%"
 CHOICES_SUMMARY = "{model}, {language}, {device}"
 HEADERS = ("Recording", "Duration", "Status", "Progress", "Elapsed", "Result")
 STATUSES = {
-    "queued": "Queued",
-    "preflight": "Checking",
-    "decoding": "Preparing audio",
+    "queued": "Waiting",
+    "preflight": "Preparing",
+    "decoding": "Preparing",
     "transcribing": "Transcribing",
     "exporting": "Saving",
     "done": "Done",
@@ -180,7 +193,7 @@ GPU_FALLBACK = "Completed on processor (graphics card failed)"
 GPU_NOTICE = (
     "The graphics card could not finish a file. Dusty completed it with the processor instead."
 )
-UNFINISHED_NOTICE = "Your unfinished batch is saved."
+UNFINISHED_NOTICE = "Your unfinished recordings are saved."
 
 
 def time_label(seconds: float) -> str:
@@ -347,3 +360,13 @@ LANGUAGES = (
     ("su", "Sundanese"),
     ("yue", "Cantonese"),
 )
+
+
+def summary_counts(jobs_counts: dict[str, int]) -> str:
+    return ", ".join(
+        SUMMARY_ITEMS[key].format(count=value) for key, value in jobs_counts.items() if value
+    )
+
+
+def phase_text(status: str, progress: float) -> str:
+    return PREPARING if status == "transcribing" and progress == 0 else STATUSES[status]

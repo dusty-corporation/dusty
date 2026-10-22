@@ -47,10 +47,8 @@ class QueueModel(QAbstractTableModel):
             status = (
                 M.GPU_FALLBACK
                 if job.gpu_fallback and job.status == JobStatus.DONE
-                else M.STATUSES[job.status.value]
+                else M.phase_text(job.status.value, job.progress)
             )
-            if job.status == JobStatus.TRANSCRIBING and job.progress == 0:
-                status = M.PREPARING
             return (
                 job.source.name,
                 M.time_label(job.duration_sec) if job.duration_sec else M.UNKNOWN_TIME,
