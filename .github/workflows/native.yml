@@ -1,0 +1,85 @@
+name: Native whisper build
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - native/**
+      - .github/workflows/native.yml
+  pull_request:
+    paths:
+      - native/**
+      - .github/workflows/native.yml
+
+permissions:
+  contents: read
+
+jobs:
+  whisper:
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [cpu, vulkan]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Read pins
+        id: pins
+        shell: pwsh
+        run: |
+          $pins = Get-Content native/versions.toml -Raw
+          $commit = [regex]::Match($pins, '(?s)\[whisper_cpp\].*?commit = "([0-9a-f]{40})"').Groups[1].Value
+          $sdk = [regex]::Match($pins, '(?s)\[vulkan_sdk\].*?version = "([0-9.]+)"').Groups[1].Value
+          $sha = [regex]::Match($pins, '(?s)\[vulkan_sdk\].*?windows_installer_sha256 = "([0-9a-f]{64})"').Groups[1].Value
+          if (-not $commit -or -not $sdk -or -not $sha) { throw 'Missing native version pin' }
+          "commit=$commit" >> $env:GITHUB_OUTPUT
+          "sdk=$sdk" >> $env:GITHUB_OUTPUT
+          "sdksha=$sha" >> $env:GITHUB_OUTPUT
+      - name: Get pinned whisper.cpp
+        shell: pwsh
+        run: |
+          git clone --filter=blob:none https://github.com/ggml-org/whisper.cpp.git build/upstream-whisper
+          git -C build/upstream-whisper checkout --detach '${{ steps.pins.outputs.commit }}'
+          if ((git -C build/upstream-whisper rev-parse HEAD).Trim() -ne '${{ steps.pins.outputs.commit }}') { throw 'Commit mismatch' }
+      - name: Install verified LunarG Vulkan SDK
+        if: matrix.backend == 'vulkan'
+        shell: pwsh
+        run: |
+          $url = 'https://sdk.lunarg.com/sdk/download/${{ steps.pins.outputs.sdk }}/windows/vulkan_sdk.exe'
+          $installer = Join-Path $env:RUNNER_TEMP 'vulkan-sdk.exe'
+          Invoke-WebRequest -Uri $url -OutFile $installer
+          $hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($hash -ne '${{ steps.pins.outputs.sdksha }}') { throw 'Vulkan SDK SHA-256 mismatch' }
+          $sdkRoot = Join-Path $env:RUNNER_TEMP 'vulkan-sdk'
+          & $installer --root $sdkRoot --accept-licenses --default-answer --confirm-command install copy_only=1
+          if ($LASTEXITCODE -ne 0) { throw 'Vulkan SDK install failed' }
+          "VULKAN_SDK=$sdkRoot" >> $env:GITHUB_ENV
+      - name: Build
+        shell: pwsh
+        run: ./native/build_whisper.ps1 -Backend '${{ matrix.backend }}'
+      - name: Check binary imports
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products '*' -property installationPath
+          $dumpbin = Get-ChildItem (Join-Path $vs 'VC/Tools/MSVC') -Filter dumpbin.exe -Recurse | Where-Object FullName -Match '\\Hostx64\\x64\\' | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $dumpbin) { throw 'dumpbin missing' }
+          $package = "build/native/package/${{ matrix.backend }}"
+          $bundled = @(Get-ChildItem $package -Filter *.dll | ForEach-Object { $_.Name.ToLowerInvariant() })
+          foreach ($binary in Get-ChildItem $package | Where-Object { $_.Extension -in @('.exe', '.dll') }) {
+            $deps = & $dumpbin /dependents $binary.FullName
+            if ($LASTEXITCODE -ne 0) { throw 'dumpbin failed' }
+            $deps | Out-File -Encoding utf8 "$($binary.FullName).imports.txt"
+            $dlls = @($deps | Select-String -Pattern '^\s+([\w.-]+\.dll)\s*$' | ForEach-Object { $_.Matches[0].Groups[1].Value.ToLowerInvariant() })
+            $unexpected = @($dlls | Where-Object {
+              $_ -notin $bundled -and
+              -not (Test-Path (Join-Path $env:SystemRoot "System32/$_")) -and
+              $_ -notmatch '^(api-ms-win-|ext-ms-win-)' -and
+              -not ('${{ matrix.backend }}' -eq 'vulkan' -and $_ -eq 'vulkan-1.dll')
+            })
+            if ($unexpected.Count) { throw "Unexpected external DLLs: $($unexpected -join ', ')" }
+            if ('${{ matrix.backend }}' -eq 'cpu' -and $dlls -contains 'vulkan-1.dll') { throw 'CPU binary imports Vulkan' }
+          }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: whisper-${{ matrix.backend }}
+          path: build/native/package/${{ matrix.backend }}/

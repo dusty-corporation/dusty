@@ -1,0 +1,127 @@
+name: Convert benchmark models
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [m1-engine-spike]
+    paths:
+      - .github/workflows/models.yml
+      - modelpipeline/**
+      - native/versions.toml
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Check model-host policy
+        run: python tools/check_no_huggingface.py
+      - name: Ensure draft model release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view models-v1 --json isDraft --jq .isDraft >/tmp/draft-state 2>/dev/null; then
+            test "$(cat /tmp/draft-state)" = true
+          else
+            gh release create models-v1 --draft --prerelease --target "${{ github.sha }}" --title "M1 benchmark models" --notes "Draft benchmark candidates. Owner publishes after review."
+          fi
+
+  convert:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { model: tiny, quant: f16 }
+          - { model: base, quant: f16 }
+          - { model: small, quant: f16 }
+          - { model: small.en, quant: f16 }
+          - { model: medium, quant: f16 }
+          - { model: large-v3-turbo, quant: f16 }
+          - { model: large-v3-turbo, quant: q8_0 }
+          - { model: large-v3-turbo, quant: q5_0 }
+          - { model: large-v3, quant: q8_0 }
+          - { model: large-v3, quant: q5_0 }
+          - { model: silero-vad, quant: f16 }
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Get pinned upstream source
+        run: |
+          git clone --filter=blob:none https://github.com/ggml-org/whisper.cpp.git build/upstream-whisper
+          git -C build/upstream-whisper checkout --detach d1be6fde11ac6e0407606b4e42fe72d34add8037
+          test "$(git -C build/upstream-whisper rev-parse HEAD)" = d1be6fde11ac6e0407606b4e42fe72d34add8037
+          git clone --filter=blob:none https://github.com/openai/whisper.git build/upstream-openai
+          git -C build/upstream-openai checkout --detach 86098128c0b4f24f0e2aa2994de830614b474227
+          test "$(git -C build/upstream-openai rev-parse HEAD)" = 86098128c0b4f24f0e2aa2994de830614b474227
+          python -m modelpipeline.verify_sources build/upstream-openai
+      - name: Install pinned CPU conversion tools
+        run: |
+          python -m pip install 'torch==2.14.1+cpu' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'numpy==2.3.3' 'silero-vad==6.2.3'
+          python - <<'PY'
+          import importlib.resources
+          import torch
+          import silero_vad
+          assert torch.__version__ == '2.14.1+cpu'
+          assert silero_vad.__version__ == '6.2.3'
+          assert importlib.resources.files('silero_vad.data').joinpath('silero_vad.jit').is_file()
+          print('Pinned CPU tools and bundled Silero weights verified')
+          PY
+      - name: Build quantizer
+        if: matrix.quant != 'f16'
+        run: |
+          cmake -S build/upstream-whisper -B build/upstream-whisper/build -DWHISPER_BUILD_TESTS=OFF -DGGML_VULKAN=OFF
+          cmake --build build/upstream-whisper/build --target whisper-quantize --parallel 4
+      - name: Download verified source model
+        if: matrix.model != 'silero-vad'
+        env:
+          MODEL: ${{ matrix.model }}
+        run: |
+          mkdir -p build/model-work
+          url="$(python -c 'import json,os; print(json.load(open("modelpipeline/model_sources.json"))[os.environ["MODEL"]]["url"])')"
+          expected="$(python -c 'import json,os; print(json.load(open("modelpipeline/model_sources.json"))[os.environ["MODEL"]]["sha256"])')"
+          curl --fail --location --retry 3 --silent --show-error --output build/model-work/model.pt "$url"
+          echo "$expected  build/model-work/model.pt" | sha256sum --check --status
+      - name: Convert twice and check size
+        env:
+          MODEL: ${{ matrix.model }}
+          QUANT: ${{ matrix.quant }}
+        run: |
+          set -euo pipefail
+          python -m modelpipeline.convert "$MODEL" "$QUANT" 2>&1 | tee build-model.log
+          python -m modelpipeline.check_log build-model.log
+          python tools/check_no_huggingface.py
+      - name: Upload model directly to draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(gh release view models-v1 --json isDraft --jq .isDraft)" = true
+          gh release upload models-v1 build/model-package/*.bin
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fragment-${{ matrix.model }}-${{ matrix.quant }}
+          path: fragment.json
+
+  manifest:
+    needs: convert
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: fragment-*
+          path: build/fragments
+      - name: Merge and upload manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python -m modelpipeline.merge
+          test "$(gh release view models-v1 --json isDraft --jq .isDraft)" = true
+          gh release upload models-v1 models.json

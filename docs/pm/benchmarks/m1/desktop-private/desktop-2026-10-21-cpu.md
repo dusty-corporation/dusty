@@ -1,0 +1,14 @@
+﻿# Benchmark summary
+
+| Model | Quant | Requested | Actual | CPU variant | Threads | Duration s | Wall s | RTF | Peak MB |
+| --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| base-f16 | f16 | cpu | cpu | haswell | 8 | 600 | 25.649 | 0.0427 | 467.1 |
+| large-v3-q5_0 | q5_0 | cpu | cpu | haswell | 8 | 600 | 561.652 | 0.9361 | 2189.7 |
+| large-v3-q8_0 | q8_0 | cpu | cpu | haswell | 8 | 600 | 409.253 | 0.6821 | 2729.7 |
+| large-v3-turbo-f16 | f16 | cpu | cpu | haswell | 8 | 600 | 235.106 | 0.3918 | 1992.3 |
+| large-v3-turbo-q5_0 | q5_0 | cpu | cpu | haswell | 8 | 600 | 233.227 | 0.3887 | 983.3 |
+| large-v3-turbo-q8_0 | q8_0 | cpu | cpu | haswell | 8 | 600 | 198.076 | 0.3301 | 1270.3 |
+| medium-f16 | f16 | cpu | cpu | haswell | 8 | 600 | 226.506 | 0.3775 | 2256.4 |
+| small-f16 | f16 | cpu | cpu | haswell | 8 | 600 | 82.353 | 0.1373 | 934.5 |
+| small.en-f16 | f16 | cpu | cpu | haswell | 8 | 600 | 77.575 | 0.1293 | 928.3 |
+| tiny-f16 | f16 | cpu | cpu | haswell | 8 | 600 | 15.929 | 0.0265 | 352.9 |
