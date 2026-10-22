@@ -3,18 +3,19 @@
 import logging
 import shutil
 import threading
+import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Literal
 
 from dusty.core import BatchOptions, FailureCode, Job, JobStatus
-from dusty.core.types import Cancellation
+from dusty.core.types import Cancellation, CollisionPolicy
 from dusty.models import ModelCorrupt, ModelMissing, ModelRegistry, can_translate
 from dusty.platform.power import prevent_sleep
 from dusty.runtime_paths import RuntimePaths
 
-from .outputs import OutputExistsError, write_outputs
+from .outputs import OutputExistsError, output_targets, write_outputs
 from .storage import save_batch
 
 _LOG = logging.getLogger("dusty")
@@ -62,6 +63,7 @@ class Coordinator:
         cancel_current: threading.Event | None = None,
         on_change: Callable[[Job], None] | None = None,
         vulkan_ok: bool | None = None,
+        on_collision: Callable[[Job], CollisionPolicy] | None = None,
     ) -> list[Job]:
         """Save every transition; preserve finished jobs on restart."""
         if options.task == "translate" and not can_translate(
@@ -80,14 +82,31 @@ class Coordinator:
                 save_batch(self.state_path, options, jobs)
                 continue
 
-            def changed(current: Job = job) -> None:
+            job_started = time.monotonic()
+
+            def changed(current: Job = job, started: float = job_started) -> None:
+                current.elapsed_sec = time.monotonic() - started
                 self._changed(current, options, jobs, on_change)
 
             signals = _CancellationGroup(
                 tuple(event for event in (cancel, cancel_current) if event)
             )
+            current_options = options
+            if options.collision == "ask" and on_collision:
+                try:
+                    output_targets(job, options)
+                except OutputExistsError:
+                    decision = on_collision(job)
+                    current_options = replace(options, collision=decision)
+                if cancel and cancel.is_set():
+                    job.status = JobStatus.CANCELLED
+                    changed()
+                    continue
             try:
-                self._run_one(job, options, signals, vulkan_ok, changed)
+                job.failure = None
+                job.progress = 0.0
+                job.gpu_fallback = False
+                self._run_one(job, current_options, signals, vulkan_ok, changed)
             finally:
                 if cancel_current:
                     cancel_current.clear()
@@ -147,6 +166,7 @@ class Coordinator:
             if not probe.has_audio:
                 job.failure = FailureCode.NO_AUDIO
                 return
+            job.duration_sec = probe.duration_sec
             estimated_wav = int(probe.duration_sec * 16000 * 2 + 4096)
             if shutil.disk_usage(work).free < estimated_wav * 2:
                 job.failure = FailureCode.DISK_FULL

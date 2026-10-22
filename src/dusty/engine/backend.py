@@ -4,7 +4,7 @@ import hashlib
 import shutil
 from pathlib import Path
 
-from dusty.models import ModelRegistry
+from dusty.models import ModelCorrupt, ModelMissing, ModelRegistry
 from dusty.platform.gpu_signature import display_driver_signature
 from dusty.queue.storage import load_settings, save_settings
 from dusty.runtime_paths import RuntimePaths
@@ -21,7 +21,9 @@ def _engine_signature(executable: Path) -> str:
     return digest.hexdigest()
 
 
-def probe_vulkan(paths: RuntimePaths, registry: ModelRegistry, *, refresh: bool = False) -> bool:
+def probe_vulkan(
+    paths: RuntimePaths, registry: ModelRegistry, *, refresh: bool = False, model_id: str = "tiny"
+) -> bool:
     """Recheck whenever the pinned engine or display-driver signature changes."""
     executable = paths.bin_dir / "vulkan/whisper-cli.exe"
     try:
@@ -46,10 +48,10 @@ def probe_vulkan(paths: RuntimePaths, registry: ModelRegistry, *, refresh: bool 
         transcode_audio(paths.bin_dir / "ffmpeg/ffmpeg.exe", fixture, work / "audio.wav")
         run = run_whisper(
             executable,
-            registry.model_path("tiny"),
+            registry.model_path(model_id),
             work / "audio.wav",
             work / "raw",
-            model_id="tiny",
+            model_id=model_id,
             task="transcribe",
             language="en",
             threads=4,
@@ -60,7 +62,7 @@ def probe_vulkan(paths: RuntimePaths, registry: ModelRegistry, *, refresh: bool 
         )
         ok = bool(run.transcript.segments)
         device_name = run.device_name
-    except (OSError, EngineError, ValueError):
+    except (OSError, EngineError, ValueError, ModelMissing, ModelCorrupt):
         ok = False
     finally:
         shutil.rmtree(work)

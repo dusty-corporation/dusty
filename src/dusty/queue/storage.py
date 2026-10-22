@@ -59,6 +59,8 @@ def save_batch(path: Path, options: BatchOptions, jobs: list[Job]) -> None:
                     "outputs": [str(output) for output in job.outputs],
                     "backend_used": job.backend_used,
                     "gpu_fallback": job.gpu_fallback,
+                    "duration_sec": job.duration_sec,
+                    "elapsed_sec": job.elapsed_sec,
                 }
                 for job in jobs
             ],
@@ -100,6 +102,8 @@ def load_batch(path: Path) -> tuple[BatchOptions, list[Job]] | None:
                 outputs=[Path(value) for value in item["outputs"]],
                 backend_used=item["backend_used"],
                 gpu_fallback=bool(item["gpu_fallback"]),
+                duration_sec=float(item.get("duration_sec", 0.0)),
+                elapsed_sec=float(item.get("elapsed_sec", 0.0)),
             )
             if job.status not in {JobStatus.DONE, JobStatus.SKIPPED} or (
                 job.status == JobStatus.DONE
