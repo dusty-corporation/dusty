@@ -24,7 +24,9 @@ def eta_seconds(jobs: list[Job], elapsed: float) -> float | None:
     ):
         return None
     completed = sum(
-        job.duration_sec * (1 if job.status in TERMINAL else job.progress) for job in jobs
+        job.duration_sec * (1 if job.status == JobStatus.DONE else job.progress)
+        for job in jobs
+        if job.status == JobStatus.DONE or job.status not in TERMINAL
     )
     remaining = sum(
         job.duration_sec * (1 - job.progress) for job in jobs if job.status not in TERMINAL

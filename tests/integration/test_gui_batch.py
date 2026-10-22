@@ -4,7 +4,7 @@ import shutil
 import time
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QThread, QTimer
 from PySide6.QtWidgets import QDialog
 
 from dusty.app.dialogs import CloseDialog, CollisionDialog, ResumeDialog, SyncDialog
@@ -28,12 +28,20 @@ def ready_window(qtbot, tmp_path):
     return window
 
 
-def test_real_batch_event_loop_gap_never_exceeds_200ms(qtbot, tmp_path) -> None:
+def test_real_batch_event_loop_gap_never_exceeds_200ms(qtbot, tmp_path, monkeypatch) -> None:
     window = ready_window(qtbot, tmp_path)
     window.model.set_jobs([Job(ROOT / "tests/fixtures/audio/formats/jfk.wav", duration_sec=11)])
     window._set_combo(window.device_choice, "cpu")
     window.threads_choice.setValue(2)
     window._refresh()
+    update_threads = []
+    original = window.model.update_job
+
+    def update(job):
+        update_threads.append(QThread.currentThread())
+        original(job)
+
+    monkeypatch.setattr(window.model, "update_job", update)
     qtbot.wait(100)
     ticks = [time.perf_counter()]
     timer = QTimer()
@@ -49,6 +57,7 @@ def test_real_batch_event_loop_gap_never_exceeds_200ms(qtbot, tmp_path) -> None:
     assert window.model.jobs[0].status == JobStatus.DONE
     assert len(window.model.jobs[0].outputs) == 2
     assert len(ticks) > 10
+    assert update_threads and all(thread == window.thread() for thread in update_threads)
     maximum_gap = max(b - a for a, b in zip(ticks, ticks[1:], strict=False))
     print(f"qt_maximum_event_gap_ms={maximum_gap * 1000:.3f}")
     assert maximum_gap <= 0.200, f"Qt event-loop maximum gap: {maximum_gap:.3f} seconds"

@@ -38,17 +38,21 @@ def main() -> int:
 
     def ready() -> None:
         nonlocal started
+        if started:
+            if window.batch and not window.running and not window.batch.isRunning():
+                poll.stop()
+                finished()
+            return
         if not started and window.ready:
             started = True
-            poll.stop()
             window._set_combo(window.model_choice, "tiny")
             window._set_combo(window.device_choice, "cpu")
             window._refresh()
             window.start_batch()
-            if window.batch:
-                window.batch.finished.connect(finished)
-            else:
+            if not window.batch:
                 app.quit()
+        elif window.preparer and not window.preparer.isRunning() and not window.ready:
+            app.quit()
 
     poll.timeout.connect(ready)
     poll.start()

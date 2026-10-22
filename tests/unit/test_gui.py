@@ -9,7 +9,14 @@ from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import QApplication, QDialog, QFileDialog
 
 from dusty.app import messages as M
-from dusty.app.dialogs import CollisionDialog, ErrorDialog, ResumeDialog, SummaryDialog, SyncDialog
+from dusty.app.dialogs import (
+    CollisionDialog,
+    ErrorDialog,
+    FolderDialog,
+    ResumeDialog,
+    SummaryDialog,
+    SyncDialog,
+)
 from dusty.app.window import MainWindow
 from dusty.app.workers import Prepared, PrepareWorker
 from dusty.core import BatchOptions, FailureCode, Job, JobStatus
@@ -102,6 +109,8 @@ def test_backend_defaults_language_translation_and_hint_rules(window, qtbot, tmp
     assert window.language_choice.currentData() == "en"
     assert not window.language_choice.isEnabled()
     assert not window.start_button.isEnabled()
+    window._use_medium()
+    assert window.language_choice.currentData() == "auto"
     window.prompt.setPlainText("CANARYMEDTERM " * 80)
     assert window.prompt_warning.isVisible()
     window._set_combo(window.model_choice, "medium")
@@ -138,6 +147,17 @@ def test_add_files_button_and_local_drop(window, qtbot, tmp_path, monkeypatch) -
     )
     QApplication.sendEvent(window, drop)
     qtbot.waitUntil(lambda: window.model.rowCount() == 2 and not window.scanner.isRunning())
+    (tmp_path / "nested").mkdir()
+    (tmp_path / "nested/three.wav").touch()
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a: str(tmp_path))
+
+    def include_subfolders(dialog):
+        dialog.recursive.setChecked(True)
+        return QDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(FolderDialog, "exec", include_subfolders)
+    qtbot.mouseClick(window.add_folder_button, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: window.model.rowCount() == 3 and not window.scanner.isRunning())
 
 
 def test_dialog_defaults_and_every_error(window, qtbot) -> None:

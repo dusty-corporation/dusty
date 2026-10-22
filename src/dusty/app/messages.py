@@ -11,7 +11,7 @@ FILE_FILTER = (
 )
 PRIVACY_TITLE = "Privacy and accuracy"
 ABOUT_VERSION = "Dusty {version}"
-TAGLINE = "Private transcription, on your computer."
+TAGLINE = "Private transcription that never leaves your computer."
 PRIVACY = (
     "Dusty processes your recordings entirely on this computer. After installation, it "
     "never needs an internet connection, and it never sends your audio or transcripts "
@@ -23,7 +23,7 @@ ACCURACY = (
     "or other important decisions."
 )
 DROP = "Drop recordings or folders here"
-DROP_HELP = "Audio and video recordings stay on this computer."
+DROP_HELP = "Add one recording or a whole folder."
 ADD_FILES = "Add files"
 ADD_FOLDER = "Add folder"
 REMOVE = "Remove"
@@ -215,7 +215,7 @@ FAILURE_MESSAGES: dict[FailureCode, FailureMessage] = {
         "The selected model is not installed.", "Open Model Manager to download it."
     ),
     FailureCode.MODEL_CORRUPT: FailureMessage(
-        "The selected model file is damaged.", "Open Model Manager to download it again."
+        "The selected model is damaged.", "Open Model Manager to download it again."
     ),
     FailureCode.ENGINE_ERROR: FailureMessage(
         "Transcription could not complete.", "Click Retry or choose another model."

@@ -91,6 +91,7 @@ class MainWindow(QMainWindow):
         self._active_received = 0.0
         self._active_id: UUID | None = None
         self._active_elapsed = 0.0
+        self._timed_ids: set[UUID] = set()
         self.setWindowTitle(M.APP_NAME)
         self.resize(1060, 780)
         self.setMinimumSize(800, 640)
@@ -358,7 +359,7 @@ class MainWindow(QMainWindow):
         self.preparer = PrepareWorker(self.paths, self.registry)
         self._tasks.append(self.preparer)
         self.preparer.ready.connect(self.apply_prepared)
-        self.preparer.failed.connect(lambda: self.show_error(text=M.PREPARATION_ERROR))
+        self.preparer.failed.connect(self._prepare_failed)
         self.preparer.finished.connect(self._background_finished)
         self.preparer.start()
 
@@ -524,7 +525,7 @@ class MainWindow(QMainWindow):
             self.preparer = PrepareWorker(self.paths, self.registry, refresh_probe=True)
             self._tasks.append(self.preparer)
             self.preparer.ready.connect(self._device_prepared)
-            self.preparer.failed.connect(lambda: self.show_error(text=M.PREPARATION_ERROR))
+            self.preparer.failed.connect(self._prepare_failed)
             self.preparer.finished.connect(self._background_finished)
             self.preparer.start()
             self._refresh()
@@ -618,7 +619,10 @@ class MainWindow(QMainWindow):
         )
 
     def _use_medium(self) -> None:
+        previous = self.registry.manifest.models.get(self.model_choice.currentData())
         self._set_combo(self.model_choice, "medium")
+        if previous and previous.english_only:
+            self._set_combo(self.language_choice, "auto")
         self._set_combo(self.task_choice, "translate")
         self._rules()
 
@@ -680,7 +684,7 @@ class MainWindow(QMainWindow):
         self.scanner = ScanWorker(paths, recursive, list(self.model.jobs), self.paths)
         self._tasks.append(self.scanner)
         self.scanner.ready.connect(self._scanned)
-        self.scanner.failed.connect(lambda: self.show_error(text=M.SCAN_ERROR))
+        self.scanner.failed.connect(self._scan_failed)
         self.scanner.finished.connect(self._background_finished)
         self.scanner.start()
         self._refresh()
@@ -788,10 +792,13 @@ class MainWindow(QMainWindow):
         self._tasks.append(self.batch)
         self.batch.changed.connect(self._job_changed)
         self.batch.collision.connect(self._collision)
-        self.batch.failed.connect(lambda: self.show_error(text=M.PREPARATION_ERROR))
+        self.batch.failed.connect(self._prepare_failed)
         self.batch.finished.connect(self._batch_finished)
         self.running = True
         self._batch_started = time.monotonic()
+        self._timed_ids = {
+            job.id for job in jobs if job.status not in {JobStatus.DONE, JobStatus.SKIPPED}
+        }
         self.overall.setRange(0, 1000)
         self.status.setText(M.PREPARING)
         self._refresh()
@@ -825,6 +832,7 @@ class MainWindow(QMainWindow):
             self.batch.cancel_all.set()
             self.status.setText(M.CLOSING)
 
+    @Slot()
     def _batch_finished(self) -> None:
         self.running = False
         self._active_id = None
@@ -857,7 +865,7 @@ class MainWindow(QMainWindow):
                 self.model.dataChanged.emit(self.model.index(row, 4), self.model.index(row, 4))
         self.overall.setValue(int(overall_progress(self.model.jobs) * 1000))
         elapsed = time.monotonic() - self._batch_started
-        eta = eta_seconds(self.model.jobs, elapsed)
+        eta = eta_seconds([job for job in self.model.jobs if job.id in self._timed_ids], elapsed)
         completed = sum(job.status in TERMINAL for job in self.model.jobs)
         active = next((job for job in self.model.jobs if job.id == self._active_id), None)
         phase = (
@@ -875,6 +883,7 @@ class MainWindow(QMainWindow):
             + (M.ESTIMATING if eta is None else M.ETA.format(time=M.time_label(eta)))
         )
 
+    @Slot()
     def _background_finished(self) -> None:
         self._refresh()
         if self.closing and not any(task.isRunning() for task in self._tasks):
@@ -902,11 +911,7 @@ class MainWindow(QMainWindow):
             return
         worker = SelfTestWorker(self.paths, self.model_choice.currentData())
         self._tasks.append(worker)
-        worker.result.connect(
-            lambda ok: TextDialog(
-                M.SELF_TEST, (M.SELF_TEST_OK if ok else M.SELF_TEST_ERROR,), self
-            ).exec()
-        )
+        worker.result.connect(self._selftest_result)
         worker.finished.connect(self._background_finished)
         worker.start()
         self._refresh()
@@ -918,6 +923,22 @@ class MainWindow(QMainWindow):
             self.status.setText(
                 text or M.FAILURE_MESSAGES[code].message if code else text or M.PREPARATION_ERROR
             )
+
+    @Slot()
+    def _prepare_failed(self) -> None:
+        self.show_error(text=M.PREPARATION_ERROR)
+
+    @Slot()
+    def _scan_failed(self) -> None:
+        self.show_error(text=M.SCAN_ERROR)
+
+    @Slot(bool)
+    def _selftest_result(self, ok: bool) -> None:
+        text = M.SELF_TEST_OK if ok else M.SELF_TEST_ERROR
+        if self.interactive:
+            TextDialog(M.SELF_TEST, (text,), self).exec()
+        else:
+            self.status.setText(text)
 
     def closeEvent(self, event: QCloseEvent) -> None:
         if self.running:
