@@ -82,6 +82,12 @@ class Coordinator:
             if target.exists()
         }
         produced: set[Path] = set()
+        claimed = {
+            target.resolve()
+            for entry in jobs
+            if entry.status in {JobStatus.DONE, JobStatus.SKIPPED}
+            for target in output_targets(entry, replace(options, collision="overwrite"))
+        }
         for job in jobs:
             if job.status in {JobStatus.DONE, JobStatus.SKIPPED}:
                 continue
@@ -107,7 +113,9 @@ class Coordinator:
                 for target in existing
                 if target.resolve() in preexisting and target.resolve() not in produced
             ]
-            if existing and not prior:
+            repeated_name = any(target.resolve() in claimed for target in nominal)
+            claimed.update(target.resolve() for target in nominal)
+            if repeated_name or (existing and not prior):
                 current_options = replace(options, collision="keep_both")
             elif prior and options.collision == "ask" and on_collision:
                 decision = on_collision(replace(job, outputs=prior))

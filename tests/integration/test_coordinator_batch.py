@@ -238,3 +238,13 @@ def test_amr_unknown_duration_and_same_run_stems_use_real_pipeline(tmp_path: Pat
     )
     assert again.status == JobStatus.SKIPPED
     assert asked[0].outputs[0].name == "jfk.txt"
+
+    asked.clear()
+    third = [Job(folder / "jfk.wav"), Job(folder / "jfk.amr")]
+    Coordinator(paths, registry).run_batch(
+        third, options, vulkan_ok=False, on_collision=lambda job: asked.append(job) or "keep_both"
+    )
+    assert all(job.status == JobStatus.DONE for job in third)
+    assert len(asked) == 1
+    assert third[0].outputs[0].name == "jfk (2).txt"
+    assert third[1].outputs[0].name == "jfk (3).txt"
