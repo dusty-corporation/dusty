@@ -21,10 +21,10 @@ def test_persian_translation_is_english(tmp_path: Path) -> None:
     for task in ("transcribe", "translate"):
         result = run_whisper(
             paths.bin_dir / "cpu/whisper-cli.exe",
-            registry.model_path("small"),
+            registry.model_path("medium"),
             ROOT / "tests/fixtures/audio/translate/rubaiyat-fa.wav",
             tmp_path / task,
-            model_id="small",
+            model_id="medium",
             task=task,
             language="fa",
             threads=4,
@@ -43,5 +43,10 @@ def test_persian_translation_is_english(tmp_path: Path) -> None:
     words = set(re.findall(r"[a-z]+", translated.lower()))
     # Whinfield's published quatrain 2 says "burns as fire". This is a loose
     # translation smoke test, not a WER or literary translation quality claim.
-    assert "fire" in words
+    reference_keyword_present = "fire" in words
+    assert reference_keyword_present, "Missing independent source keyword"
+    other_reference_content = bool(
+        words & {"brought", "night", "nightfall", "tonight", "wind", "air"}
+    )
+    assert other_reference_content, "Missing additional independent source content"
     assert len(words & {"who", "you", "your", "the", "is", "and", "was", "it", "in", "to"}) >= 4

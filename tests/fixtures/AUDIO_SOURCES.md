@@ -72,12 +72,13 @@ No Owner recording is stored here.
 - Source: https://archive.org/download/rubaiyat_bilingual_1207_librivox/rubaiyat_01_khayyam_whinfield_64kb.mp3
   SHA-256 `2ad5b8c9f30ee8540f1706b64257c7717b3b0bed6447163e34a547d6f9c9dc5e`.
 - Excerpt: source interval [107, 122) seconds, Persian quatrain 2, excluding
-  the following English reading. Transcribe with Small recognizes Persian
+  the following English reading. Transcribe with Medium recognizes Persian
   script; Translate produces English instead.
 - Independent reference: Edward Henry Whinfield's 1883 bilingual edition,
   [quatrain 2](https://archive.org/details/quatrains1883omaruoft), says
-  "burns as fire". The test checks that content keyword and English script
-  and function words. It makes no WER or literary translation quality claim.
+  "burns as fire". The test checks that keyword, another reference concept
+  (brought/night/wind/air), English script and function words. It makes no WER
+  or literary translation quality claim.
 - Reproduce with the pinned minimal FFmpeg: `ffmpeg -nostdin -hide_banner
   -loglevel error -protocol_whitelist file,pipe -i <source.mp3> -ss 107 -t 15
   -ac 1 -ar 16000 -c:a pcm_s16le rubaiyat-fa.wav`.

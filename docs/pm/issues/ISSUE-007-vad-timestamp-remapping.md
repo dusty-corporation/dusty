@@ -2,7 +2,7 @@
 
 - Severity: S1
 - Milestone: M2
-- Status: In progress
+- Status: Resolved
 - Environment: Owner desktop, pinned whisper.cpp v1.9.5 commit
   `d1be6fde11ac6e0407606b4e42fe72d34add8037`, CPU tiny, Silero VAD 6.2.3,
   four threads, public mostly-silence-10min fixture
@@ -64,19 +64,22 @@ regression are implemented. Native run 39804070663 passed both builds and
 import checks. Desktop JFK, segment/word regressions on CPU and Vulkan, and
 five startup runs per backend passed. VAD-on outside-span segment words are
 zero after the fix versus 22 before, with 44 total words in both cases.
-All real-word timestamp intervals pass the 0.5 s tolerance. The fix is in
-verified draft engine-v2; this issue stays in progress until the Owner
-publishes it and the active dev/CI release pin is promoted.
+All real-word timestamp intervals pass the 0.5 s tolerance. The Owner published
+engine-v2 as a prerelease; `d3ed49c` activated it after all five published asset
+digests and downloaded bytes matched the verified draft. Published engine-v1
+was not modified. VAD remains on by default.
 
-Recommend a PM-approved patch of the pinned native engine to map segment
-starts/ends and full JSON token times correctly at VAD gaps, followed by a new
-immutable engine release and hash pins. Do not replace published engine-v1.
-An application-side mapper using numeric VAD boundaries is an alternative,
-but adds reliance on diagnostic stderr and more reconstruction logic.
-No workaround or native change has been implemented. VAD remains on by default.
+## Resolution
+
+The active published-engine VAD regression passed on CI, including green PR
+run 39812231667 and green run 39812652065. Each run's offline job also passed
+the WFP positive control and recorded zero processing connection events.
+The fix is active in dev and CI. Retire the patch only after an upstream
+stable release passes the same segment and word regressions; BACKLOG.md
+records PR 4068 or an equivalent fix as that future trigger.
 
 ## Regression test added
 
-`tests/integration/test_vad_silence.py` retains the failing long-gap timestamp
+`tests/integration/test_vad_silence.py` retains the long-gap timestamp
 check and runs the VAD-off comparison before asserting. No test is skipped,
-marked xfail, or relaxed. PM guidance is required under SPEC 14.3.
+marked xfail, or relaxed. ADR 0018 records the PM-approved correction.

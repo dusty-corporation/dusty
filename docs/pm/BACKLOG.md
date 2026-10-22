@@ -9,6 +9,7 @@ Record optional improvements, optimizations, and work outside V1 here instead of
 - Persistent engine per batch: no current need after ISSUE-004 resolution; any future change needs PM approval to change ADR 0004 and preserve cancellation and crash isolation.
 - Exact vocabulary token counting: consider replacing the documented approximate prompt warning if an approved tokenizer becomes available.
 - Additional model variants: reconsider models cut by ADR 0016 only with fresh accuracy and performance evidence and PM approval.
+- CI asset-cache refresh: include the selected-model set in the immutable cache key so future dev-model additions can be cached; download hash verification already runs every time.
 
 ## After V1 (SPEC section 3.2)
 

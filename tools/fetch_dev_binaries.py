@@ -19,7 +19,7 @@ ENGINE_ASSETS = {
     "whisper-vulkan.zip": ("whisper_vulkan_zip_sha256", "vulkan"),
     "minimal-ffmpeg.zip": ("minimal_ffmpeg_zip_sha256", "ffmpeg"),
 }
-DEV_MODEL_IDS = ("tiny-f16", "small.en-f16", "small-f16")
+DEV_MODEL_IDS = ("tiny-f16", "small.en-f16", "medium-f16")
 VAD_ID = "silero-vad"
 
 
