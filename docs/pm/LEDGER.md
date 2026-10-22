@@ -27,7 +27,7 @@
 | PRE-M7-SURFACE | M7 | Real Surface Laptop 5 Vulkan smoke test | todo | Owner-owned M1 conditional GO item; required before M7, does not block M2-M6 | - |
 | M2-01 | M2 | Pinned engine and model assets for dev and CI | done | Published `engine-v1` digests matched three pins; fetch script verified engine archives, manifest, tiny, small.en, and VAD; PR #3 checks passed in runs 39722358788 and 39722363339 | ISSUE-005 (resolved) |
 | M2-02 | M2 | Headless core pipeline | doing | Owner checkpoint `9df2013` preserves queue, privacy, self-test, CLI, and backend probe; prior local suite 50 passed, strict package coverage 91.6% overall; resumed `uv run mypy` passed 39 source files; final integration and CI acceptance remain | ISSUE-006 (resolved) |
-| M2-03 | M2 | ISSUE-004 startup probe and findings | doing | Native five-run CPU/Vulkan probe validated from repository and standalone kit; setup fetched and verified published engine archives and tiny model without Python or a clone; preparing draft download and Owner commands | ISSUE-004 (open) |
+| M2-03 | M2 | ISSUE-004 startup probe and findings | blocked | `3ea08c5`; draft `startup-probe-m2` asset verified by download, SHA-256 `5f52d4c0a967c96c69bea955e0c4a817ff2042e1e1b01f9fac551a6190cc5f91`; ten local kit runs passed; awaiting Owner ThinkPad and desktop rows per `M2-interim-3.md`; independent M2 tasks remain authorized | ISSUE-004 (open) |
 | M2-04 | M2 | VAD integration check | todo | M2 brief task 4 | - |
 | M2-05 | M2 | Persian translation fixture | todo | M2 brief task 5 | - |
 | M2-06 | M2 | CI offline and WFP network isolation | todo | M2 brief task 6 | - |

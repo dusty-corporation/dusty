@@ -32,5 +32,14 @@ and the offline, crash isolation, and cancellation requirements. Any change
 to ADR 0004 needs PM approval before implementation.
 
 ## Regression test added
-None yet. M2 should add a repeatable short-file batch timing test after
-the root cause is known.
+`tools/bench/startup-probe.ps1` runs five CPU and five Vulkan tiny processes,
+checks actual Vulkan selection, and records first progress and engine timings.
+`setup-startup-probe.ps1` verifies the published engine archives and tiny model.
+The standalone kit is available in draft `startup-probe-m2`.
+
+Local kit validation on 2026-10-22 completed all ten runs: Vulkan run 1 took
+13.935 seconds, and runs 2-5 took 0.558-0.579 seconds. This is not the requested
+independent ThinkPad evidence and does not establish the driver-internal cause.
+See `docs/pm/benchmarks/m2/startup-probe-local.md`. Owner runs on the ThinkPad
+and desktop are pending. ADR 0004 is unchanged; any proposed design change
+still requires PM approval.
