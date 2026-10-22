@@ -2,7 +2,7 @@
 
 - Severity: S1
 - Milestone: M2
-- Status: In progress
+- Status: Resolved
 - Environment: Windows hosted CI, engine-v2, Small, four CPU threads, VAD on
 
 ## Steps to reproduce
@@ -41,4 +41,15 @@ retry failures into success, or reduce the assertion. Verify locally and on CI.
 ## Regression test added
 
 `tests/integration/test_translation.py` retains Persian-script Transcribe and
-English-script Translate controls with source-content checks. CI pending.
+English-script Translate controls with source-content checks. Both final
+engine-v2 runs passed: PR 39813686035 and push 39813676982. Each passed all
+checks and WFP; PR test results were 75 passed with one unavailable-Vulkan
+hardware skip. The complete local suite passed 76 tests with actual Vulkan.
+
+## Resolution
+
+Medium is the translation acceptance model, as already recommended by the PM
+in ADR 0016. The original independent keyword assertion remains mandatory,
+and the additional source-content assertion passed on both hosted runs.
+This resolves fixture acceptance; it does not claim to fix Small's literary
+translation accuracy or prove which numerical difference caused its failure.
