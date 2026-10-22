@@ -2,7 +2,7 @@
 
 - Severity: S1
 - Milestone: M2
-- Status: Open
+- Status: Resolved 2026-10-22
 - Environment: `src/dusty/privacy/` design, SPEC 9.2, `tools/check_no_network.py`
 
 ## Steps to reproduce
@@ -40,20 +40,17 @@ runtime guard that the same section requires. M0 tests correctly tested
 the static ban, while the runtime guard was scheduled for M2, so the
 contradiction was not exercised earlier.
 
-## Fix / proposed fix
+## Resolution
 
-PM approval is needed for one design:
-
-1. Recommended: allow `import socket` in exactly one audited guard module,
-   while the static checker still rejects it everywhere else. Require a
-   negative test proving all other main-app modules are blocked, tests of
-   the guard's three replacements, and the M2 WFP runtime audit.
-2. Alternative: replace the specified monkeypatch with a Python audit
-   hook that blocks socket operations without importing `socket`. This
-   changes the literal guard design in SPEC 9.2.3 and needs PM approval.
-
-Do not use an unscanned helper module or an import alias as a workaround.
+The PM accepted Option 2: use `sys.addaudithook` to block Python socket
+operations without importing `socket` inside `src/dusty`. ADR 0017
+supersedes the monkeypatch design in SPEC 9.2.3. The static check keeps
+zero exceptions. The hook is installed before other Dusty entry-point
+imports, including the `--self-test` path. `dusty_fetch` remains a
+separate process without the hook.
 
 ## Regression test added
 
-Pending PM design decision. Existing static negative tests remain enabled.
+Subprocess tests cover every required audit event, real Dusty entry-point
+startup, and independent `dusty_fetch` process startup. Static negative
+tests remain enabled, and `check_no_network.py` remains unchanged.

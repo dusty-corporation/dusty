@@ -1,9 +1,4 @@
-"""Launch Dusty's minimal M0 window."""
-
-import argparse
-import sys
-
-from dusty import __version__
+"""Launch Dusty's offline app and development entry points."""
 
 
 def create_window():
@@ -17,6 +12,11 @@ def create_window():
 
 
 def main(argv: list[str] | None = None) -> int:
+    import argparse
+    import sys
+
+    from dusty import __version__
+
     parser = argparse.ArgumentParser(prog="dusty")
     parser.add_argument("--version", action="version", version=f"Dusty {__version__}")
     parser.parse_args(argv)
@@ -30,4 +30,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    from dusty.privacy.network_guard import install_guard
+
+    install_guard()
     raise SystemExit(main())

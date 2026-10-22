@@ -26,7 +26,7 @@
 | M1-GATE | M1 | PM gate decision | done | Conditional GO per M2 brief; PR #2 merged as `d3a35f7`; `docs/adr/0016-v1-model-catalog.md` records accepted catalog | - |
 | PRE-M7-SURFACE | M7 | Real Surface Laptop 5 Vulkan smoke test | todo | Owner-owned M1 conditional GO item; required before M7, does not block M2-M6 | - |
 | M2-01 | M2 | Pinned engine and model assets for dev and CI | done | Published `engine-v1` digests matched three pins; fetch script verified engine archives, manifest, tiny, small.en, and VAD; PR #3 checks passed in runs 39722358788 and 39722363339 | ISSUE-005 (resolved) |
-| M2-02 | M2 | Headless core pipeline | blocked | Core types, V1 model trust anchor, registry, and five exporters written and locally tested; SPEC 9.2 static/runtime guard conflict needs PM design decision | ISSUE-006 (open) |
+| M2-02 | M2 | Headless core pipeline | doing | ADR 0017 records PM-approved audit hook; core types, V1 model trust anchor, registry, and five exporters tested; remaining engine, queue, privacy, self-test, and CLI in progress | ISSUE-006 (resolved) |
 | M2-03 | M2 | ISSUE-004 startup probe and findings | todo | M2 brief task 3 | ISSUE-004 (open) |
 | M2-04 | M2 | VAD integration check | todo | M2 brief task 4 | - |
 | M2-05 | M2 | Persian translation fixture | todo | M2 brief task 5 | - |
