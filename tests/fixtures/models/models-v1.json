@@ -1,0 +1,219 @@
+{
+  "schema_version": 1,
+  "release_tag": "models-v1",
+  "models": [
+    {
+      "id": "base-f16",
+      "display_name": "Base",
+      "description": "M1 benchmark candidate",
+      "file_name": "ggml-base.bin",
+      "size_bytes": 147951465,
+      "sha256": "46efeef38ca82aca008ed8edf3cc8e0865b4c793b38ae69d69d11b3aaf00f1b8",
+      "url": "https://github.com/dusty-corporation/dusty/releases/download/models-v1/ggml-base.bin",
+      "multilingual": true,
+      "supports_translate": true,
+      "english_only": false,
+      "quantization": "f16",
+      "source": {
+        "openai_pt_url": "https://openaipublic.azureedge.net/main/whisper/models/ed3a0b6b1c0edf879ad9b11b1af5a0e6ab5db9205f891f668f8b0e6c6326e34e/base.pt",
+        "openai_pt_sha256": "ed3a0b6b1c0edf879ad9b11b1af5a0e6ab5db9205f891f668f8b0e6c6326e34e",
+        "whisper_cpp_commit": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+        "converter": "models/convert-pt-to-ggml.py"
+      },
+      "recommended_min_ram_gb": 8
+    },
+    {
+      "id": "large-v3-q5_0",
+      "display_name": "Large V3",
+      "description": "M1 benchmark candidate",
+      "file_name": "ggml-large-v3-q5_0.bin",
+      "size_bytes": 1081140203,
+      "sha256": "d75795ecff3f83b5faa89d1900604ad8c780abd5739fae406de19f23ecd98ad1",
+      "url": "https://github.com/dusty-corporation/dusty/releases/download/models-v1/ggml-large-v3-q5_0.bin",
+      "multilingual": true,
+      "supports_translate": true,
+      "english_only": false,
+      "quantization": "q5_0",
+      "source": {
+        "openai_pt_url": "https://openaipublic.azureedge.net/main/whisper/models/e5b1a55b89c1367dacf97e3e19bfd829a01529dbfdeefa8caeb59b3f1b81dadb/large-v3.pt",
+        "openai_pt_sha256": "e5b1a55b89c1367dacf97e3e19bfd829a01529dbfdeefa8caeb59b3f1b81dadb",
+        "whisper_cpp_commit": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+        "converter": "models/convert-pt-to-ggml.py"
+      },
+      "recommended_min_ram_gb": 8
+    },
+    {
+      "id": "large-v3-q8_0",
+      "display_name": "Large V3",
+      "description": "M1 benchmark candidate",
+      "file_name": "ggml-large-v3-q8_0.bin",
+      "size_bytes": 1656538283,
+      "sha256": "24bc434f372355688ab9a623077a63e5361a1c41f4d8d648977e39f9b060f09e",
+      "url": "https://github.com/dusty-corporation/dusty/releases/download/models-v1/ggml-large-v3-q8_0.bin",
+      "multilingual": true,
+      "supports_translate": true,
+      "english_only": false,
+      "quantization": "q8_0",
+      "source": {
+        "openai_pt_url": "https://openaipublic.azureedge.net/main/whisper/models/e5b1a55b89c1367dacf97e3e19bfd829a01529dbfdeefa8caeb59b3f1b81dadb/large-v3.pt",
+        "openai_pt_sha256": "e5b1a55b89c1367dacf97e3e19bfd829a01529dbfdeefa8caeb59b3f1b81dadb",
+        "whisper_cpp_commit": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+        "converter": "models/convert-pt-to-ggml.py"
+      },
+      "recommended_min_ram_gb": 8
+    },
+    {
+      "id": "large-v3-turbo-f16",
+      "display_name": "Large V3 Turbo",
+      "description": "M1 benchmark candidate",
+      "file_name": "ggml-large-v3-turbo.bin",
+      "size_bytes": 1624555275,
+      "sha256": "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69",
+      "url": "https://github.com/dusty-corporation/dusty/releases/download/models-v1/ggml-large-v3-turbo.bin",
+      "multilingual": true,
+      "supports_translate": false,
+      "english_only": false,
+      "quantization": "f16",
+      "source": {
+        "openai_pt_url": "https://openaipublic.azureedge.net/main/whisper/models/aff26ae408abcba5fbf8813c21e62b0941638c5f6eebfb145be0c9839262a19a/large-v3-turbo.pt",
+        "openai_pt_sha256": "aff26ae408abcba5fbf8813c21e62b0941638c5f6eebfb145be0c9839262a19a",
+        "whisper_cpp_commit": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+        "converter": "models/convert-pt-to-ggml.py"
+      },
+      "recommended_min_ram_gb": 8
+    },
+    {
+      "id": "large-v3-turbo-q5_0",
+      "display_name": "Large V3 Turbo",
+      "description": "M1 benchmark candidate",
+      "file_name": "ggml-large-v3-turbo-q5_0.bin",
+      "size_bytes": 574041195,
+      "sha256": "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2",
+      "url": "https://github.com/dusty-corporation/dusty/releases/download/models-v1/ggml-large-v3-turbo-q5_0.bin",
+      "multilingual": true,
+      "supports_translate": false,
+      "english_only": false,
+      "quantization": "q5_0",
+      "source": {
+        "openai_pt_url": "https://openaipublic.azureedge.net/main/whisper/models/aff26ae408abcba5fbf8813c21e62b0941638c5f6eebfb145be0c9839262a19a/large-v3-turbo.pt",
+        "openai_pt_sha256": "aff26ae408abcba5fbf8813c21e62b0941638c5f6eebfb145be0c9839262a19a",
+        "whisper_cpp_commit": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+        "converter": "models/convert-pt-to-ggml.py"
+      },
+      "recommended_min_ram_gb": 8
+    },
+    {
+      "id": "large-v3-turbo-q8_0",
+      "display_name": "Large V3 Turbo",
+      "description": "M1 benchmark candidate",
+      "file_name": "ggml-large-v3-turbo-q8_0.bin",
+      "size_bytes": 874188075,
+      "sha256": "317eb69c11673c9de1e1f0d459b253999804ec71ac4c23c17ecf5fbe24e259a1",
+      "url": "https://github.com/dusty-corporation/dusty/releases/download/models-v1/ggml-large-v3-turbo-q8_0.bin",
+      "multilingual": true,
+      "supports_translate": false,
+      "english_only": false,
+      "quantization": "q8_0",
+      "source": {
+        "openai_pt_url": "https://openaipublic.azureedge.net/main/whisper/models/aff26ae408abcba5fbf8813c21e62b0941638c5f6eebfb145be0c9839262a19a/large-v3-turbo.pt",
+        "openai_pt_sha256": "aff26ae408abcba5fbf8813c21e62b0941638c5f6eebfb145be0c9839262a19a",
+        "whisper_cpp_commit": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+        "converter": "models/convert-pt-to-ggml.py"
+      },
+      "recommended_min_ram_gb": 8
+    },
+    {
+      "id": "medium-f16",
+      "display_name": "Medium",
+      "description": "M1 benchmark candidate",
+      "file_name": "ggml-medium.bin",
+      "size_bytes": 1533763059,
+      "sha256": "4c9daf0dcd936505e64f633deea7a2319b8cb7dea8a17ca42e11dcf15eae1ccf",
+      "url": "https://github.com/dusty-corporation/dusty/releases/download/models-v1/ggml-medium.bin",
+      "multilingual": true,
+      "supports_translate": true,
+      "english_only": false,
+      "quantization": "f16",
+      "source": {
+        "openai_pt_url": "https://openaipublic.azureedge.net/main/whisper/models/345ae4da62f9b3d59415adc60127b97c714f32e89e936602e85993674d08dcb1/medium.pt",
+        "openai_pt_sha256": "345ae4da62f9b3d59415adc60127b97c714f32e89e936602e85993674d08dcb1",
+        "whisper_cpp_commit": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+        "converter": "models/convert-pt-to-ggml.py"
+      },
+      "recommended_min_ram_gb": 8
+    },
+    {
+      "id": "small-f16",
+      "display_name": "Small",
+      "description": "M1 benchmark candidate",
+      "file_name": "ggml-small.bin",
+      "size_bytes": 487601967,
+      "sha256": "80345e749f165c908a4790f13191894c57bae4681872495cf0f4c302639c8076",
+      "url": "https://github.com/dusty-corporation/dusty/releases/download/models-v1/ggml-small.bin",
+      "multilingual": true,
+      "supports_translate": true,
+      "english_only": false,
+      "quantization": "f16",
+      "source": {
+        "openai_pt_url": "https://openaipublic.azureedge.net/main/whisper/models/9ecf779972d90ba49c06d968637d720dd632c55bbf19d441fb42bf17a411e794/small.pt",
+        "openai_pt_sha256": "9ecf779972d90ba49c06d968637d720dd632c55bbf19d441fb42bf17a411e794",
+        "whisper_cpp_commit": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+        "converter": "models/convert-pt-to-ggml.py"
+      },
+      "recommended_min_ram_gb": 8
+    },
+    {
+      "id": "small.en-f16",
+      "display_name": "Small.En",
+      "description": "M1 benchmark candidate",
+      "file_name": "ggml-small.en.bin",
+      "size_bytes": 487614184,
+      "sha256": "ee15d70145037f2c59b8ea2ed24a7144d9089c6056e53c67c220b9db568eadd9",
+      "url": "https://github.com/dusty-corporation/dusty/releases/download/models-v1/ggml-small.en.bin",
+      "multilingual": false,
+      "supports_translate": false,
+      "english_only": true,
+      "quantization": "f16",
+      "source": {
+        "openai_pt_url": "https://openaipublic.azureedge.net/main/whisper/models/f953ad0fd29cacd07d5a9eda5624af0f6bcf2258be67c92b79389873d91e0872/small.en.pt",
+        "openai_pt_sha256": "f953ad0fd29cacd07d5a9eda5624af0f6bcf2258be67c92b79389873d91e0872",
+        "whisper_cpp_commit": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+        "converter": "models/convert-pt-to-ggml.py"
+      },
+      "recommended_min_ram_gb": 8
+    },
+    {
+      "id": "tiny-f16",
+      "display_name": "Tiny",
+      "description": "M1 benchmark candidate",
+      "file_name": "ggml-tiny.bin",
+      "size_bytes": 77691713,
+      "sha256": "a38bcb31dcd68cf7d9a630e2148ccf0656f95ac87c5bcbc4064a689f383b2059",
+      "url": "https://github.com/dusty-corporation/dusty/releases/download/models-v1/ggml-tiny.bin",
+      "multilingual": true,
+      "supports_translate": true,
+      "english_only": false,
+      "quantization": "f16",
+      "source": {
+        "openai_pt_url": "https://openaipublic.azureedge.net/main/whisper/models/65147644a518d12f04e32d6f3b26facc3f8dd46e5390956a9424a650c0ce22b9/tiny.pt",
+        "openai_pt_sha256": "65147644a518d12f04e32d6f3b26facc3f8dd46e5390956a9424a650c0ce22b9",
+        "whisper_cpp_commit": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+        "converter": "models/convert-pt-to-ggml.py"
+      },
+      "recommended_min_ram_gb": 8
+    }
+  ],
+  "vad": [
+    {
+      "id": "silero-vad",
+      "file_name": "ggml-silero-vad.bin",
+      "size_bytes": 885098,
+      "sha256": "abd79739d3ff4bc37fa1d24f1fca8244f2e31ec9f0bb7ea6244b185bfaa0b8e6",
+      "url": "https://github.com/dusty-corporation/dusty/releases/download/models-v1/ggml-silero-vad.bin",
+      "source": {
+        "silero_vad_version": "6.2.3",
+        "whisper_cpp_commit": "d1be6fde11ac6e0407606b4e42fe72d34add8037"
+      }
+    }
+  ]
+}
