@@ -31,7 +31,9 @@ cannot identify the backend.
 `summarize_bench.py` computes word error rate with word-level Levenshtein
 distance divided by reference word count. It normalizes Unicode NFKC,
 case-folds, removes punctuation, and expands integer tokens from 0 to
-9999 into English words. The source reference was aligned to the
-recording's introduction, ending, and song sections using a timestamped
-tiny-model transcript. A final human listening check remains before the
-WER is treated as a publication-grade accuracy figure.
+9999 into English words. The Phase B score uses only the Project
+Gutenberg source-text spans specified in
+`tests/fixtures/audio/bench/swineherd-scored-spans.json`. It excludes
+the spoken introduction, song sections, and outro, whose former
+reference wording came from tiny-model output. The scorer selects
+timestamped text tokens within each span and sums per-span edit counts.

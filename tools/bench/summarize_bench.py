@@ -6,6 +6,7 @@ import json
 import re
 import unicodedata
 from pathlib import Path
+from typing import Any
 
 ONES = (
     "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen "
@@ -58,18 +59,71 @@ def word_error_rate(reference: str, hypothesis: str) -> float:
     return edit_distance(expected, words(hypothesis)) / len(expected)
 
 
-def transcript(path: Path) -> str:
-    data = json.loads(path.read_text(encoding="utf-8"))
-    return " ".join(segment["text"] for segment in data["transcription"])
+def timestamp_ms(value: str) -> int:
+    match = re.fullmatch(r"(\d+):(\d{2}):(\d{2}),(\d{3})", value)
+    if match is None:
+        raise ValueError("Invalid engine timestamp")
+    hours, minutes, seconds, milliseconds = map(int, match.groups())
+    return ((hours * 60 + minutes) * 60 + seconds) * 1000 + milliseconds
+
+
+def scored_spans(reference: str, path: Path) -> list[tuple[int, int, str]]:
+    config = json.loads(path.read_text(encoding="utf-8"))
+    lines = reference.splitlines()
+    spans = []
+    previous_end = 0
+    for item in config["spans"]:
+        start, end = item["start_ms"], item["end_ms"]
+        first, last = item["first_line"], item["last_line"]
+        if start < previous_end or end <= start or first < 1 or last > len(lines) or last < first:
+            raise ValueError("Invalid scored span")
+        source_text = "\n".join(lines[first - 1 : last])
+        if not words(source_text):
+            raise ValueError("Empty scored reference span")
+        spans.append((start, end, source_text))
+        previous_end = end
+    if not spans:
+        raise ValueError("No scored spans")
+    return spans
+
+
+def scored_transcript(path: Path, spans: list[tuple[int, int, str]]) -> list[str]:
+    data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    result: list[list[str]] = [[] for _ in spans]
+    for segment in data["transcription"]:
+        tokens = [token for token in segment["tokens"] if token["id"] < 50257]
+        if "".join(token["text"] for token in tokens) != segment["text"]:
+            raise ValueError("Engine text and tokens disagree")
+        for token in tokens:
+            start = timestamp_ms(token["timestamps"]["from"])
+            end = timestamp_ms(token["timestamps"]["to"])
+            for index, (span_start, span_end, _) in enumerate(spans):
+                if start >= span_start and end <= span_end:
+                    result[index].append(token["text"])
+                    break
+    return ["".join(parts) for parts in result]
+
+
+def scored_word_error_rate(path: Path, spans: list[tuple[int, int, str]]) -> float:
+    hypotheses = scored_transcript(path, spans)
+    reference_count = 0
+    errors = 0
+    for (_, _, reference), hypothesis in zip(spans, hypotheses, strict=True):
+        expected = words(reference)
+        reference_count += len(expected)
+        errors += edit_distance(expected, words(hypothesis))
+    return errors / reference_count
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("csv", type=Path)
     parser.add_argument("--reference", type=Path, required=True)
+    parser.add_argument("--spans", type=Path, required=True)
     parser.add_argument("--results", type=Path, required=True)
     args = parser.parse_args()
     reference = args.reference.read_text(encoding="utf-8")
+    spans = scored_spans(reference, args.spans)
     with args.csv.open(encoding="utf-8-sig", newline="") as file:
         rows = list(csv.DictReader(file))
     lines = [
@@ -81,11 +135,12 @@ def main() -> None:
     for row in rows:
         if row["sample"] != "public":
             raise ValueError("WER can only be computed for public reference runs")
+        mode_prefix = "quick-" if row.get("run_mode") == "quick" else ""
         name = (
-            f"public-{row['machine']}-{row['model']}-{row['backend_requested']}-"
+            f"public-{row['machine']}-{mode_prefix}{row['model']}-{row['backend_requested']}-"
             f"t{row['threads']}.json"
         )
-        wer = word_error_rate(reference, transcript(args.results / name))
+        wer = scored_word_error_rate(args.results / name, spans)
         lines.append(f"| {row['model']} | {row['backend_actual']} | {row['rtf']} | {wer:.4f} |")
     print("\n".join(lines))
 

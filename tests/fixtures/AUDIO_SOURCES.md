@@ -47,8 +47,11 @@
   LibriVox introduction and closing title were added. The German song
   and its footnote were represented by the spoken English translation.
   The reference was compared with a timestamped tiny-model transcript to
-  identify the introduction, ending, and three song locations. Final
-  listening verification is still needed before treating WER as a
-  publication-grade accuracy measurement.
+  locate the introduction, ending, and three song locations. Those
+  model-derived spans are excluded from WER. The scored Gutenberg text
+  and audio boundaries are specified in
+  `bench/swineherd-scored-spans.json` and explained in
+  `docs/pm/benchmarks/m1/README.md`. No human listening pass is required
+  for this source-text-only score under the PM's Phase B decision.
 
 No Owner recording is stored here.
