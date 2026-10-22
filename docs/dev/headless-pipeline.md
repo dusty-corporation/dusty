@@ -55,3 +55,17 @@ scanner filters the 17 verified extensions, deduplicates resolved paths, and
 returns counts without logging paths. `core/failures.py` provides an actionable
 message for every failure code for the later GUI to consume. Saved batch
 preferences are validated on load, and malformed known settings are quarantined.
+
+`Coordinator.run_batch` accepts separate `cancel` (whole batch) and
+`cancel_current` events. A current-file cancellation is consumed and cleared
+before the next file starts. Numeric engine progress is published on the
+coordinator's worker thread; stderr reads consume available pipe bytes so a
+short progress line is delivered before process exit. Raw native lines are
+still discarded after parsing.
+
+While a batch runs, the Windows platform helper requests
+`ES_CONTINUOUS | ES_SYSTEM_REQUIRED` with `SetThreadExecutionState` and restores
+the prior thread state in a `finally` block. It does not keep the display on
+or override a user's explicit sleep request. This behavior and the previous-state
+return value were verified against the
+[Microsoft API documentation](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-setthreadexecutionstate).

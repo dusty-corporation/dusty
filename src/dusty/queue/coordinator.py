@@ -4,17 +4,28 @@ import logging
 import shutil
 import threading
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
 from dusty.core import BatchOptions, FailureCode, Job, JobStatus
+from dusty.core.types import Cancellation
 from dusty.models import ModelCorrupt, ModelMissing, ModelRegistry, can_translate
+from dusty.platform.power import prevent_sleep
 from dusty.runtime_paths import RuntimePaths
 
 from .outputs import OutputExistsError, write_outputs
 from .storage import save_batch
 
 _LOG = logging.getLogger("dusty")
+
+
+@dataclass(frozen=True)
+class _CancellationGroup:
+    events: tuple[Cancellation, ...]
+
+    def is_set(self) -> bool:
+        return any(event.is_set() for event in self.events)
 
 
 def cleanup_orphaned_work(work_root: Path) -> None:
@@ -41,12 +52,14 @@ class Coordinator:
         self.state_path = paths.user_dir / "state/queue.json"
         self.work_root = paths.user_dir / "work"
 
+    @prevent_sleep()
     def run_batch(
         self,
         jobs: list[Job],
         options: BatchOptions,
         *,
         cancel: threading.Event | None = None,
+        cancel_current: threading.Event | None = None,
         on_change: Callable[[Job], None] | None = None,
         vulkan_ok: bool | None = None,
     ) -> list[Job]:
@@ -70,13 +83,14 @@ class Coordinator:
             def changed(current: Job = job) -> None:
                 self._changed(current, options, jobs, on_change)
 
-            self._run_one(
-                job,
-                options,
-                cancel,
-                vulkan_ok,
-                changed,
+            signals = _CancellationGroup(
+                tuple(event for event in (cancel, cancel_current) if event)
             )
+            try:
+                self._run_one(job, options, signals, vulkan_ok, changed)
+            finally:
+                if cancel_current:
+                    cancel_current.clear()
         return jobs
 
     def _changed(
@@ -95,7 +109,7 @@ class Coordinator:
         self,
         job: Job,
         options: BatchOptions,
-        cancel: threading.Event | None,
+        cancel: Cancellation | None,
         vulkan_ok: bool | None,
         changed: Callable[[], None],
     ) -> None:
@@ -151,6 +165,11 @@ class Coordinator:
                 else "vulkan"
             )
             executable = self.paths.bin_dir / backend / "whisper-cli.exe"
+
+            def progress(value: float) -> None:
+                job.progress = value
+                changed()
+
             try:
                 result = run_whisper(
                     executable,
@@ -166,11 +185,13 @@ class Coordinator:
                     vad_model=vad,
                     prompt=options.prompt,
                     cancel=cancel,
+                    on_progress=progress,
                 )
             except EngineError as exc:
                 if backend != "vulkan" or not exc.gpu_error or (cancel and cancel.is_set()):
                     raise
                 job.gpu_fallback = True
+                job.progress = 0.0
                 backend = "cpu"
                 result = run_whisper(
                     self.paths.bin_dir / "cpu/whisper-cli.exe",
@@ -186,6 +207,7 @@ class Coordinator:
                     vad_model=vad,
                     prompt=options.prompt,
                     cancel=cancel,
+                    on_progress=progress,
                 )
             job.backend_used = backend
             _LOG.info(

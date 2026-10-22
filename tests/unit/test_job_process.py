@@ -24,3 +24,28 @@ def test_job_object_cancels_child() -> None:
         timer.cancel()
     assert result.cancelled
     assert result.elapsed_sec < 3
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows Job Objects")
+def test_short_stderr_progress_is_delivered_before_child_exits() -> None:
+    cancel = threading.Event()
+    lines = []
+
+    def poll() -> None:
+        if lines:
+            cancel.set()
+
+    result = run_job_process(
+        [
+            str(Path(sys.executable).resolve()),
+            "-c",
+            "import sys,time; print('progress=25',file=sys.stderr,flush=True); time.sleep(5)",
+        ],
+        on_stderr=lines.append,
+        on_poll=poll,
+        cancel=cancel,
+        timeout_sec=10,
+    )
+    assert lines == ["progress=25"]
+    assert result.cancelled
+    assert result.elapsed_sec < 3

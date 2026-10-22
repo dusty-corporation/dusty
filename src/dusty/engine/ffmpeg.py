@@ -1,10 +1,10 @@
 """Probe and decode local audio through the network-disabled FFmpeg package."""
 
 import json
-import threading
 from dataclasses import dataclass
 from pathlib import Path
 
+from dusty.core.types import Cancellation
 from dusty.platform.win_process import run_job_process
 
 
@@ -18,9 +18,7 @@ class AudioProbe:
     has_audio: bool
 
 
-def probe_audio(
-    ffprobe: Path, source: Path, *, cancel: threading.Event | None = None
-) -> AudioProbe:
+def probe_audio(ffprobe: Path, source: Path, *, cancel: Cancellation | None = None) -> AudioProbe:
     """Read duration from FFprobe JSON in memory without logging input paths."""
     lines: list[str] = []
     result = run_job_process(
@@ -64,7 +62,7 @@ def transcode_audio(
     source: Path,
     output_wav: Path,
     *,
-    cancel: threading.Event | None = None,
+    cancel: Cancellation | None = None,
 ) -> float:
     """Decode to 16 kHz mono PCM in the per-job work directory."""
     result = run_job_process(

@@ -27,6 +27,7 @@ def test_decode_transcribe_with_vad(tmp_path: Path) -> None:
     assert probe.has_audio and 10 <= probe.duration_sec <= 12
     wav = tmp_path / "audio.wav"
     assert transcode_audio(paths.bin_dir / "ffmpeg/ffmpeg.exe", source, wav) >= 0
+    updates = []
     result = run_whisper(
         paths.bin_dir / backend / "whisper-cli.exe",
         registry.model_path("tiny"),
@@ -40,11 +41,14 @@ def test_decode_transcribe_with_vad(tmp_path: Path) -> None:
         backend=backend,
         vad_model=registry.vad_path(),
         prompt="",
+        on_progress=updates.append,
     )
     assert result.transcript.backend == backend
     assert result.transcript.language == "en"
     assert len(result.transcript.segments) > 0
     assert result.timings_ms["total"] > 0
+    assert updates and all(0 <= value <= 1 for value in updates)
+    assert updates == sorted(updates)
     contains_expected = "fellow americans" in " ".join(
         segment.text.lower() for segment in result.transcript.segments
     )

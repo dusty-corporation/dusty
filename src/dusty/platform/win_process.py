@@ -11,6 +11,8 @@ from ctypes import wintypes
 from dataclasses import dataclass
 from pathlib import Path
 
+from dusty.core.types import Cancellation
+
 CREATE_SUSPENDED = 0x00000004
 CREATE_NO_WINDOW = 0x08000000
 STARTF_USESTDHANDLES = 0x00000100
@@ -145,7 +147,7 @@ def _read_lines(fd: int, callback: Callable[[str], None] | None) -> None:
     """Parse lines in memory and discard raw native output immediately."""
     buffer = b""
     with os.fdopen(fd, "rb", closefd=True) as stream:
-        while chunk := stream.read(4096):
+        while chunk := os.read(stream.fileno(), 4096):
             buffer += chunk
             while b"\n" in buffer or b"\r" in buffer:
                 newline = buffer.find(b"\n")
@@ -167,8 +169,9 @@ def run_job_process(
     cwd: Path | None = None,
     on_stderr: Callable[[str], None] | None = None,
     on_stdout: Callable[[str], None] | None = None,
-    cancel: threading.Event | None = None,
+    cancel: Cancellation | None = None,
     timeout_sec: float | None = None,
+    on_poll: Callable[[], None] | None = None,
 ) -> ProcessResult:
     """Run a child only after attaching it to a kill-on-close Job Object."""
     if not args or not Path(args[0]).is_absolute():
@@ -259,6 +262,8 @@ def run_job_process(
                 break
             if result != WAIT_TIMEOUT:
                 _check(0, "WaitForSingleObject")
+            if on_poll:
+                on_poll()
             if (
                 cancel
                 and cancel.is_set()
@@ -271,6 +276,8 @@ def run_job_process(
                 break
         for reader in readers:
             reader.join(timeout=5)
+        if on_poll:
+            on_poll()
         exit_code = wintypes.DWORD()
         _check(
             _kernel32.GetExitCodeProcess(process.hProcess, ctypes.byref(exit_code)),

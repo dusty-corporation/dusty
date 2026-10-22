@@ -3,13 +3,19 @@
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Protocol
 from uuid import UUID, uuid4
 
 Backend = Literal["auto", "cpu", "vulkan"]
 Task = Literal["transcribe", "translate"]
 OutputFormat = Literal["txt", "srt", "vtt", "json", "docx"]
 CollisionPolicy = Literal["ask", "skip", "overwrite", "keep_both"]
+
+
+class Cancellation(Protocol):
+    """Read-only cancellation signal, including a group of user cancel events."""
+
+    def is_set(self) -> bool: ...
 
 
 class JobStatus(str, Enum):

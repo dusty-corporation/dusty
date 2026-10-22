@@ -1,13 +1,14 @@
 """Invoke pinned whisper-cli and parse its JSON into platform-neutral types."""
 
 import json
-import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
 from dusty.core import Segment, Transcript
+from dusty.core.types import Cancellation
 from dusty.platform.win_process import run_job_process
 
 from .progress import ProgressState
@@ -75,7 +76,8 @@ def run_whisper(
     backend: Literal["cpu", "vulkan"],
     vad_model: Path | None,
     prompt: str,
-    cancel: threading.Event | None = None,
+    cancel: Cancellation | None = None,
+    on_progress: Callable[[float], None] | None = None,
 ) -> EngineRun:
     """Pass prompts as one argument and never retain raw native stderr."""
     args = [
@@ -102,7 +104,21 @@ def run_whisper(
     if prompt:
         args.extend(["--prompt", prompt])
     state = ProgressState(started_at=time.monotonic())
-    result = run_job_process(args, on_stderr=state.feed, cancel=cancel, timeout_sec=12 * 3600)
+    previous_progress = 0.0
+
+    def publish_progress() -> None:
+        nonlocal previous_progress
+        if on_progress and state.progress != previous_progress:
+            previous_progress = state.progress
+            on_progress(state.progress)
+
+    result = run_job_process(
+        args,
+        on_stderr=state.feed,
+        cancel=cancel,
+        timeout_sec=12 * 3600,
+        on_poll=publish_progress,
+    )
     if result.cancelled:
         raise EngineError("Transcription cancelled", cancelled=True)
     if result.exit_code:

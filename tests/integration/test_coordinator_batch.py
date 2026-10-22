@@ -1,5 +1,6 @@
 """Run the shared coordinator with pinned binaries and public fixtures."""
 
+import shutil
 import sys
 import threading
 from dataclasses import replace
@@ -23,7 +24,8 @@ def test_mixed_batch_all_formats_cleanup_and_canary(tmp_path: Path) -> None:
     paths = RuntimePaths(dev.bin_dir, dev.models_dir, dev.resources_dir, tmp_path / "user")
     registry = ModelRegistry(load_manifest(paths.resources_dir / "models.json"), paths.models_dir)
     logger = configure_logger(paths.user_dir)
-    source = ROOT / "tests/fixtures/audio/formats/jfk.wav"
+    source = tmp_path / "CANARY_PATIENT_JANE_DOE.wav"
+    shutil.copyfile(ROOT / "tests/fixtures/audio/formats/jfk.wav", source)
     empty = tmp_path / "empty.wav"
     empty.touch()
     jobs = [Job(source), Job(empty)]
@@ -37,7 +39,9 @@ def test_mixed_batch_all_formats_cleanup_and_canary(tmp_path: Path) -> None:
     Coordinator(paths, registry).run_batch(jobs, options, vulkan_ok=False)
     assert jobs[0].status == JobStatus.DONE
     assert len(jobs[0].outputs) == 5
-    assert "fellow Americans" in (tmp_path / "out/jfk.txt").read_text(encoding="utf-8")
+    assert "fellow Americans" in (tmp_path / "out/CANARY_PATIENT_JANE_DOE.txt").read_text(
+        encoding="utf-8"
+    )
     assert jobs[1].status == JobStatus.FAILED
     assert jobs[1].failure == FailureCode.EMPTY_FILE
     assert list((paths.user_dir / "work").iterdir()) == []
@@ -45,6 +49,7 @@ def test_mixed_batch_all_formats_cleanup_and_canary(tmp_path: Path) -> None:
         handler.flush()
     log = (paths.user_dir / "logs/dusty.log").read_text(encoding="utf-8")
     assert "CANARYMEDTERM" not in log
+    assert "CANARY_PATIENT_JANE_DOE" not in log
     assert "jfk.wav" not in log
     assert str(source) not in log
 
@@ -169,4 +174,39 @@ def test_real_pipeline_collision_policies(tmp_path: Path, policy: str) -> None:
         if policy == "keep_both":
             assert output.read_bytes() == b"existing transcript"
     assert source.read_bytes() == original
+    assert list((paths.user_dir / "work").iterdir()) == []
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Pinned binaries target Windows")
+def test_cancel_current_continues_remaining_files(tmp_path: Path) -> None:
+    dev = resolve_paths(repo_root=ROOT, frozen=False)
+    paths = RuntimePaths(dev.bin_dir, dev.models_dir, dev.resources_dir, tmp_path / "user")
+    registry = ModelRegistry(load_manifest(paths.resources_dir / "models.json"), paths.models_dir)
+    jobs = [
+        Job(ROOT / "tests/fixtures/audio/vad/mostly-silence-10min.m4a"),
+        Job(ROOT / "tests/fixtures/audio/formats/jfk.wav"),
+    ]
+    cancel_current = threading.Event()
+    timers = []
+
+    def changed(job: Job) -> None:
+        if job is jobs[0] and job.status == JobStatus.TRANSCRIBING and not timers:
+            timer = threading.Timer(0.25, cancel_current.set)
+            timers.append(timer)
+            timer.start()
+
+    options = BatchOptions("tiny", tmp_path / "out", formats=("txt",), backend="cpu", vad=False)
+    try:
+        Coordinator(paths, registry).run_batch(
+            jobs, options, cancel_current=cancel_current, on_change=changed, vulkan_ok=False
+        )
+    finally:
+        for timer in timers:
+            timer.cancel()
+            timer.join()
+    assert timers
+    assert [job.status for job in jobs] == [JobStatus.CANCELLED, JobStatus.DONE]
+    assert not cancel_current.is_set()
+    assert not jobs[0].outputs
+    assert jobs[1].outputs[0].is_file()
     assert list((paths.user_dir / "work").iterdir()) == []
