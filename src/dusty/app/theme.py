@@ -156,6 +156,7 @@ def apply_theme(app: QApplication, mode: str = "system") -> None:
             color: {ink}; border: 1px solid {edge}; border-radius: 4px; }}
         QComboBox QAbstractItemView, QMenu {{ background: {base}; color: {ink};
             border: 1px solid {edge}; }}
+        QComboBox QAbstractItemView::item:disabled {{ color: #87968d; background: {base}; }}
         QCheckBox, QRadioButton {{ spacing: 8px; }}
         QPushButton:focus, QToolButton:focus, QComboBox:focus, QSpinBox:focus,
         QPlainTextEdit:focus, QTableView:focus {{ border: 2px solid {accent}; }}

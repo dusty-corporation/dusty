@@ -17,6 +17,8 @@ class QueueModel(QAbstractTableModel):
     def __init__(self):
         super().__init__()
         self.jobs: list[Job] = []
+        self.highlighted = set()
+        self.waiting_choice = None
 
     def rowCount(self, parent=_ROOT_INDEX) -> int:
         return 0 if parent.isValid() else len(self.jobs)
@@ -34,6 +36,11 @@ class QueueModel(QAbstractTableModel):
             return None
         job = self.jobs[index.row()]
         column = index.column()
+        if job.source in self.highlighted:
+            if role == Qt.ItemDataRole.BackgroundRole:
+                return QApplication.palette().highlight()
+            if role == Qt.ItemDataRole.ForegroundRole:
+                return QApplication.palette().highlightedText()
         if role == Qt.ItemDataRole.UserRole:
             return job.progress
         if column == 5 and job.outputs:
@@ -49,6 +56,8 @@ class QueueModel(QAbstractTableModel):
                 if job.gpu_fallback and job.status == JobStatus.DONE
                 else M.phase_text(job.status.value, job.progress)
             )
+            if job.id == self.waiting_choice:
+                status = M.WAITING_CHOICE
             return (
                 job.source.name,
                 M.time_label(job.duration_sec) if job.duration_sec else M.UNKNOWN_TIME,

@@ -83,7 +83,7 @@ def test_folder_scan_duplicate_reorder_remove(window, qtbot, tmp_path, monkeypat
     window.add_paths([remaining])
     qtbot.waitUntil(lambda: not window.scanner.isRunning())
     assert window.model.rowCount() == 1
-    assert "1 duplicates" in window.status.text()
+    assert remaining.name + " is already in the list" in window.status.text()
 
 
 def test_backend_defaults_language_translation_and_hint_rules(window, qtbot, tmp_path) -> None:
@@ -183,7 +183,7 @@ def test_dialog_defaults_and_every_error(window, qtbot) -> None:
         assert M.FAILURE_MESSAGES[code].action
 
 
-def test_resume_and_settings_preserve_preferences(window, tmp_path, monkeypatch) -> None:
+def test_resume_and_settings_preserve_preferences(window, qtbot, tmp_path, monkeypatch) -> None:
     options = BatchOptions(
         "medium",
         tmp_path / "out",
@@ -191,13 +191,17 @@ def test_resume_and_settings_preserve_preferences(window, tmp_path, monkeypatch)
         prompt="CANARYMEDTERM",
         formats=("txt", "json"),
     )
-    job = Job(tmp_path / "clip.wav", status=JobStatus.TRANSCRIBING)
+    job = Job(tmp_path / "clip.wav", status=JobStatus.TRANSCRIBING, elapsed_sec=120)
     state = window.paths.user_dir / "state/queue.json"
     save_batch(state, options, [job])
     recovered = load_batch(state)
     monkeypatch.setattr(ResumeDialog, "exec", lambda self: QDialog.DialogCode.Accepted)
+    resumed = []
+    monkeypatch.setattr(window, "start_batch", lambda: resumed.append(True))
     window._startup_dialogs(Prepared(window.installed, False, window.settings, recovered))
+    qtbot.waitUntil(lambda: bool(resumed))
     assert window.model.jobs[0].status == JobStatus.QUEUED
+    assert window.model.jobs[0].elapsed_sec == 0
     assert window.task_choice.currentData() == "translate"
     assert window.prompt.toPlainText() == "CANARYMEDTERM"
     assert window.formats["json"].isChecked() and not window.formats["docx"].isChecked()
@@ -337,7 +341,97 @@ def test_named_dialogs_radio_choices_and_nonzero_summary(window, qtbot) -> None:
     text = "\n".join(label.text() for label in summary.findChildren(QLabel))
     assert "0 done" not in text and "0 skipped" not in text
     assert "bad.wav" in text and M.FAILURE_MESSAGES[FailureCode.NO_AUDIO].message in text
-    assert summary.open_folder.isDefault()
+    assert not summary.open_folder.isVisible()
+    assert summary.dismiss.isDefault()
+    assert summary.dismiss.objectName() == "primaryButton"
     dialog = ErrorDialog(FailureCode.NO_AUDIO, filename="bad.wav", parent=window)
     qtbot.addWidget(dialog)
     assert any("bad.wav" in label.text() for label in dialog.findChildren(QLabel))
+
+
+def test_empty_output_language_rules_and_clear_finished(window, qtbot, tmp_path) -> None:
+    window.output_dir = None
+    window._refresh()
+    assert window.output_row.isVisible()
+    assert window.output_label.text() == M.NO_OUTPUT
+    assert window.warning.text() == M.CHOOSE_OUTPUT_FIRST
+    assert not window.start_button.isEnabled()
+    assert any(action.text() == M.CHOOSE_OUTPUT_MENU for action in window.edit_actions)
+    window.options_dialog.show()
+    window._set_combo(window.language_choice, "fa")
+    window._set_combo(window.model_choice, "small.en")
+    assert window.language_choice.currentData() == "en"
+    assert window.incompatible.isVisible()
+    assert "unavailable" in window.task_choice.itemText(1)
+    assert not window.task_choice.model().item(1).isEnabled()
+    window._set_combo(window.model_choice, "medium")
+    assert window.language_choice.currentData() == "fa"
+    assert window.model_warning.isVisible()
+    assert window.model_warning.text() == M.SLOW
+    assert window.model_speed.text().startswith(M.SPEED_SLOW)
+    window.options_dialog.hide()
+    window.output_dir = tmp_path / "out"
+    window.model.set_jobs([Job(tmp_path / "one.wav", status=JobStatus.DONE)])
+    window._refresh()
+    assert window.warning.text() == M.EVERYTHING_DONE
+    window.clear_finished()
+    assert window.model.rowCount() == 0 and window.output_row.isVisible()
+
+
+def test_duplicate_copy_highlight_and_tab_exits_recording_list(window, qtbot, tmp_path) -> None:
+    from dusty.queue.scanning import ScanResult
+
+    job = Job(tmp_path / "one.wav")
+    window.model.set_jobs([job])
+    window._scanned(ScanResult((), 0, 1, (job.source,)))
+    assert window.status.text() == "one.wav is already in the list"
+    assert job.source in window.model.highlighted
+    assert M.scan_summary(1, 0, 0) == M.ADDED_ONE
+    assert M.scan_summary(2, 0, 3) == "2 recordings added; 3 recordings were already in the list"
+    window.activateWindow()
+    window.table.setFocus()
+    qtbot.waitUntil(window.table.hasFocus)
+    qtbot.keyClick(window.table, Qt.Key.Key_Tab)
+    assert not window.table.hasFocus()
+    window._clear_highlight()
+    assert not window.model.highlighted
+
+
+def test_collision_wait_phase_and_existing_transcript_name(
+    window, monkeypatch, qtbot, tmp_path
+) -> None:
+    class Worker:
+        def choose_collision(self, policy, apply_all):
+            assert policy == "keep_both"
+
+    window.batch = Worker()
+    window.running = True
+    job = Job(tmp_path / "one.amr", outputs=[tmp_path / "one.txt"])
+    window.model.set_jobs([job])
+
+    def choose(dialog):
+        window._tick()
+        assert window.status.text() == M.WAITING_CHOICE
+        assert window.model.data(window.model.index(0, 2)) == M.WAITING_CHOICE
+        assert any("one.txt" in label.text() for label in dialog.findChildren(QLabel))
+        return QDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(CollisionDialog, "exec", choose)
+    window._collision(job)
+    assert not window._waiting_choice
+    window.running = False
+    window.batch = None
+
+
+def test_zero_success_summary_and_folder_title_are_unambiguous(window, qtbot) -> None:
+    summary = SummaryDialog(
+        [Job(Path("bad.mp3"), status=JobStatus.FAILED, failure=FailureCode.DECODE_ERROR)], window
+    )
+    qtbot.addWidget(summary)
+    summary.show()
+    assert not summary.open_folder.isVisible()
+    assert summary.dismiss.isDefault()
+    assert summary.dismiss.objectName() == "primaryButton"
+    folder = FolderDialog(window)
+    qtbot.addWidget(folder)
+    assert not any(label.text() == M.FOLDER_TITLE for label in folder.findChildren(QLabel))

@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QRadioButton,
     QScrollArea,
+    QStyledItemDelegate,
     QVBoxLayout,
     QWidget,
 )
@@ -23,17 +24,21 @@ from .presentation import counts
 
 
 class TextDialog(QDialog):
-    def __init__(self, title: str, paragraphs: tuple[str, ...], parent=None):
+    def __init__(
+        self, title: str, paragraphs: tuple[str, ...], parent=None, *, show_heading: bool = True
+    ):
         super().__init__(parent)
         self.setWindowTitle(title)
         self.setMinimumWidth(460)
         self.body = QVBoxLayout(self)
         self.body.setContentsMargins(24, 24, 24, 24)
         self.body.setSpacing(16)
+        heading_enabled = show_heading
         heading = QLabel(title)
         heading.setWordWrap(True)
         heading.setStyleSheet("font-size: 18px; font-weight: 600")
-        self.body.addWidget(heading)
+        if heading_enabled:
+            self.body.addWidget(heading)
         for text in paragraphs:
             label = QLabel(text)
             label.setWordWrap(True)
@@ -60,9 +65,9 @@ class WelcomeDialog(TextDialog):
 
 class FolderDialog(TextDialog):
     def __init__(self, parent=None):
-        super().__init__(M.FOLDER_TITLE, (), parent)
+        super().__init__(M.FOLDER_TITLE, (), parent, show_heading=False)
         self.recursive = QCheckBox(M.INCLUDE_SUBFOLDERS)
-        self.body.insertWidget(1, self.recursive)
+        self.body.insertWidget(0, self.recursive)
         self.button(M.CANCEL, self.reject)
         self.button(M.ADD_FOLDER, self.accept, default=True)
 
@@ -70,7 +75,9 @@ class FolderDialog(TextDialog):
 class CollisionDialog(TextDialog):
     def __init__(self, filename: str, parent=None):
         super().__init__(
-            M.COLLISION_TITLE, (M.RECORDING_NAME.format(name=filename), M.COLLISION_HELP), parent
+            M.COLLISION_TITLE,
+            (M.EXISTING_TRANSCRIPT.format(name=filename), M.COLLISION_HELP),
+            parent,
         )
         self.choices: dict[CollisionPolicy, QRadioButton] = {}
         for index, (key, text) in enumerate(M.COLLISION_CHOICES.items()):
@@ -132,8 +139,15 @@ class SummaryDialog(TextDialog):
             self.body.insertWidget(3, area)
         self.retry = self.button(M.RETRY, lambda: self.done(2))
         self.retry.setEnabled(bool(failed))
-        self.button(M.DISMISS, self.accept)
-        self.open_folder = self.button(M.OPEN_FOLDER, lambda: None, default=True)
+        self.dismiss = self.button(
+            M.DISMISS, self.accept, default=not any(job.status == JobStatus.DONE for job in jobs)
+        )
+        if not any(job.status == JobStatus.DONE for job in jobs):
+            self.dismiss.setObjectName("primaryButton")
+        self.open_folder = self.button(
+            M.OPEN_FOLDER, lambda: None, default=any(job.status == JobStatus.DONE for job in jobs)
+        )
+        self.open_folder.setVisible(any(job.status == JobStatus.DONE for job in jobs))
         self.open_folder.setObjectName("primaryButton")
 
 
@@ -157,3 +171,7 @@ class ErrorDialog(TextDialog):
             paragraphs = (M.RECORDING_NAME.format(name=filename),) + paragraphs
         super().__init__(M.ERROR_TITLE, paragraphs, parent)
         self.button(M.OK, self.accept, default=True)
+
+
+class ChoiceDelegate(QStyledItemDelegate):
+    """Use Qt's item view so disabled model/task entries are visibly unavailable."""

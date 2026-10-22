@@ -39,7 +39,17 @@ MORE_FORMATS = "More formats"
 ADVANCED = "Advanced"
 OUTPUT = "Save transcripts to"
 CHOOSE_FOLDER = "Choose folder"
-NO_OUTPUT = "Choose where to save your transcripts"
+NO_OUTPUT = "Not chosen yet"
+CHOOSE_OUTPUT_FIRST = "Choose where to save transcripts first."
+CHOOSE_OUTPUT_MENU = "Choose where to save transcripts..."
+CLEAR_FINISHED = "Clear finished"
+EVERYTHING_DONE = "Everything in the list is done. Add more recordings to start again."
+WAITING_CHOICE = "Waiting for your choice"
+TRANSLATE_UNAVAILABLE = "Translate to English (unavailable)"
+TRANSLATE_REASON = (
+    "This choice cannot translate to English. "
+    "Choose a multilingual option that supports translation."
+)
 SAME_FOLDER = "Save next to each recording"
 KEEP_STRUCTURE = "Keep folder structure"
 FORMATS = {
@@ -51,12 +61,23 @@ FORMATS = {
 }
 MODEL = "Accuracy and speed"
 MODEL_NAMES = {
-    "large-v3-turbo-q8_0": "Large v3 Turbo",
-    "small": "Small",
-    "medium": "Medium",
-    "small.en": "Small English",
-    "tiny": "Tiny",
+    "large-v3-turbo-q8_0": "Best quality (Large v3 Turbo)",
+    "small": "Balanced (Small)",
+    "small.en": "Balanced, English only (Small English)",
+    "tiny": "Fastest (Tiny)",
+    "medium": "Best for translating to English (Medium)",
 }
+MODEL_DETAILS = {
+    "large-v3-turbo-q8_0": "Recommended with a graphics card",
+    "small": "Good on any computer",
+    "small.en": "Good for English recordings on any computer",
+    "tiny": "Lower accuracy",
+    "medium": "Slower",
+}
+SPEED_ESTIMATE = "On this computer: allow about {minutes} minutes per hour of audio."
+SPEED_SLOW = "Slower than the recording itself on this computer."
+SPEED_CAUTION = "Estimate from a similar laptop; recording and hardware can change the time."
+
 RECOMMENDED = "{name} (Recommended)"
 MISSING_RECOMMENDATION = "{name} is recommended but is not installed. Choose an installed model."
 NO_MODELS = "No verified models are installed. Model downloads will be available in Model Manager."
@@ -117,6 +138,7 @@ SUMMARY_ITEMS = {
 FAILED_FILES = "Recordings that could not finish"
 NAMED_FAILURE = "{name}: {reason}"
 RECORDING_NAME = "Recording: {name}"
+EXISTING_TRANSCRIPT = "Existing transcript: {name}"
 COLLISION_CHOICES = {
     "keep_both": "Keep both (the new one gets a number)",
     "overwrite": "Replace the old transcript",
@@ -221,7 +243,8 @@ FAILURE_MESSAGES: dict[FailureCode, FailureMessage] = {
         "This file doesn't contain any audio we can transcribe.", "Choose an audio recording."
     ),
     FailureCode.DECODE_ERROR: FailureMessage(
-        "Dusty could not decode this recording.", "Try converting it to MP3 or WAV."
+        "Dusty could not decode this recording.",
+        "This file may be damaged. If it plays in another program, try saving it again as WAV.",
     ),
     FailureCode.UNSUPPORTED_FORMAT: FailureMessage(
         "Dusty can't read this file type.", "Try converting it to MP3 or WAV."
@@ -370,3 +393,28 @@ def summary_counts(jobs_counts: dict[str, int]) -> str:
 
 def phase_text(status: str, progress: float) -> str:
     return PREPARING if status == "transcribing" and progress == 0 else STATUSES[status]
+
+
+ADDED_ONE = "1 recording added"
+ADDED_MANY = "{count} recordings added"
+UNSUPPORTED_ONE = "1 unsupported file skipped"
+UNSUPPORTED_MANY = "{count} unsupported files skipped"
+DUPLICATE_ONE = "{name} is already in the list"
+DUPLICATE_MANY = "{count} recordings were already in the list"
+
+
+def scan_summary(added: int, unsupported: int, duplicates: int, name: str = "") -> str:
+    parts = []
+    if added:
+        parts.append(ADDED_ONE if added == 1 else ADDED_MANY.format(count=added))
+    if unsupported:
+        parts.append(
+            UNSUPPORTED_ONE if unsupported == 1 else UNSUPPORTED_MANY.format(count=unsupported)
+        )
+    if duplicates:
+        parts.append(
+            DUPLICATE_ONE.format(name=name)
+            if duplicates == 1 and name
+            else DUPLICATE_MANY.format(count=duplicates)
+        )
+    return "; ".join(parts)

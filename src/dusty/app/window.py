@@ -49,6 +49,7 @@ from dusty.runtime_paths import RuntimePaths, resolve_paths
 
 from . import messages as M
 from .dialogs import (
+    ChoiceDelegate,
     CloseDialog,
     CollisionDialog,
     ErrorDialog,
@@ -79,6 +80,9 @@ class MainWindow(QMainWindow):
         self.ready = False
         self.running = False
         self.closing = False
+        self._previous_language = "auto"
+        self._english_forced = False
+        self._waiting_choice = False
         self._applying = False
         self._recommendation = "small"
         self._follow_recommendation = False
@@ -128,6 +132,7 @@ class MainWindow(QMainWindow):
     def _combo(self, entries: dict[str, str], name: str) -> QComboBox:
         combo = QComboBox()
         combo.setAccessibleName(name)
+        combo.setItemDelegate(ChoiceDelegate(combo))
         for key, label in entries.items():
             combo.addItem(label, key)
         return combo
@@ -182,6 +187,7 @@ class MainWindow(QMainWindow):
         self.table = QTableView()
         self.table.setAccessibleName(M.APP_NAME)
         self.table.setModel(self.model)
+        self.table.setTabKeyNavigation(False)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.table.setAlternatingRowColors(True)
@@ -245,6 +251,12 @@ class MainWindow(QMainWindow):
         self.model_choice = QComboBox()
         self.model_choice.setAccessibleName(M.MODEL)
         form.addRow(M.MODEL, self.model_choice)
+        self.model_details = self._label(M.EMPTY_CELL)
+        self.model_speed = self._label(M.EMPTY_CELL)
+        self.model_warning = self._label(M.EMPTY_CELL, warning=True)
+        form.addRow(self.model_details)
+        form.addRow(self.model_speed)
+        form.addRow(self.model_warning)
         manage = self._button(M.MANAGE_MODELS, lambda: None)
         manage.setEnabled(False)
         manage.setToolTip(M.MANAGE_LATER)
@@ -353,6 +365,8 @@ class MainWindow(QMainWindow):
         for text, callback, menu in (
             (M.ADD_FILES, self.choose_files, file_menu),
             (M.ADD_FOLDER, self.choose_input_folder, file_menu),
+            (M.CHOOSE_OUTPUT_MENU, self.choose_output, file_menu),
+            (M.CLEAR_FINISHED, self.clear_finished, tools),
             (M.CLEAR_HISTORY, self.clear_queue, tools),
         ):
             action = QAction(text, self)
@@ -435,12 +449,16 @@ class MainWindow(QMainWindow):
             remaining = sum(job.status not in {JobStatus.DONE, JobStatus.SKIPPED} for job in jobs)
             if remaining and ResumeDialog(remaining, self).exec() == QDialog.DialogCode.Accepted:
                 self.restore_batch(options, jobs)
+                QTimer.singleShot(0, self.start_batch)
             else:
                 clear_history(self.paths.user_dir / "state/queue.json")
 
     def restore_batch(self, options: BatchOptions, jobs: list[Job]) -> None:
         from dataclasses import asdict
 
+        for job in jobs:
+            if job.status not in {JobStatus.DONE, JobStatus.SKIPPED}:
+                job.elapsed_sec = 0.0
         self.model.set_jobs(jobs)
         self._missing_resume_model = (
             options.model_id if options.model_id not in self.installed else None
@@ -485,6 +503,8 @@ class MainWindow(QMainWindow):
         self._theme_changed()
         self._applying = False
         self._rules()
+        if self._english_forced:
+            self._previous_language = settings.get("preferred_language", self._previous_language)
 
     def _save_settings(self) -> bool:
         from dusty.queue.storage import load_settings
@@ -497,6 +517,9 @@ class MainWindow(QMainWindow):
                     "schema_version": 1,
                     "model_id": self.model_choice.currentData() or "tiny",
                     "language": self.language_choice.currentData(),
+                    "preferred_language": self._previous_language
+                    if self._english_forced
+                    else self.language_choice.currentData(),
                     "task": self.task_choice.currentData(),
                     "backend": self.device_choice.currentData(),
                     "collision": self.collision_choice.currentData(),
@@ -589,19 +612,51 @@ class MainWindow(QMainWindow):
         incompatible = model is not None and not can_translate(model)
         english_only = bool(model and model.english_only)
         self.language_choice.setEnabled(not english_only and not self.running)
-        if english_only:
+        if english_only and not self._english_forced:
+            self._previous_language = self.language_choice.currentData() or "auto"
+            self._english_forced = True
             self._set_combo(self.language_choice, "en")
+        if english_only and self.language_choice.currentData() != "en":
+            self._set_combo(self.language_choice, "en")
+        elif not english_only and self._english_forced:
+            self._english_forced = False
+            self._set_combo(self.language_choice, self._previous_language)
         task_model = self.task_choice.model()
         if isinstance(task_model, QStandardItemModel):
             translate_item = task_model.item(1)
             if translate_item:
+                translate_item.setText(
+                    M.TRANSLATE_UNAVAILABLE if incompatible else M.TASKS["translate"]
+                )
                 translate_item.setEnabled(not incompatible)
                 translate_item.setToolTip(M.TRANSLATE_DISABLED if incompatible else M.EMPTY_CELL)
         invalid = incompatible and self.task_choice.currentData() == "translate"
-        self.incompatible.setVisible(bool(invalid))
+        self.incompatible.setText(M.TRANSLATE_REASON if english_only else M.TRANSLATE_DISABLED)
+        self.incompatible.setVisible(bool(invalid or english_only))
         self.use_medium.setVisible(bool(invalid and "medium" in self.installed))
+        self.model_details.setText(M.MODEL_DETAILS.get(model_id, M.EMPTY_CELL))
         self.prompt_warning.setVisible(len(self.prompt.toPlainText()) / 4 > 200)
         cpu_only = not self.vulkan_ok or self.device_choice.currentData() == "cpu"
+        speed_class = (model.speed_cpu if cpu_only else model.speed_vulkan) if model else "slow"
+        self.model_warning.setText(M.SLOW if model and speed_class == "slow" else M.EMPTY_CELL)
+        self.model_warning.setVisible(bool(model and speed_class == "slow"))
+        # Conservative rounded ThinkPad M1 RTFs, not a measured per-machine benchmark.
+        minutes = (
+            {"tiny": 10, "small": 30, "small.en": 30}.get(model_id, 60)
+            if cpu_only
+            else {
+                "tiny": 10,
+                "small": 15,
+                "small.en": 15,
+                "medium": 25,
+                "large-v3-turbo-q8_0": 25,
+            }.get(model_id, 60)
+        )
+        self.model_speed.setText(
+            (M.SPEED_SLOW if speed_class == "slow" else M.SPEED_ESTIMATE.format(minutes=minutes))
+            + "\n"
+            + M.SPEED_CAUTION
+        )
         warning = M.SLOW if model and slow_warning(model, "cpu" if cpu_only else "vulkan") else None
         if not model:
             warning = M.NO_MODELS if self.ready else M.EMPTY_CELL
@@ -629,6 +684,12 @@ class MainWindow(QMainWindow):
             M.USE_INSTALLED.format(model=M.MODEL_NAMES.get(model_id, M.PREPARING))
         )
         self.resume_model_button.setEnabled(bool(model and not invalid and not self.running))
+        if not self.output_dir and not self.same_folder.isChecked():
+            warning = M.CHOOSE_OUTPUT_FIRST
+        elif self.model.jobs and all(
+            job.status in {JobStatus.DONE, JobStatus.SKIPPED} for job in self.model.jobs
+        ):
+            warning = M.EVERYTHING_DONE
         self.warning.setText(warning or M.EMPTY_CELL)
         self.warning.setVisible(bool(warning))
         self.choices_summary.setText(
@@ -645,6 +706,11 @@ class MainWindow(QMainWindow):
             if self.output_dir
             else M.NO_OUTPUT
         )
+        self.output_label.setObjectName(
+            "warning" if not self.output_dir and not self.same_folder.isChecked() else ""
+        )
+        self.output_label.style().unpolish(self.output_label)
+        self.output_label.style().polish(self.output_label)
         self.output_button.setEnabled(not self.running and not self.same_folder.isChecked())
         self.start_button.setEnabled(
             bool(
@@ -667,10 +733,7 @@ class MainWindow(QMainWindow):
         )
 
     def _use_medium(self) -> None:
-        previous = self.registry.manifest.models.get(self.model_choice.currentData())
         self._set_combo(self.model_choice, "medium")
-        if previous and previous.english_only:
-            self._set_combo(self.language_choice, "auto")
         self._set_combo(self.task_choice, "translate")
         self._missing_resume_model = None
         self._rules()
@@ -689,7 +752,7 @@ class MainWindow(QMainWindow):
                 target.insertWidget(index if has_jobs else index + 1, button)
         self.drop_area.setVisible(not has_jobs)
         self.table.setVisible(has_jobs)
-        self.output_row.setVisible(has_jobs)
+        self.output_row.setVisible(True)
         self.format_row.setVisible(has_jobs)
         editing = not self.running and not (self.scanner and self.scanner.isRunning())
         for button in self.edit_buttons + self.queue_buttons:
@@ -748,11 +811,24 @@ class MainWindow(QMainWindow):
     @Slot(object)
     def _scanned(self, result: ScanResult) -> None:
         self.model.set_jobs(self.model.jobs + list(result.jobs))
+        name = result.duplicate_paths[0].name if len(result.duplicate_paths) == 1 else ""
         self.status.setText(
-            M.SCAN_COUNT.format(
-                added=len(result.jobs), unsupported=result.unsupported, duplicates=result.duplicates
-            )
+            M.scan_summary(len(result.jobs), result.unsupported, result.duplicates, name)
         )
+        if result.duplicate_paths:
+            self.model.highlighted = set(result.duplicate_paths)
+            self.model.layoutChanged.emit()
+            index = next(
+                (
+                    i
+                    for i, job in enumerate(self.model.jobs)
+                    if job.source in self.model.highlighted
+                ),
+                None,
+            )
+            if index is not None:
+                self.table.scrollTo(self.model.index(index, 0))
+            QTimer.singleShot(1800, self._clear_highlight)
         self._refresh()
 
     def _selected_rows(self) -> list[int]:
@@ -776,6 +852,21 @@ class MainWindow(QMainWindow):
             jobs[row], jobs[target] = jobs[target], jobs[row]
             self.model.set_jobs(jobs)
             self.table.selectRow(target)
+
+    def _clear_highlight(self) -> None:
+        self.model.highlighted.clear()
+        self.model.layoutChanged.emit()
+
+    def clear_finished(self) -> None:
+        if not self.running:
+            self.model.set_jobs(
+                [
+                    job
+                    for job in self.model.jobs
+                    if job.status not in {JobStatus.DONE, JobStatus.SKIPPED}
+                ]
+            )
+            self._refresh()
 
     def clear_queue(self) -> None:
         if not self.running:
@@ -873,11 +964,21 @@ class MainWindow(QMainWindow):
     def _collision(self, job: Job) -> None:
         if not self.batch:
             return
-        dialog = CollisionDialog(job.source.name, self)
+        self._waiting_choice = True
+        self.model.waiting_choice = job.id
+        self._active_id = job.id
+        job.status = JobStatus.QUEUED
+        job.elapsed_sec = 0
+        self.model.update_job(job)
+        self.status.setText(M.WAITING_CHOICE)
+        dialog = CollisionDialog(job.outputs[0].name if job.outputs else job.source.name, self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.batch.choose_collision(dialog.selected_policy(), dialog.apply_all.isChecked())
         else:
             self.cancel_all()
+        self._waiting_choice = False
+        self.model.waiting_choice = None
+        self.model.layoutChanged.emit()
 
     def cancel_current(self) -> None:
         if self.batch and self.running:
@@ -913,7 +1014,7 @@ class MainWindow(QMainWindow):
                 TextDialog(M.APP_NAME, (M.GPU_NOTICE,), self).exec()
 
     def _tick(self) -> None:
-        if not self.running:
+        if not self.running or self._waiting_choice:
             return
         for row, job in enumerate(self.model.jobs):
             if job.id == self._active_id and job.status not in TERMINAL:

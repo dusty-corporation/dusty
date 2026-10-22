@@ -130,6 +130,17 @@ def test_close_mid_batch_saves_resume_and_sync_warning(qtbot, tmp_path, monkeypa
     assert second.model.jobs[0].id == recovered[1][0].id
     second.vad.setChecked(True)
     second._refresh()
-    second.start_batch()
+    qtbot.waitUntil(lambda: second.running, timeout=3000)
     qtbot.waitUntil(lambda: not second.running, timeout=60000)
     assert second.model.jobs[0].status == JobStatus.DONE
+
+
+def test_amr_add_and_start_through_real_window(qtbot, tmp_path) -> None:
+    window = ready_window(qtbot, tmp_path)
+    window.add_paths([ROOT / "tests/fixtures/audio/formats/jfk.amr"])
+    qtbot.waitUntil(lambda: window.model.rowCount() == 1 and not window.scanner.isRunning())
+    assert window.model.data(window.model.index(0, 1)) == "--"
+    window.start_batch()
+    qtbot.waitUntil(lambda: not window.running, timeout=30000)
+    assert window.model.jobs[0].status == JobStatus.DONE
+    assert "Americans" in (tmp_path / "out/jfk.txt").read_text(encoding="utf-8")
