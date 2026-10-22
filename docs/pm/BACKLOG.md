@@ -4,6 +4,7 @@ Record optional improvements, optimizations, and work outside V1 here instead of
 
 ## Optimizations and optional improvements
 
+- Remove the native VAD patch: when whisper.cpp PR 4068 or an equivalent timestamp fix reaches a stable release, verify it, upgrade the pin, rerun native/VAD regressions, and drop our patch (ADR 0018).
 - Vulkan pipeline caching: consider after the ThinkPad startup probe establishes whether ISSUE-004 persists beyond the first run; no cache implementation is assigned to M2.
 - Persistent engine per batch: possible alternative for ISSUE-004 startup overhead, requiring PM approval to change ADR 0004 and preserve cancellation and crash isolation.
 - Exact vocabulary token counting: consider replacing the documented approximate prompt warning if an approved tokenizer becomes available.
