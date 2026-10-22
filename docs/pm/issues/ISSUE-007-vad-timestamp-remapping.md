@@ -2,7 +2,7 @@
 
 - Severity: S1
 - Milestone: M2
-- Status: Open
+- Status: In progress
 - Environment: Owner desktop, pinned whisper.cpp v1.9.5 commit
   `d1be6fde11ac6e0407606b4e42fe72d34add8037`, CPU tiny, Silero VAD 6.2.3,
   four threads, public mostly-silence-10min fixture
@@ -55,6 +55,12 @@ M1's short contiguous-speech checks did not exercise a long removed gap; the
 required M2 silence fixture revealed it before acceptance.
 
 ## Fix / proposed fix
+
+PM approved the native patch path after an upstream search, rejected stderr
+reconstruction, and requires a new draft engine-v2 release. ADR 0018 records
+the decision. No newer stable tag exists as of the 2026-10-22 API review;
+related upstream PR 4068 remains open. The patch and strengthened segment/word
+regression are prepared; native build and runtime verification are pending.
 
 Recommend a PM-approved patch of the pinned native engine to map segment
 starts/ends and full JSON token times correctly at VAD gaps, followed by a new

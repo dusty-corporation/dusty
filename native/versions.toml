@@ -1,6 +1,8 @@
 [whisper_cpp]
 tag = "v1.9.5"
 commit = "d1be6fde11ac6e0407606b4e42fe72d34add8037"
+patch = "native/patches/0001-vad-timestamp-mapping.patch"
+patch_sha256 = "5dea476a89b6a7ac725cffeb72e2d80a33dc04ac0f0635dfe28cc4a25d911d1b"
 
 [openai_whisper]
 commit = "86098128c0b4f24f0e2aa2994de830614b474227"
