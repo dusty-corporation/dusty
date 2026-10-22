@@ -90,7 +90,8 @@ try {
     $selftest = Invoke-TestPython -Arguments @('-m', 'dusty', '--self-test', '--backend', 'auto', '--model', 'tiny')
     if ($selftest -ne 'OK') { throw 'Offline self-test did not report success' }
     $batch = Invoke-TestPython -Arguments @('-m', 'dusty', '--headless-batch', 'tests/fixtures/audio/formats/jfk.wav', '--out', (Join-Path $work 'outputs'), '--backend', 'auto', '--model', 'tiny')
-    if ($batch -ne 'done OK') { throw 'Offline batch did not report success' }
+    $expectedBatch = "added=1 unsupported=0 duplicates=0`ndone OK"
+    if (($batch -replace "`r`n", "`n") -cne $expectedBatch) { throw 'Offline batch did not report success' }
     Start-Sleep -Seconds 3
     $events = Read-ConnectionEvents $began
     $violations = @(Get-DustyConnectionEvents -Events $events -Programs $programs -AfterRecordId $marker -ExcludeProcessId $controlPid)
