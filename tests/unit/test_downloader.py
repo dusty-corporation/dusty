@@ -174,6 +174,7 @@ def test_hash_mismatch_deletes_part_and_preserves_existing_final(tls):
         "https://github.com.evil.invalid/x",
         "https://user:password@github.com/x",
         "https://github.com:444/x",
+        "https://github.com:0/x",
         "file:///anything",
         "https://github.com./x",
         "https://github.com/x#fragment",

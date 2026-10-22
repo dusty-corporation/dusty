@@ -55,7 +55,7 @@ class HostPolicy:
                 or parsed.username is not None
                 or parsed.password is not None
                 or parsed.fragment
-                or (parsed.port or 443) != self.port
+                or (parsed.port if parsed.port is not None else 443) != self.port
             ):
                 raise ValueError
         except ValueError as exc:
