@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from typing import cast
 
-from dusty.core import BatchOptions, Job, JobStatus
+from dusty.core import BatchOptions, JobStatus
 from dusty.core.types import Backend, CollisionPolicy, OutputFormat, Task
 from dusty.engine.backend import probe_vulkan
 from dusty.models import ModelRegistry, load_manifest
@@ -13,6 +13,7 @@ from dusty.platform.cpu_topology import default_threads
 from dusty.privacy.logging import configure_logger
 from dusty.privacy.sync import is_synced
 from dusty.queue import Coordinator, cleanup_orphaned_work
+from dusty.queue.scanning import scan_inputs
 from dusty.runtime_paths import resolve_paths
 
 
@@ -29,6 +30,8 @@ def transcribe(
     vad: bool = True,
     prompt: str = "",
     collision: CollisionPolicy = "ask",
+    recursive: bool = False,
+    keep_structure: bool = False,
 ) -> int:
     paths = resolve_paths()
     configure_logger(paths.user_dir)
@@ -52,12 +55,17 @@ def transcribe(
         language=language,
         task=task,
         backend=backend,
-        threads=threads or default_threads(),
+        threads=default_threads() if threads is None else threads,
         vad=vad,
         prompt=prompt,
         collision=collision,
+        keep_structure=keep_structure,
     )
-    jobs = [Job(source) for source in files]
+    scanned = scan_inputs(files, recursive=recursive)
+    jobs = list(scanned.jobs)
+    print(f"added={len(jobs)} unsupported={scanned.unsupported} duplicates={scanned.duplicates}")
+    if not jobs:
+        return 1
     Coordinator(paths, registry).run_batch(jobs, options, vulkan_ok=vulkan_ok)
     for job in jobs:
         print(f"{job.status.value} {job.failure.value if job.failure else 'OK'}")
@@ -76,6 +84,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--task", choices=("transcribe", "translate"), default="transcribe")
     parser.add_argument("--threads", type=int)
     parser.add_argument("--no-vad", action="store_true")
+    parser.add_argument("--recursive", action="store_true")
+    parser.add_argument("--keep-structure", action="store_true")
     parser.add_argument("--prompt", default="")
     parser.add_argument(
         "--collision", choices=("ask", "skip", "overwrite", "keep_both"), default="ask"
@@ -93,6 +103,8 @@ def main(argv: list[str] | None = None) -> int:
         vad=not args.no_vad,
         prompt=args.prompt,
         collision=cast(CollisionPolicy, args.collision),
+        recursive=args.recursive,
+        keep_structure=args.keep_structure,
     )
 
 

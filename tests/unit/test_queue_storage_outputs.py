@@ -1,5 +1,6 @@
 """Exercise output collision policies and restart state."""
 
+import json
 from pathlib import Path
 
 import pytest
@@ -70,3 +71,29 @@ def test_settings_are_atomic_and_unknown_schema_is_quarantined(tmp_path: Path) -
     path.write_text('{"schema_version":99}', encoding="utf-8")
     assert load_settings(path) == {"schema_version": 1}
     assert len(list(tmp_path.glob("settings.json.corrupt-*"))) == 1
+
+
+@pytest.mark.parametrize(
+    "preference", [{"threads": "fast"}, {"formats": "txt"}, {"collision": "always"}, {"vad": "no"}]
+)
+def test_invalid_known_settings_are_quarantined(tmp_path: Path, preference: dict) -> None:
+    path = tmp_path / "settings.json"
+    path.write_text(json.dumps({"schema_version": 1, **preference}), encoding="utf-8")
+    assert load_settings(path) == {"schema_version": 1}
+    assert len(list(tmp_path.glob("settings.json.corrupt-*"))) == 1
+    with pytest.raises(ValueError):
+        save_settings(path, {"schema_version": 1, **preference})
+    assert not path.exists()
+
+
+def test_invalid_queue_options_and_missing_done_outputs_recover(tmp_path: Path) -> None:
+    path = tmp_path / "queue.json"
+    options = BatchOptions("tiny", tmp_path)
+    save_batch(path, options, [Job(tmp_path / "clip.wav", status=JobStatus.DONE)])
+    recovered = load_batch(path)
+    assert recovered is not None and recovered[1][0].status == JobStatus.QUEUED
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["options"]["threads"] = "invalid"
+    path.write_text(json.dumps(data), encoding="utf-8")
+    assert load_batch(path) is None
+    assert len(list(tmp_path.glob("queue.json.corrupt-*"))) == 1

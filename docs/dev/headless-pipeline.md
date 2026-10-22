@@ -48,3 +48,10 @@ then loads and resumes the persisted batch while preserving completed output.
 The Windows virtual-environment Python launcher can have a different PID from
 the actual interpreter; the test records and terminates the interpreter PID.
 The resume dialog belongs to M3; M2 verifies the recovery data and coordinator.
+
+The dev CLI also accepts folders. `--recursive` includes subfolders;
+`--keep-structure` preserves paths relative to each selected folder. The shared
+scanner filters the 17 verified extensions, deduplicates resolved paths, and
+returns counts without logging paths. `core/failures.py` provides an actionable
+message for every failure code for the later GUI to consume. Saved batch
+preferences are validated on load, and malformed known settings are quarantined.

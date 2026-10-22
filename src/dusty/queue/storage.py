@@ -2,7 +2,7 @@
 
 import json
 import os
-from dataclasses import asdict
+from dataclasses import asdict, fields
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -101,8 +101,9 @@ def load_batch(path: Path) -> tuple[BatchOptions, list[Job]] | None:
                 backend_used=item["backend_used"],
                 gpu_fallback=bool(item["gpu_fallback"]),
             )
-            if job.status not in {JobStatus.DONE, JobStatus.SKIPPED} or not all(
-                output.is_file() for output in job.outputs
+            if job.status not in {JobStatus.DONE, JobStatus.SKIPPED} or (
+                job.status == JobStatus.DONE
+                and (not job.outputs or not all(output.is_file() for output in job.outputs))
             ):
                 job.status = JobStatus.QUEUED
                 job.failure = None
@@ -125,8 +126,13 @@ def load_settings(path: Path) -> dict[str, Any]:
     data = _read(path)
     if data is None:
         return {"schema_version": 1}
-    if isinstance(data, dict) and data.get("schema_version") == 1:
+    try:
+        if not isinstance(data, dict) or data.get("schema_version") != 1:
+            raise ValueError("Unknown settings schema")
+        _validate_settings(data)
         return data
+    except (ValueError, TypeError):
+        pass
     suffix = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%f")
     path.rename(path.with_name(path.name + ".corrupt-" + suffix))
     return {"schema_version": 1}
@@ -135,4 +141,21 @@ def load_settings(path: Path) -> dict[str, Any]:
 def save_settings(path: Path, settings: dict[str, Any]) -> None:
     if settings.get("schema_version") != 1:
         raise ValueError("Unknown settings schema")
+    _validate_settings(settings)
     atomic_json(path, settings)
+
+
+def _validate_settings(settings: dict[str, Any]) -> None:
+    """Validate persisted batch preferences; leave UI and probe fields intact."""
+    names = {field.name for field in fields(BatchOptions)}
+    preferences: dict[str, Any] = {"model_id": "tiny", "output_dir": Path(".")}
+    preferences.update({key: value for key, value in settings.items() if key in names})
+    if "output_dir" in settings:
+        if not isinstance(settings["output_dir"], str) or not settings["output_dir"]:
+            raise ValueError("Invalid saved output directory")
+        preferences["output_dir"] = Path(settings["output_dir"])
+    if "formats" in settings:
+        if not isinstance(settings["formats"], list):
+            raise ValueError("Invalid saved formats")
+        preferences["formats"] = tuple(settings["formats"])
+    BatchOptions(**preferences)
