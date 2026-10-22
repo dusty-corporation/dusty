@@ -36,3 +36,6 @@ All notable changes to Dusty will be documented here. This project follows Keep 
   purpose and estimated speed, and resume starts unfinished recordings directly.
 - ThinkPad-reviewed list, duplicate, summary, error and keyboard improvements;
   explicit development fetch option for the recommended Small and Turbo models.
+- M4 downloader-only prework: isolated standard-library HTTPS download/verify CLI,
+  strict redirect hosts, verified resumable parts, space/cancellation safety and
+  local TLS plus explicit CI-only public model integration tests.
