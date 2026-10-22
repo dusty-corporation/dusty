@@ -2,7 +2,7 @@
 
 - Severity: S1
 - Milestone: M2
-- Status: Open
+- Status: Resolved 2026-10-22
 - Environment: Published `models-v1` GitHub release and M2 Task 1
 
 ## Steps to reproduce
@@ -34,16 +34,16 @@ asked to produce. M1 tests proved the M1 candidate set, not the later M2
 download set. The mismatch appeared when Task 1 compared the published
 release asset list against its required model names.
 
-## Fix / proposed fix
+## Resolution
 
-PM decision required: either revise Task 1 to use the already published
-`small.en` model for English-only integration tests, or approve producing
-and adding `tiny.en` with a verified manifest entry. Editing a published
-release is Owner-only under AGENTS rule 13; the implementing engineer
-cannot make that change. No unverified substitute is acceptable.
+The PM confirmed that the M2 `tiny.en` request was an error and directed
+the Task 1 fetch script and English-only tests to use the already published
+`small.en` model. The M2 brief now says `small.en`. The `models-v1` release
+was not modified.
 
 ## Regression test added
 
-Pending PM decision. The eventual fetch script must test that every
-required model is present in the pinned release manifest and verify its
-downloaded SHA-256 before use.
+`tests/unit/test_fetch_dev_binaries.py` selects exactly tiny, small.en,
+and VAD, and covers hash mismatch rejection and safe ZIP extraction. The
+fetch script verified the pinned release manifest and downloaded all three
+approved models by SHA-256 on 2026-10-22.

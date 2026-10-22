@@ -31,7 +31,7 @@ Cut from V1: large-v3-q8_0, large-v3-q5_0, large-v3-turbo f16 and q5_0, base. La
 
 ### 1. Pinned engine binaries for dev and CI
 - Prepare a draft release `engine-v1` with the CPU and Vulkan whisper-cli packages and the minimal FFmpeg package from the M1 workflows (same pinned versions). Record each zip's SHA-256 in `native/versions.toml`.
-- Add `tools/fetch_dev_binaries.py`: downloads `engine-v1` assets and the `tiny`, `tiny.en`, and VAD models from `models-v1`, verifies every SHA-256, and unpacks into `build/bin/` and `build/models/` (gitignored). It is dev tooling, not shipped, so network access is allowed there. `check_no_network.py` must still pass because it scans only `src/dusty`.
+- Add `tools/fetch_dev_binaries.py`: downloads `engine-v1` assets and the `tiny`, `small.en`, and VAD models from `models-v1`, verifies every SHA-256, and unpacks into `build/bin/` and `build/models/` (gitignored). PM correction for ISSUE-005: M1 produced `small.en`, not `tiny.en`; do not modify `models-v1`. It is dev tooling, not shipped, so network access is allowed there. `check_no_network.py` must still pass because it scans only `src/dusty`.
 - CI uses the same script, with caching keyed on the hashes. No per-PR rebuild of whisper.cpp or FFmpeg.
 - Dusty locates binaries via `DUSTY_BIN_DIR` / `DUSTY_MODELS_DIR` in dev and tests, and via the bundled layout in packaged builds (M5). Write this resolution order in `docs/dev/`.
 - Stop after preparing the draft and ask the Owner to publish both releases. Then continue.
