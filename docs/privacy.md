@@ -1,26 +1,45 @@
-# Local data and privacy
+# Privacy and local data
 
-Dusty processes recordings entirely on this computer. The main app has a
-Python socket audit hook and does not make network requests. Native FFmpeg is
-built without network protocols, and its input protocol whitelist is
-`file,pipe`. The separate future model downloader will be an explicit user
-action. The development asset fetcher is not shipped.
+Dusty processes your recordings entirely on this computer. After installation,
+it never needs an internet connection, and it never sends your audio or
+transcripts anywhere.
 
-Dusty reads source recordings but does not modify them. It writes chosen
-transcript formats to the chosen output folder. A folder managed by OneDrive,
-Dropbox, or Google Drive may sync those outputs; Dusty warns when it recognizes
-such a folder. The sync provider's behavior is outside Dusty's control.
+Automatic transcripts can contain mistakes, especially with names, medications,
+and numbers. Always review a transcript before relying on it for medical,
+legal, or other important decisions.
 
-Local app data is under `%LOCALAPPDATA%\Dusty`:
+## What is stored
 
-| Location | Contents | Removal |
-|---|---|---|
-| `models/` | Downloaded model files | User-managed model removal; installer behavior comes in M5 |
-| `settings.json` | Preferences and cached backend probe | Reset settings or uninstall |
-| `state/queue.json` | Current batch, source paths, output paths, vocabulary hints, status | Delete after dismissing a finished batch with Clear history |
-| `work/<job UUID>/` | Decoded WAV and temporary engine JSON | Removed after each job; abandoned UUID work directories removed at next startup |
-| `logs/dusty.log*` | Numeric timings, job UUIDs, model, backend, status | Rotating 5 files of at most 1 MB each; user can remove them |
+- `%LOCALAPPDATA%/Dusty/settings.json`: selected model, language, task, formats,
+  output folder, collision policy, device, threads, silence detection, vocabulary
+  hints, appearance, window geometry, welcome state and local graphics-probe cache.
+- `%LOCALAPPDATA%/Dusty/state/queue.json`: recording/output paths and batch
+  choices, including vocabulary hints, required to resume an unfinished batch.
+  Clear history removes it. Dismissing a completed batch summary also removes it.
+- `%LOCALAPPDATA%/Dusty/work/<job UUID>/`: temporary decoded audio and native
+  transcription JSON. The coordinator removes the directory on success,
+  failure and cancellation. Startup removes abandoned per-job directories.
+- `%LOCALAPPDATA%/Dusty/models/`: downloaded and hash-verified model data in an
+  installed app. Development models/binaries use ignored `build/` directories.
+- `%LOCALAPPDATA%/Dusty/logs/`: rotating redacted diagnostics with statuses and
+  numeric timings, not recording names/paths, transcript text or vocabulary hints.
+- Transcripts are saved only to the chosen destination. Clearing history or
+  the queue does not delete recordings or exported transcripts.
 
-Transcript text, recording names and paths, and vocabulary hints are never
-written to logs. Temporary files are deleted normally, without a secure-wipe
-claim. Outputs may remain in the user-selected folder after clearing history.
+The app's processing package has no networking imports. A startup Python audit
+hook blocks socket operations; Windows CI uses firewall rules and WFP auditing
+for self-test, a headless batch and a batch driven through the Qt window.
+Downloading is reserved for the separate explicit downloader; model management
+is not enabled in the M3 interface. There are no telemetry or update checks.
+
+## Sync folders and device security
+
+A cloud-sync service may upload files placed in its folders independently of
+Dusty. The GUI warns for detected sync destinations before processing and lets
+you choose another folder or explicitly continue. The acknowledgement lasts for
+that folder in the current app session. Detection is a warning aid, not a way
+to disable another program's sync behavior.
+
+Anyone with access to your Windows account or administrator rights may be able
+to read local state and outputs. Temporary-file deletion is not secure erasure.
+Full user documentation and release checklists are completed in M6.
