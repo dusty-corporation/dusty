@@ -14,6 +14,8 @@ Record optional improvements, optimizations, and work outside V1 here instead of
 
 - Refresh pinned GitHub Actions during M6 maintenance: CI warns that the pinned Node 20 actions are forced onto Node 24; verify supported replacements without changing current M3 scope.
 
+- Explicit enterprise proxy support: defer pending a PM-approved host/credential policy; the isolated downloader currently connects directly.
+
 ## After V1 (SPEC section 3.2)
 
 - Speaker diarization: V2 feature; V1 retains only the specified interface stub.

@@ -2,7 +2,7 @@
 
 ## 1. Summary
 
-The Owner reviewed M3 on the ThinkPad (i7-1365U, Iris Xe, Tiny, Vulkan): 16 checks passed, checks 1 and 8 failed, and checks 6 and 17 were not reported. This revision fixes the supplied output-folder, model-choice, AMR, run-flow, wording and keyboard findings; the AMR failure was a duration-preflight assumption, not a missing native decoder. All 106 local tests pass, and the regenerated screenshot asset has 136 images. A short changed-behavior re-test is still pending, so human acceptance remains partial. No M4 work has started; PR #4 remains a draft.
+The Owner reviewed M3 on the ThinkPad (i7-1365U, Iris Xe, Tiny, Vulkan): 18 checks passed and checks 1 and 8 failed. This revision fixes the supplied output-folder, model-choice, AMR, run-flow, wording and keyboard findings; the AMR failure was a duration-preflight assumption, not a missing native decoder. All 106 local tests pass, and the regenerated screenshot asset has 136 images. A short changed-behavior re-test is still pending, so human acceptance remains partial. No M4 work has started; PR #4 remains a draft.
 
 ## 2. Acceptance criteria
 
@@ -14,7 +14,7 @@ The Owner reviewed M3 on the ThinkPad (i7-1365U, Iris Xe, Tiny, Vulkan): 16 chec
 | UI event loop gap at most 200 ms during a real batch | met | Public JFK, Tiny CPU, two threads, TXT+DOCX; 10 ms precise Qt timer and GUI-thread delivery assertions. The final real-batch integration test passes the 200 ms maximum-gap assertion. This measures the tested batch, not every possible recording or workload. |
 | Centralized copy, exact privacy/accuracy wording, vocabulary hints | met | app/messages.py; copy/model-control tests; multi-line hints and soft warning based on the verified approximate 800-character prompt threshold. |
 | Themes, scaling, required dialogs and screenshots | met | 136 synthetic PNGs: 34 states in light/dark at 100%/150%; font glyph validation and key-image visual inspection. Native display review is pending below. |
-| Owner walkthrough | partial | ThinkPad: 16 passed, steps 1/8 failed and now corrected; 6/17 unreported. Eight changed-behavior re-test checks are in section 8. |
+| Owner walkthrough | partial | ThinkPad: 18 passed, steps 1/8 failed and now corrected; targeted re-test pending. Eight changed-behavior re-test checks are in section 8. |
 | Approved cleanup and real-appdata test protection | met | backend_probe-only cleanup completed and verified before M3; session audit guard plus repo-local appdata for tests and child processes. |
 
 ## 3. What was built
@@ -140,10 +140,11 @@ Owner evidence received 2026-10-22, ThinkPad i7-1365U / Iris Xe, Tiny, Vulkan:
 
 | Original walkthrough steps | Owner result |
 |---|---|
-| 2, 3, 4, 5, 7, 9, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20 | Passed |
+| 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 | Passed |
 | 1 | Failed: Welcome X left an empty screen without a visible output-folder choice; persistence itself already worked. |
 | 8 | Failed: English-only Translate looked selectable and did nothing. |
-| 6, 17 | Not reported; no pass is inferred. |
+| 6 | Passed: Move up/down and Remove worked. The Tab-trap finding was addressed by correction 15. |
+| 17 | Passed: Close/save/resume worked. The extra-Start finding was addressed by correction 9. |
 
 Step 15 explicitly verified Keep both, Replace and Skip. Step 20 was at 150%
 scaling and confirmed settings and the output folder persist across launches.
@@ -186,7 +187,7 @@ reference. The Owner handles merging and release publication.
 
 ## 9. Risks for the next milestone
 
-- The ThinkPad already passed 150% scaling and persistence. Changed behavior needs the eight targeted re-tests; original steps 6/17 were unreported.
+- The ThinkPad already passed 150% scaling and persistence. Changed behavior needs the eight targeted re-tests; original steps 6/17 also passed, as corrected by the PM.
 - M4 must preserve the separate downloader process and the runtime/static networking boundary while replacing the disabled model-management control.
 - The real Surface Vulkan smoke test remains required before M7 under the accepted M1 conditional GO; it does not block M3.
 - File/history deletion is not secure erasure. Sync-folder warnings cannot disable another program's uploads.

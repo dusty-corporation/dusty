@@ -7,8 +7,9 @@
 
 ## Findings and cause
 
-Owner passed 16 original checks, failed Welcome/output recovery and the
-English-only task display. Checks 6 and 17 were not reported. Modal options
+PM correction: Owner passed 18 original checks, including 6 and 17, and
+failed Welcome/output recovery and the English-only task display. Move/Remove
+and close/save/resume passed; Tab and the extra Start were separate findings. Modal options
 hid the main slow warning, the forced language was not restored, collision
 state could retain a previous row, and resumed rows needed another Start.
 The initial pipeline collision decision treated outputs made earlier in the
