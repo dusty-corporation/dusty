@@ -16,6 +16,10 @@ All notable changes to Dusty will be documented here. This project follows Keep 
 - Runtime audit-hook network guard, redacted logs, Windows firewall/WFP CI
   acceptance, public Persian translation fixture and strict package coverage.
 - Repository-local test app data and a PM backlog for deferred work.
+- M3 desktop queue with collapsed options, background processing, progress,
+  cancellation, safe collision handling, resume, themes and privacy warnings.
+- Centralized interface copy, real Qt batch acceptance tests and a draft
+  screenshot matrix covering light/dark appearance at two display scales.
 
 ### Fixed
 
@@ -23,3 +27,5 @@ All notable changes to Dusty will be documented here. This project follows Keep 
 - Distinct public and private benchmark summary names with overwrite checks.
 - Segment and word timestamps across VAD-removed silence, using the approved
   minimal native patch in the published engine-v2 prerelease.
+- Explicit replacement choice when a resumed batch model is unavailable;
+  Google Drive streaming mount detection for sync-folder warnings.

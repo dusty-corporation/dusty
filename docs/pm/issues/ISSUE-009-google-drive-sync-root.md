@@ -2,7 +2,7 @@
 
 - Severity: S2
 - Milestone: M3
-- Status: In progress
+- Status: Resolved
 - Environment: Windows, Google Drive for desktop streaming mount
 
 ## Steps to reproduce
@@ -37,4 +37,10 @@ Document limits for arbitrary mirrored folders and stale configuration.
 
 Injected registry readers verify precedence, custom paths/letters and default
 DriveFS presence without touching real registry keys. Existing GUI sync tests
-verify warning acknowledgement and refusal behavior. CI pending.
+verify warning acknowledgement and refusal behavior. Final code 7551944: 94 local tests passed; PR CI 39827402358 passed with 93 tests and one unavailable-Vulkan skip. WFP GUI processing passed with zero connections.
+
+## Resolution
+
+Closed in M3 after the verified local configuration fix and regression checks.
+No vendor data or registry entries are changed. Advisory detection limits are
+documented in docs/dev/sync-detection.md and docs/privacy.md.
