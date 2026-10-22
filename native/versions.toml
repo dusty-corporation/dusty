@@ -22,3 +22,12 @@ headers_package = "11.0.1-3build1"
 version = "6.2.3"
 tag = "v6.2.3"
 commit = "5cd7945676eb32225748052e2e6a0580e4686a08"
+
+[engine_release]
+tag = "engine-v1"
+source_commit = "29f9ca75b05c168c6d89e14d784319c2489c38d6"
+native_run_id = 39718973902
+ffmpeg_run_id = 39718973892
+whisper_cpu_zip_sha256 = "bb98378bfe200f503fdeff5aed8aa9e7c043a3e32f6d274b3ae4fb8ebdcb120c"
+whisper_vulkan_zip_sha256 = "1c6892dea290e4c16b3a1e109ac5950e018fa89ce2a27c679f638009f4921f76"
+minimal_ffmpeg_zip_sha256 = "d687eb1e7403b6ab9c444118c055ac99521ea34782f52538787690d1e53da40c"
