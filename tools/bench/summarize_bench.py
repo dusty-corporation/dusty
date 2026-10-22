@@ -129,19 +129,25 @@ def main() -> None:
     lines = [
         "# Accuracy and speed summary",
         "",
-        "| Model | Backend | RTF | WER |",
-        "| --- | --- | ---: | ---: |",
+        "| Model | Backend | Threads | RTF | WER |",
+        "| --- | --- | ---: | ---: | ---: |",
     ]
     for row in rows:
         if row["sample"] != "public":
             raise ValueError("WER can only be computed for public reference runs")
-        mode_prefix = "quick-" if row.get("run_mode") == "quick" else ""
+        mode_prefix = {
+            "quick": "quick-",
+            "quick_sweep": "quick-sweep-",
+        }.get(row.get("run_mode", "full"), "")
         name = (
             f"public-{row['machine']}-{mode_prefix}{row['model']}-{row['backend_requested']}-"
             f"t{row['threads']}.json"
         )
         wer = scored_word_error_rate(args.results / name, spans)
-        lines.append(f"| {row['model']} | {row['backend_actual']} | {row['rtf']} | {wer:.4f} |")
+        lines.append(
+            f"| {row['model']} | {row['backend_actual']} | {row['threads']} | "
+            f"{row['rtf']} | {wer:.4f} |"
+        )
     print("\n".join(lines))
 
 

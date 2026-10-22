@@ -2,12 +2,27 @@ param(
     [Parameter(Mandatory = $true)][string]$AudioPath,
     [ValidateSet('cpu', 'vulkan')][string]$Backend,
     [Parameter(Mandatory = $true)][string]$Machine,
-    [int[]]$Threads = @(4),
+    [string]$Threads = '4',
     [switch]$PublicReference,
-    [switch]$Quick
+    [switch]$Quick,
+    [ValidateSet('tiny-f16', 'small-f16', 'large-v3-turbo-q5_0', 'large-v3-q5_0')]
+    [string]$SweepModel
 )
 
 $ErrorActionPreference = 'Stop'
+if ($SweepModel -and -not $Quick) { throw 'SweepModel requires Quick mode' }
+$threadValues = @()
+foreach ($piece in $Threads.Split(',')) {
+    $value = $piece.Trim()
+    if ($value -notmatch '^[1-9][0-9]*$') { throw 'Threads must be positive comma-separated integers' }
+    $threadValues += [int]$value
+}
+if (($threadValues | Select-Object -Unique).Count -ne $threadValues.Count) {
+    throw 'Threads must not repeat a value'
+}
+if ($Quick -and $threadValues.Count -gt 1 -and -not $SweepModel) {
+    throw 'Use SweepModel to limit a Quick thread sweep to one model'
+}
 if ($Quick) {
     if ($PSBoundParameters.ContainsKey('Backend')) { throw 'Quick mode runs both backends; omit Backend' }
     $backends = @('cpu', 'vulkan')
@@ -93,19 +108,21 @@ New-Item -ItemType Directory -Force $results | Out-Null
 $stamp = Get-Date -Format yyyy-MM-dd
 $safeMachine = $Machine -replace '[^A-Za-z0-9_]', '_'
 $sample = if ($PublicReference) { 'public' } else { 'private' }
-$runMode = if ($Quick) { 'quick' } else { 'full' }
-$modeSuffix = if ($Quick) { '-quick' } else { '' }
-$jsonMode = if ($Quick) { 'quick-' } else { '' }
+$runMode = if ($SweepModel) { 'quick_sweep' } elseif ($Quick) { 'quick' } else { 'full' }
+$modeSuffix = if ($SweepModel) {
+    "-quick-sweep-$SweepModel-t$($threadValues -join '_')"
+} elseif ($Quick) { '-quick' } else { '' }
+$jsonMode = if ($SweepModel) { 'quick-sweep-' } elseif ($Quick) { 'quick-' } else { '' }
 $models = if ($Quick) {
-    foreach ($id in @('tiny-f16', 'small-f16', 'large-v3-turbo-q5_0', 'large-v3-q5_0')) {
+    $ids = if ($SweepModel) { @($SweepModel) } else {
+        @('tiny-f16', 'small-f16', 'large-v3-turbo-q5_0', 'large-v3-q5_0')
+    }
+    foreach ($id in $ids) {
         $match = @($manifest.models | Where-Object { $_.id -eq $id })
         if ($match.Count -ne 1) { throw "Quick model is missing from manifest: $id" }
         $match[0]
     }
 } else { @($manifest.models) }
-foreach ($threadCount in $Threads) {
-    if ($threadCount -lt 1) { throw 'Thread count must be positive' }
-}
 foreach ($model in $models) {
     $modelPath = Join-Path $root "models/$($model.file_name)"
     if (-not (Test-Path $modelPath)) { throw "Missing benchmark model $($model.id)" }
@@ -122,7 +139,7 @@ foreach ($selectedBackend in $backends) {
     }
     if ($PublicReference) {
         foreach ($model in $models) {
-            foreach ($threadCount in $Threads) {
+            foreach ($threadCount in $threadValues) {
                 $jsonName = "public-$safeMachine-$jsonMode$($model.id)-$selectedBackend-t$threadCount.json"
                 if (Test-Path (Join-Path $results $jsonName)) { throw 'Public benchmark JSON already exists' }
             }
@@ -139,7 +156,7 @@ foreach ($selectedBackend in $backends) {
     $rows = @()
     foreach ($model in $models) {
         $modelPath = Join-Path $root "models/$($model.file_name)"
-        foreach ($threadCount in $Threads) {
+        foreach ($threadCount in $threadValues) {
             $null = Invoke-Engine -ModelPath $modelPath -InputPath $warmup -ThreadCount $threadCount -OutputStem ''
             $outputStem = ''
             if ($PublicReference) {

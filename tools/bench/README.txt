@@ -66,6 +66,17 @@ time depends on its CPU and Vulkan startup cost:
 Omit -Backend with -Quick. The full ten-model test still requires one
 command per backend. Quick and full outputs have distinct names.
 
+To compare thread counts on one model, add -SweepModel and a comma-separated
+-Threads list. This runs only the selected model on both backends, with
+one warm-up per backend and thread count. For example:
+
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\bench\run-bench.ps1 -AudioPath .\audio\swineherd.wav -Machine thinkpad -PublicReference -Quick -SweepModel small-f16 -Threads '4,8,10'
+
+SweepModel accepts tiny-f16, small-f16, large-v3-turbo-q5_0, or
+large-v3-q5_0. A multi-value -Threads list in Quick mode requires
+-SweepModel to keep the test short. Sweep summaries include the model
+and thread counts in their names, and the CSV has one row per count.
+
 RESULTS AND BACKEND CHECK
 
 Each backend writes one CSV and Markdown summary under results/. The
