@@ -293,7 +293,9 @@ def test_options_are_modal_without_reflow_and_extra_formats_persist(window, qtbo
     window.move_actions[1].trigger()
     assert window.model.jobs[1].source.name == "one.wav"
     assert window.move_actions[0].shortcut().toString() == "Alt+Up"
+    window.activateWindow()
     window.table.setFocus()
+    qtbot.waitUntil(window.table.hasFocus)
     qtbot.keyClick(window.table, Qt.Key.Key_Up, Qt.KeyboardModifier.AltModifier)
     assert window.model.jobs[0].source.name == "one.wav"
 
