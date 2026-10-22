@@ -100,19 +100,44 @@ def test_real_dusty_entrypoint_installs_guard_before_app_imports() -> None:
     assert "CANARY_HOSTNAME_SECRET" not in result.stderr
 
 
-def test_dusty_fetch_process_does_not_inherit_guard() -> None:
-    result = run_child(
-        """
-        import runpy
-        import socket
-        import sys
-        runpy.run_module("dusty_fetch", run_name="__main__")
-        assert "dusty.privacy.network_guard" not in sys.modules
-        with socket.socket() as probe:
-            assert probe.fileno() >= 0
-        print("fetch unguarded")
-        """
-    )
+def test_dusty_fetch_process_does_not_inherit_guard(tmp_path: Path) -> None:
+    child = """
+import runpy, socket, sys
+sys.argv = ['dusty-fetch', 'verify', '--id', 'tiny', '--dest', sys.argv[1],
+            '--manifest', sys.argv[2]]
+try:
+    runpy.run_module('dusty_fetch', run_name='__main__')
+except SystemExit as exc:
+    assert exc.code == 0
+assert 'dusty.privacy.network_guard' not in sys.modules
+with socket.socket() as probe:
+    assert probe.fileno() >= 0
+print('child fetch unguarded')
+"""
+    result = run_child(f"""
+        import hashlib, json, socket, subprocess, sys
+        from pathlib import Path
+        from dusty.privacy.network_guard import install_guard, NetworkBlockedError
+        root = Path({str(tmp_path)!r})
+        (root / 'ggml-test.bin').write_bytes(b'test model')
+        manifest = root / 'manifest.json'
+        manifest.write_text(json.dumps({{'schema_version': 1, 'models': [{{
+            'id': 'tiny', 'file_name': 'ggml-test.bin', 'size_bytes': 10,
+            'sha256': hashlib.sha256(b'test model').hexdigest(),
+            'url': 'https://github.com/dusty-corporation/dusty/releases/download/models-v1/ggml-test.bin'
+        }}]}}), encoding='utf-8')
+        install_guard()
+        try:
+            socket.socket()
+        except NetworkBlockedError:
+            pass
+        else:
+            raise AssertionError('Parent guard was not active')
+        separate = subprocess.run([sys.executable, '-c', {child!r}, str(root), str(manifest)],
+                                  capture_output=True, text=True, check=True, timeout=20)
+        assert 'child fetch unguarded' in separate.stdout
+        print('fetch unguarded')
+    """)
     assert result.stdout.strip() == "fetch unguarded"
 
 
