@@ -25,7 +25,7 @@
 | M1-B7 | M1 | Focused Quick thread sweep | done | `b1f3ac0`; local 4, 8, 10 thread smoke test produced three rows each on CPU and Vulkan; draft `bench-kit-m1c` verified | - |
 | M1-GATE | M1 | PM gate decision | done | Conditional GO per M2 brief; PR #2 merged as `d3a35f7`; `docs/adr/0016-v1-model-catalog.md` records accepted catalog | - |
 | PRE-M7-SURFACE | M7 | Real Surface Laptop 5 Vulkan smoke test | todo | Owner-owned M1 conditional GO item; required before M7, does not block M2-M6 | - |
-| M2-01 | M2 | Pinned engine and model assets for dev and CI | blocked | `engine-v1` draft uploaded with three SHA-256 pins in `native/versions.toml`; Owner publication required; published `models-v1` has no `tiny.en` asset | ISSUE-005 (open) |
+| M2-01 | M2 | Pinned engine and model assets for dev and CI | doing | Published `engine-v1` digests matched three pins; fetch script downloaded and verified engine archives, manifest, tiny, small.en, and VAD; local 23 tests passed; CI pending | ISSUE-005 (resolved) |
 | M2-02 | M2 | Headless core pipeline | todo | M2 brief task 2 | - |
 | M2-03 | M2 | ISSUE-004 startup probe and findings | todo | M2 brief task 3 | ISSUE-004 (open) |
 | M2-04 | M2 | VAD integration check | todo | M2 brief task 4 | - |

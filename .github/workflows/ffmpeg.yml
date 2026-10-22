@@ -2,16 +2,6 @@ name: Minimal FFmpeg build
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - native/**
-      - tests/fixtures/audio/**
-      - .github/workflows/ffmpeg.yml
-  pull_request:
-    paths:
-      - native/**
-      - tests/fixtures/audio/**
-      - .github/workflows/ffmpeg.yml
 
 permissions:
   contents: read

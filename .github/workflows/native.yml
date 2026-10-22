@@ -2,14 +2,6 @@ name: Native whisper build
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - native/**
-      - .github/workflows/native.yml
-  pull_request:
-    paths:
-      - native/**
-      - .github/workflows/native.yml
 
 permissions:
   contents: read
