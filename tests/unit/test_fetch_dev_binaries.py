@@ -69,11 +69,16 @@ def test_selected_models_use_pm_approved_release_set() -> None:
 
     manifest = {
         "release_tag": "models-v1",
-        "models": [entry("tiny-f16", "ggml-tiny.bin"), entry("small.en-f16", "ggml-small.en.bin")],
+        "models": [
+            entry("tiny-f16", "ggml-tiny.bin"),
+            entry("small.en-f16", "ggml-small.en.bin"),
+            entry("small-f16", "ggml-small.bin"),
+        ],
         "vad": [entry("silero-vad", "ggml-silero-vad.bin")],
     }
     assert [item["id"] for item in selected_models(manifest, "models-v1")] == [
         "tiny-f16",
         "small.en-f16",
+        "small-f16",
         "silero-vad",
     ]

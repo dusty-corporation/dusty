@@ -36,7 +36,8 @@ Each chosen path is validated before launching a process. App logs never
 include these paths.
 
 `uv run python tools/fetch_dev_binaries.py` downloads the three engine
-archives and the `tiny`, `small.en`, and VAD model files. It checks every
+archives and the `tiny`, `small.en`, multilingual `small` (for the Persian
+translation regression), and VAD model files. It checks every
 archive against `native/versions.toml`, checks the published model manifest
 against its pinned hash, then checks each selected model against that
 manifest before use. Existing files are reused only if their hashes match.

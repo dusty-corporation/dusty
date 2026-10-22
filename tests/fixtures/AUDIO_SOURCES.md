@@ -59,3 +59,25 @@ provenance and expected text below.
   for this source-text-only score under the PM's Phase B decision.
 
 No Owner recording is stored here.
+
+## Persian translation smoke fixture
+
+- `audio/translate/rubaiyat-fa.wav`: 15 seconds, 16 kHz mono signed 16-bit
+  PCM, 480,310 bytes; SHA-256
+  `5c1ab7a657e78769eff8ab33f9afe4e58f7d38820eaada850649596b6be31c2a`.
+- Recording: Omar Khayyam's Rubaiyat, Persian reader MostafaRazavi,
+  [LibriVox bilingual edition](https://librivox.org/the-rubaiyat-of-omar-khayyam-version-2-by-omar-khayyam/),
+  chapter 1, Quatrains 1-101. LibriVox explicitly declares its recordings
+  public domain in the USA; the original poems are medieval.
+- Source: https://archive.org/download/rubaiyat_bilingual_1207_librivox/rubaiyat_01_khayyam_whinfield_64kb.mp3
+  SHA-256 `2ad5b8c9f30ee8540f1706b64257c7717b3b0bed6447163e34a547d6f9c9dc5e`.
+- Excerpt: source interval [107, 122) seconds, Persian quatrain 2, excluding
+  the following English reading. Transcribe with Small recognizes Persian
+  script; Translate produces English instead.
+- Independent reference: Edward Henry Whinfield's 1883 bilingual edition,
+  [quatrain 2](https://archive.org/details/quatrains1883omaruoft), says
+  "burns as fire". The test checks that content keyword and English script
+  and function words. It makes no WER or literary translation quality claim.
+- Reproduce with the pinned minimal FFmpeg: `ffmpeg -nostdin -hide_banner
+  -loglevel error -protocol_whitelist file,pipe -i <source.mp3> -ss 107 -t 15
+  -ac 1 -ar 16000 -c:a pcm_s16le rubaiyat-fa.wav`.
