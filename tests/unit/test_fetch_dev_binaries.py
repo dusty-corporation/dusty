@@ -82,3 +82,17 @@ def test_selected_models_use_pm_approved_release_set() -> None:
         "medium-f16",
         "silero-vad",
     ]
+
+
+def test_recommended_models_are_an_explicit_optional_pinned_set() -> None:
+    import json
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "resources/models.json").read_text(encoding="utf-8"))
+    for entry in manifest["models"]:
+        entry["id"] = entry["release_model_id"]
+    ids = {item["id"] for item in selected_models(manifest, "models-v1", recommended=True)}
+    assert {"small-f16", "large-v3-turbo-q8_0"} <= ids
+    assert "large-v3-turbo-q8_0" not in {
+        item["id"] for item in selected_models(manifest, "models-v1")
+    }

@@ -89,3 +89,27 @@ paints clear check/radio indicators; stylesheet control boundaries use measured
 sRGB contrast. Regression tests inspect actual painted borders for check/radio,
 push/tool buttons, combo/spin boxes, text entry, table and scroll area in both
 themes. Native operating-system file pickers remain subject to desktop review.
+
+## ThinkPad walkthrough corrections and speed estimates
+
+The output-folder line is always visible; no automatic Documents destination
+is selected. Resume immediately starts unfinished files and resets their stale
+elapsed time. Same-run output collisions auto-number; the coordinator snapshots
+existing nominal targets at run start, asks only for prior transcripts, and
+never overwrites a current-run result. Later filesystem races still fail safely.
+
+Model labels lead with purpose and retain technical names in parentheses.
+The probe selects CPU/Vulkan, and the bundled manifest selects fast/slow class.
+For fast models we round up M1 ThinkPad public-clip measurements conservatively:
+CPU Tiny 0.0875 RTF -> 10 minutes/hour; Small 0.4048 and Small English 0.3862
+-> 30 minutes/hour. Vulkan Tiny 0.0731 -> 10; Small 0.133 and Small English
+0.1365 -> 15; Turbo q8 0.2282 and Medium 0.2474 -> 25 minutes/hour.
+Slow-class choices use the slower-than-recording warning. These are similar-
+laptop planning estimates, not a benchmark of the current machine; the UI
+explicitly states that hardware and recordings can change them.
+
+The AMR native decode was valid; FFprobe omits its duration. Unknown duration
+now remains -- until decoding, and the known decoded PCM WAV is probed before
+Whisper. Real coordinator and actual Qt add/start tests cover jfk.amr. A custom
+Qt item delegate plus unavailable text makes disabled task entries explicit;
+English-only selection preserves the previous multilingual language choice.

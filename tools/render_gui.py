@@ -20,6 +20,7 @@ def render(output: Path, theme: str) -> None:
     from dusty.app.dialogs import (
         CollisionDialog,
         ErrorDialog,
+        FolderDialog,
         ResumeDialog,
         SummaryDialog,
         SyncDialog,
@@ -45,7 +46,7 @@ def render(output: Path, theme: str) -> None:
             tuple(window.registry.manifest.models), True, {"schema_version": 1, "theme": theme}
         )
     )
-    window.output_dir = Path("C:/Transcripts")
+    window.output_dir = None
     window.show()
 
     def capture(widget, name: str) -> None:
@@ -56,6 +57,9 @@ def render(output: Path, theme: str) -> None:
 
     window._refresh()
     capture(window, "01-empty")
+    window.output_dir = Path("C:/Transcripts")
+    window._refresh()
+    capture(window, "01b-output-chosen")
     jobs = [
         Job(Path("C:/Recordings/Lecture 01.wav"), duration_sec=1200),
         Job(Path("C:/Recordings/Lecture 02.mp3"), duration_sec=900),
@@ -78,6 +82,16 @@ def render(output: Path, theme: str) -> None:
         window.options_scroll.verticalScrollBar().maximum()
     )
     capture(window.options_dialog, "05-advanced")
+    window.advanced_toggle.setChecked(False)
+    window.options_scroll.verticalScrollBar().setValue(0)
+    window._set_combo(window.model_choice, "small.en")
+    capture(window.options_dialog, "05b-english-only")
+    window._set_combo(window.model_choice, "medium")
+    window.options_scroll.verticalScrollBar().setValue(0)
+    window._set_combo(window.device_choice, "cpu")
+    capture(window.options_dialog, "05c-slow-choice")
+    window._set_combo(window.device_choice, "auto")
+    window._set_combo(window.model_choice, "large-v3-turbo-q8_0")
     window.options_dialog.hide()
     window.model.jobs[0].status = JobStatus.TRANSCRIBING
     window.model.jobs[0].progress = 0.62
@@ -105,8 +119,10 @@ def render(output: Path, theme: str) -> None:
     window.model.jobs[1].failure = FailureCode.NO_AUDIO
     window._refresh()
     dialogs = [
-        (CollisionDialog(window.model.jobs[0].source.name, window), "07-collision"),
+        (CollisionDialog("Lecture 01.txt", window), "07-collision"),
         (SummaryDialog(window.model.jobs, window), "08-summary"),
+        (SummaryDialog([window.model.jobs[1]], window), "08b-no-successes"),
+        (FolderDialog(window), "12-add-folder"),
         (ResumeDialog(2, window), "09-resume"),
         (WelcomeDialog(window), "10-welcome"),
         (SyncDialog(window), "11-sync-warning"),
