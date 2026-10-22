@@ -61,7 +61,7 @@ def extract_flat_zip(archive_path: Path, destination: Path) -> None:
                 ".txt",
             }:
                 raise ValueError(f"Unexpected archive member: {name}")
-            if name.endswith(".txt") and name != "buildconf.txt":
+            if name.endswith(".txt") and name not in {"buildconf.txt", "LICENSE.txt"}:
                 raise ValueError(f"Unexpected archive member: {name}")
         for name in names:
             temporary = destination / (name + ".part")

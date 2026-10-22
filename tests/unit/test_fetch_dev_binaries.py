@@ -46,6 +46,15 @@ def test_zip_rejects_path_traversal(tmp_path: Path) -> None:
     assert not (tmp_path / "outside.exe").exists()
 
 
+def test_zip_preserves_native_license_notice(tmp_path: Path) -> None:
+    archive_path = tmp_path / "native.zip"
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr("whisper-cli.exe", b"native fixture")
+        archive.writestr("LICENSE.txt", b"MIT notice fixture")
+    extract_flat_zip(archive_path, tmp_path / "output")
+    assert (tmp_path / "output/LICENSE.txt").read_bytes() == b"MIT notice fixture"
+
+
 def test_selected_models_use_pm_approved_release_set() -> None:
     prefix = "https://github.com/dusty-corporation/dusty/releases/download/models-v1/"
 

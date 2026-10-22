@@ -1,11 +1,14 @@
 param(
     [string]$Root,
+    [string]$BinDir,
     [int]$Threads = 4,
     [int]$TimeoutSeconds = 180
 )
 
 $ErrorActionPreference = 'Stop'
 if (-not $Root) { $Root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path }
+if (-not $BinDir) { $BinDir = Join-Path $Root 'build/bin' }
+$BinDir = (Resolve-Path -LiteralPath $BinDir).Path
 if ($Threads -lt 1) { throw 'Threads must be positive' }
 if ($TimeoutSeconds -lt 1) { throw 'TimeoutSeconds must be positive' }
 $audio = Join-Path $Root 'tests/fixtures/audio/formats/jfk.wav'
@@ -21,7 +24,7 @@ if ((Get-FileHash -LiteralPath $audio -Algorithm SHA256).Hash -ne '59dfb9a4acb36
 'startup_probe engine=v1.9.5 model=tiny threads={0} runs_per_backend=5 vad=off' -f $Threads
 
 foreach ($backend in @('cpu', 'vulkan')) {
-    $engine = Join-Path $Root "build/bin/$backend/whisper-cli.exe"
+    $engine = Join-Path $BinDir "$backend/whisper-cli.exe"
     if (-not (Test-Path -LiteralPath $engine)) { throw 'Pinned engine is missing' }
     for ($run = 1; $run -le 5; $run++) {
         $psi = [Diagnostics.ProcessStartInfo]::new()

@@ -19,6 +19,9 @@ shader-compilation measurement. `load_ms`, `encode_ms`, `decode_ms`, and
 includes process startup and shutdown. A zero decode value is valid for this
 engine's timing categories. Compare run 1 with runs 2-5 for each backend.
 
+Use `-BinDir build/engine-v2` to validate candidate binaries while keeping the
+same pinned model and audio fixture. Omitting it uses `build/bin` as before.
+
 The engine archives include runtime CPU dispatch for x64, SSE4.2, Sandy Bridge,
 Haswell, Skylake-X, Cannon Lake, Cascade Lake, Ice Lake, and Alder Lake. The
 `cpu_variant` field reports the `ggml-cpu-<variant>.dll` selected in the startup

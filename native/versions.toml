@@ -37,3 +37,13 @@ minimal_ffmpeg_zip_sha256 = "d687eb1e7403b6ab9c444118c055ac99521ea34782f52538787
 [models_release]
 tag = "models-v1"
 manifest_sha256 = "6f8e4afd9665c18a14ff38d5541d9160110dc82ca47b6862918d86257c16277e"
+
+# Activate after the Owner publishes engine-v2; public dev setup uses engine_release above.
+[engine_release_candidate]
+tag = "engine-v2"
+source_commit = "c560048bbf0ec7d01fcc3074c61957982fc255dd"
+native_run_id = 39804070663
+ffmpeg_run_id = 39718973892
+whisper_cpu_zip_sha256 = "a8c0630616b70a00e40b9534f594cd525885cd10ef45e492aa82378ea9a325b6"
+whisper_vulkan_zip_sha256 = "2a4aeae6789391c7cc2fa8bbe01648e0d36c499ca1233cbdcf58d127c47fc6a0"
+minimal_ffmpeg_zip_sha256 = "d687eb1e7403b6ab9c444118c055ac99521ea34782f52538787690d1e53da40c"

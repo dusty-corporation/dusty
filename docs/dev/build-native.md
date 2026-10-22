@@ -43,6 +43,17 @@ build still prints every GGML cache setting, rejects GGML_NATIVE=ON, and checks
 all nine CPU dispatch DLLs. Vulkan runtime tests and startup measurements run
 on the Owner desktop because hosted runners do not provide its Vulkan GPU.
 
+Native run 39804070663 passed both corrected builds. Desktop JFK, segment/word
+regressions on both backends, and the startup probe also passed; see
+`docs/pm/benchmarks/m2/engine-v2-desktop.md`. Release archives contain
+whisper-cli, its runtime DLLs, and the upstream MIT notice; whisper-bench is
+a build tool and is excluded from engine-v2.
+
+`engine_release_candidate` in `native/versions.toml` records engine-v2 hashes.
+The public fetcher's active `engine_release` remains the published engine-v1
+until the Owner publishes engine-v2. Promote the candidate on resume and rerun
+PR CI; draft assets are not yet public download dependencies.
+
 ## Model conversion sources
 
 `openai/whisper` is pinned to

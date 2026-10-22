@@ -61,6 +61,7 @@ if ($LASTEXITCODE -ne 0) { throw 'CMake build failed' }
 
 $package = Join-Path $outputPath "package/$Backend"
 New-Item -ItemType Directory -Force $package | Out-Null
+Copy-Item -LiteralPath (Join-Path $sourcePath 'LICENSE') -Destination (Join-Path $package 'LICENSE.txt')
 foreach ($name in @('whisper-cli.exe', 'whisper-bench.exe')) {
     $candidate = Join-Path $buildPath "bin/Release/$name"
     if (-not (Test-Path $candidate)) { throw "Missing $name" }

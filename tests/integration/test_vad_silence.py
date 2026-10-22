@@ -10,7 +10,8 @@ from dusty.models import ModelRegistry, load_manifest
 from dusty.runtime_paths import resolve_paths
 
 ROOT = Path(__file__).resolve().parents[2]
-SPEECH_WINDOWS = ((0.0, 11.0), (300.0, 311.0))
+# Spoken reference ends at 10.5 s (the M1 JFK reference), not the 11 s container end.
+SPEECH_WINDOWS = ((0.0, 10.5), (300.0, 310.5))
 TIMESTAMP_TOLERANCE = 0.5
 MAX_VAD_WORDS = 80
 MAX_OUTSIDE_WORDS = 5
