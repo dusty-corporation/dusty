@@ -14,5 +14,11 @@
 | M1-A3 | M1 | Minimal FFmpeg and fixtures | done | CI runs 39693880471 and PR #2 run 39694259434 passed; 17 formats plus Unicode and long path passed, three invalid inputs rejected | - |
 | M1-A4 | M1 | Model conversion pipeline | done | CI run 39691863874; ten candidates, VAD, and manifest uploaded to draft `models-v1` | - |
 | M1-A5 | M1 | Verify engine flags and output | done | Desktop CPU, Vulkan, VAD, JSON, progress, and prompt limit documented in `docs/dev/engine-cli.md` | - |
-| M1-A6 | M1 | Bench tooling and accuracy reference | doing | Extracted kit tiny-model public test passed; private metric-only smoke test passed; final human listening check pending | - |
-| M1-A7 | M1 | Bench kit draft prerelease | done | Draft `bench-kit-m1` uploaded, 46,253,549 bytes, SHA-256 `19e5764c1848bfb944d930bbc614bf560b40ed788ebaa852fde88d3f8fce4da1` | - |
+| M1-A6 | M1 | Bench tooling and accuracy reference | done | Source-text-only spans in `swineherd-scored-spans.json`; 20 desktop public runs scored; four scorer tests passed | - |
+| M1-A7 | M1 | Bench kit draft prerelease | done | Drafts `bench-kit-m1` and `bench-kit-m1b`; new kit 46,254,971 bytes, SHA-256 `16f94ad209be637ae41e1dda61b619d68e4b32a2bf2e8010ad848e64efaad1cc` | - |
+| M1-B1 | M1 | Proxy hardware and gate decision | done | PM approved ThinkPad i7-1365U/Iris Xe 96EU proxy, estimated 20% faster than Surface, RTF target 0.8; `docs/pm/benchmarks/m1/README.md` | - |
+| M1-B2 | M1 | Correct WER scoring and preserve desktop results | done | `be02def`, `11031b9`; 20 public JSON files scored on three Gutenberg-only spans; private files contain timing only | - |
+| M1-B3 | M1 | Distinct result names and Quick mode | done | `fa17ee9`; public/private smoke tests and overwrite rejection passed; local Quick check ran both backends | - |
+| M1-B4 | M1 | Record Iris Xe startup concern | done | `docs/pm/issues/ISSUE-004-iris-xe-startup-cost.md`; M2 investigation proposed | ISSUE-004 (open) |
+| M1-B5 | M1 | Revised draft bench kit | done | `bench-kit-m1b` uploaded as draft and verified; original draft retained | - |
+| M1-B6 | M1 | ThinkPad results and final gate report | doing | Awaiting ThinkPad public CPU results and any remaining public Vulkan files | - |

@@ -13,7 +13,10 @@ how strongly these results predict Surface performance.
 CSVs and engine JSON for both backends. `desktop-private/` contains only
 timing CSVs and Markdown summaries for the Owner's real recording, with
 no recording or transcript. Public JSON model paths were redacted before
-commit. ThinkPad files will be added as they arrive.
+commit. ThinkPad files will be added as they arrive. The revised
+[draft benchmark kit](https://github.com/dusty-corporation/dusty/releases/tag/untagged-37ba07ac5cef03ef1fcd)
+contains Quick mode and distinct public/private output names. The
+original draft kit remains available for comparison.
 
 ## WER scoring boundaries
 
