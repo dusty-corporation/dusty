@@ -1,12 +1,20 @@
 param(
     [Parameter(Mandatory = $true)][string]$AudioPath,
-    [Parameter(Mandatory = $true)][ValidateSet('cpu', 'vulkan')][string]$Backend,
+    [ValidateSet('cpu', 'vulkan')][string]$Backend,
     [Parameter(Mandatory = $true)][string]$Machine,
     [int[]]$Threads = @(4),
-    [switch]$PublicReference
+    [switch]$PublicReference,
+    [switch]$Quick
 )
 
 $ErrorActionPreference = 'Stop'
+if ($Quick) {
+    if ($PSBoundParameters.ContainsKey('Backend')) { throw 'Quick mode runs both backends; omit Backend' }
+    $backends = @('cpu', 'vulkan')
+} else {
+    if (-not $PSBoundParameters.ContainsKey('Backend')) { throw 'Backend is required for a full run' }
+    $backends = @($Backend)
+}
 $kit = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 if (Test-Path (Join-Path $kit 'models.json')) {
     $root = $kit
@@ -14,10 +22,13 @@ if (Test-Path (Join-Path $kit 'models.json')) {
     $root = (Get-Location).Path
 }
 $manifest = Get-Content (Join-Path $root 'models.json') -Raw | ConvertFrom-Json
-$engine = Join-Path $root "bin/$Backend/whisper-cli.exe"
 $probe = Join-Path $root 'bin/ffmpeg/ffprobe.exe'
 $warmup = Join-Path $root 'audio/warmup.wav'
-if (-not (Test-Path $engine)) { throw 'Engine binary is missing' }
+foreach ($selectedBackend in $backends) {
+    if (-not (Test-Path (Join-Path $root "bin/$selectedBackend/whisper-cli.exe"))) {
+        throw 'Engine binary is missing'
+    }
+}
 if (-not (Test-Path $probe)) { throw 'FFprobe binary is missing' }
 if (-not (Test-Path $warmup)) { throw 'Warm-up fixture is missing' }
 if (-not (Test-Path $AudioPath)) { throw 'Input audio is missing' }
@@ -81,42 +92,89 @@ $results = Join-Path $root 'results'
 New-Item -ItemType Directory -Force $results | Out-Null
 $stamp = Get-Date -Format yyyy-MM-dd
 $safeMachine = $Machine -replace '[^A-Za-z0-9_]', '_'
-$csv = Join-Path $results "$safeMachine-$stamp-$Backend.csv"
-$rows = @()
-foreach ($model in $manifest.models) {
+$sample = if ($PublicReference) { 'public' } else { 'private' }
+$runMode = if ($Quick) { 'quick' } else { 'full' }
+$modeSuffix = if ($Quick) { '-quick' } else { '' }
+$jsonMode = if ($Quick) { 'quick-' } else { '' }
+$models = if ($Quick) {
+    foreach ($id in @('tiny-f16', 'small-f16', 'large-v3-turbo-q5_0', 'large-v3-q5_0')) {
+        $match = @($manifest.models | Where-Object { $_.id -eq $id })
+        if ($match.Count -ne 1) { throw "Quick model is missing from manifest: $id" }
+        $match[0]
+    }
+} else { @($manifest.models) }
+foreach ($threadCount in $Threads) {
+    if ($threadCount -lt 1) { throw 'Thread count must be positive' }
+}
+foreach ($model in $models) {
     $modelPath = Join-Path $root "models/$($model.file_name)"
     if (-not (Test-Path $modelPath)) { throw "Missing benchmark model $($model.id)" }
     $modelHash = (Get-FileHash -LiteralPath $modelPath -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($modelHash -ne $model.sha256) { throw "Model hash mismatch for $($model.id)" }
-    foreach ($threadCount in $Threads) {
-        if ($threadCount -lt 1) { throw 'Thread count must be positive' }
-        $null = Invoke-Engine -ModelPath $modelPath -InputPath $warmup -ThreadCount $threadCount -OutputStem ''
-        $outputStem = ''
-        if ($PublicReference) {
-            $outputStem = Join-Path $results "public-$safeMachine-$($model.id)-$Backend-t$threadCount"
-        }
-        $run = Invoke-Engine -ModelPath $modelPath -InputPath $AudioPath -ThreadCount $threadCount -OutputStem $outputStem
-        $rows += [pscustomobject]@{
-            machine = $safeMachine
-            sample = $(if ($PublicReference) { 'public' } else { 'private' })
-            model = $model.id
-            quantization = $model.quantization
-            backend_requested = $Backend
-            backend_actual = $run.actual
-            cpu_variant = $run.variant
-            threads = $threadCount
-            audio_duration_s = [Math]::Round($duration, 3)
-            wall_time_s = [Math]::Round($run.seconds, 3)
-            rtf = [Math]::Round($run.seconds / $duration, 4)
-            peak_memory_mb = [Math]::Round($run.peak / 1MB, 1)
+}
+
+# Check every planned output before running any model. Existing summaries and
+# public JSON are never overwritten, including when a second backend is run.
+foreach ($selectedBackend in $backends) {
+    $stem = "$safeMachine-$stamp-$sample-$selectedBackend$modeSuffix"
+    foreach ($extension in @('.csv', '.md')) {
+        if (Test-Path (Join-Path $results "$stem$extension")) { throw 'Benchmark summary already exists' }
+    }
+    if ($PublicReference) {
+        foreach ($model in $models) {
+            foreach ($threadCount in $Threads) {
+                $jsonName = "public-$safeMachine-$jsonMode$($model.id)-$selectedBackend-t$threadCount.json"
+                if (Test-Path (Join-Path $results $jsonName)) { throw 'Public benchmark JSON already exists' }
+            }
         }
     }
 }
-$rows | Export-Csv -Path $csv -NoTypeInformation -Encoding UTF8
-$summary = Join-Path $results "$safeMachine-$stamp-$Backend.md"
-$lines = @('# Benchmark summary', '', '| Model | Quant | Requested | Actual | CPU variant | Threads | Duration s | Wall s | RTF | Peak MB |', '| --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |')
-foreach ($row in $rows) {
-    $lines += "| $($row.model) | $($row.quantization) | $($row.backend_requested) | $($row.backend_actual) | $($row.cpu_variant) | $($row.threads) | $($row.audio_duration_s) | $($row.wall_time_s) | $($row.rtf) | $($row.peak_memory_mb) |"
+
+foreach ($selectedBackend in $backends) {
+    $Backend = $selectedBackend
+    $engine = Join-Path $root "bin/$Backend/whisper-cli.exe"
+    $stem = "$safeMachine-$stamp-$sample-$Backend$modeSuffix"
+    $csv = Join-Path $results "$stem.csv"
+    $summary = Join-Path $results "$stem.md"
+    $rows = @()
+    foreach ($model in $models) {
+        $modelPath = Join-Path $root "models/$($model.file_name)"
+        foreach ($threadCount in $Threads) {
+            $null = Invoke-Engine -ModelPath $modelPath -InputPath $warmup -ThreadCount $threadCount -OutputStem ''
+            $outputStem = ''
+            if ($PublicReference) {
+                $outputStem = Join-Path $results "public-$safeMachine-$jsonMode$($model.id)-$Backend-t$threadCount"
+            }
+            $run = Invoke-Engine -ModelPath $modelPath -InputPath $AudioPath -ThreadCount $threadCount -OutputStem $outputStem
+            if ($PublicReference) {
+                $jsonPath = "$outputStem.json"
+                $publicJson = Get-Content -LiteralPath $jsonPath -Raw | ConvertFrom-Json
+                $publicJson.params.model = '<redacted>'
+                $safeJson = $publicJson | ConvertTo-Json -Depth 100
+                [IO.File]::WriteAllText($jsonPath, $safeJson, [Text.UTF8Encoding]::new($false))
+            }
+            $rows += [pscustomobject]@{
+                machine = $safeMachine
+                sample = $sample
+                run_mode = $runMode
+                model = $model.id
+                quantization = $model.quantization
+                backend_requested = $Backend
+                backend_actual = $run.actual
+                cpu_variant = $run.variant
+                threads = $threadCount
+                audio_duration_s = [Math]::Round($duration, 3)
+                wall_time_s = [Math]::Round($run.seconds, 3)
+                rtf = [Math]::Round($run.seconds / $duration, 4)
+                peak_memory_mb = [Math]::Round($run.peak / 1MB, 1)
+            }
+        }
+    }
+    $rows | Export-Csv -Path $csv -NoTypeInformation -Encoding UTF8
+    $lines = @('# Benchmark summary', '', '| Model | Quant | Requested | Actual | CPU variant | Threads | Duration s | Wall s | RTF | Peak MB |', '| --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |')
+    foreach ($row in $rows) {
+        $lines += "| $($row.model) | $($row.quantization) | $($row.backend_requested) | $($row.backend_actual) | $($row.cpu_variant) | $($row.threads) | $($row.audio_duration_s) | $($row.wall_time_s) | $($row.rtf) | $($row.peak_memory_mb) |"
+    }
+    $lines | Set-Content -Path $summary -Encoding UTF8
 }
-$lines | Set-Content -Path $summary -Encoding UTF8
-Write-Output 'Benchmark CSV and Markdown summary written to results folder.'
+Write-Output 'Benchmark CSV and Markdown summaries written to results folder.'

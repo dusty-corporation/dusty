@@ -1,4 +1,4 @@
-Dusty M1 benchmark kit
+Dusty M1 benchmark kit b
 
 This folder runs on Windows 10/11 without Python, developer tools, or
 administrator rights. Keep the full bin/cpu and bin/vulkan folders intact.
@@ -45,19 +45,34 @@ DESKTOP STEPS (Ryzen + RTX 3080 Ti)
   powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\bench\run-bench.ps1 -AudioPath "C:\private\bench-input.wav" -Backend cpu -Machine desktop -Threads 8
   powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\bench\run-bench.ps1 -AudioPath "C:\private\bench-input.wav" -Backend vulkan -Machine desktop -Threads 8
 
-SURFACE LAPTOP 5 STEPS (i5-1235U + Iris Xe)
+THINKPAD X1 CARBON PROXY STEPS (i7-1365U + Iris Xe)
 
-1. Copy the full kit and separately downloaded model files to the Surface.
-2. Plug in the Surface and set Windows power mode to Best performance.
+1. Copy the full kit and separately downloaded model files to the ThinkPad.
+2. Plug in the ThinkPad and set Windows power mode to Best performance.
 3. Open Windows PowerShell in the kit folder and run the same four commands
-   above with -Machine surface and -Threads 4. For the two public commands,
-   keep -PublicReference. For private commands, use the Surface's own local
+   above with -Machine thinkpad and -Threads 4. For the two public commands,
+   keep -PublicReference. For private commands, use the ThinkPad's own local
    path to the same private WAV. Do not put it in this kit folder.
+
+QUICK LAPTOP CHECK
+
+For a shorter public check, one command runs tiny, small, Large-v3-Turbo
+q5_0, and Large-v3 q5_0 on both CPU and Vulkan. It skips the other six
+models. The PM's time target is about 15 minutes on the proxy, but actual
+time depends on its CPU and Vulkan startup cost:
+
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\bench\run-bench.ps1 -AudioPath .\audio\swineherd.wav -Machine thinkpad -Threads 4 -PublicReference -Quick
+
+Omit -Backend with -Quick. The full ten-model test still requires one
+command per backend. Quick and full outputs have distinct names.
 
 RESULTS AND BACKEND CHECK
 
-Each command writes one CSV and Markdown summary under results/. Public
-commands also write JSON transcripts for the public-domain chapter only.
+Each backend writes one CSV and Markdown summary under results/. The
+name includes public or private, and quick when requested. The script
+refuses to overwrite an existing summary or public JSON file. Public
+commands also write JSON transcripts for the public-domain chapter only;
+the JSON model path is redacted before saving.
 Private commands write metrics only: model, quantization, backend,
 threads, duration, wall time, real-time factor, peak memory, and CPU
 variant. They do not store the recording's path, name, or content.
@@ -74,4 +89,5 @@ the script stops rather than guessing.
 Send the CSV, Markdown summaries, and public-*.json files from results/
 back to the implementing engineer. Do not send the private recording or
 its converted WAV. WER is computed later with summarize_bench.py on the
-public JSON and the included swineherd-reference.txt.
+public JSON, swineherd-reference.txt, and the scored-span boundaries in
+the repository. Intro, songs, and outro are excluded from WER.

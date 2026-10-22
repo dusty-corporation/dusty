@@ -29,6 +29,7 @@ Copy-Item (Join-Path $repo 'tools/bench/run-bench.ps1') (Join-Path $destinationP
 Copy-Item (Join-Path $repo 'tools/bench/README.txt') (Join-Path $destinationPath 'README.txt')
 Copy-Item (Join-Path $repo 'tests/fixtures/audio/formats/jfk.wav') (Join-Path $destinationPath 'audio/warmup.wav')
 Copy-Item (Join-Path $repo 'tests/fixtures/audio/bench/swineherd-reference.txt') (Join-Path $destinationPath 'audio/swineherd-reference.txt')
+Copy-Item (Join-Path $repo 'tests/fixtures/audio/bench/swineherd-scored-spans.json') (Join-Path $destinationPath 'audio/swineherd-scored-spans.json')
 $ffmpeg = Join-Path $destinationPath 'bin/ffmpeg/ffmpeg.exe'
 & $ffmpeg -nostdin -hide_banner -loglevel error -protocol_whitelist file,pipe -i (Join-Path $repo 'tests/fixtures/audio/bench/swineherd.mp3') -vn -map 0:a:0 -ac 1 -ar 16000 -c:a pcm_s16le -f wav (Join-Path $destinationPath 'audio/swineherd.wav') -y
 if ($LASTEXITCODE -ne 0) { throw 'Public reference audio conversion failed' }
