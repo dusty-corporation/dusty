@@ -30,8 +30,8 @@ Invalid negative token times remain invalid. Non-VAD behavior is unchanged.
 
 CI verifies the patch hash and applies it to the exact pinned commit. Preserve
 CPU dispatch and GGML_NATIVE=OFF guards. Validate the 600-second speech/silence
-fixture's segment and reconstructed word times inside the known 0-11 and
-300-311 second speech windows, with at most 0.5 second tolerance. Check both
+fixture's segment and reconstructed word times inside the known 0-10.5 and
+300-310.5 second speech windows, with at most 0.5 second tolerance. Check both
 boundaries of each segment and every word interval. Retain the total-word and
 outside-span checks and report the measured changes.
 

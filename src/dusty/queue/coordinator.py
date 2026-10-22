@@ -224,6 +224,8 @@ class Coordinator:
                 _LOG.info("job_id=%s timing_%s_ms=%.3f", job.id, name, milliseconds)
             job.status = JobStatus.EXPORTING
             changed()
+            # SPEC 5.9: future extension hook after parsing, before export.
+            # V1 does not execute diarization or text-translation extensions.
             job.outputs = write_outputs(job, options, result.transcript)
             job.progress = 1.0
             job.status = JobStatus.DONE
