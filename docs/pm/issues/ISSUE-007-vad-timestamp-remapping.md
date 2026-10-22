@@ -60,7 +60,13 @@ PM approved the native patch path after an upstream search, rejected stderr
 reconstruction, and requires a new draft engine-v2 release. ADR 0018 records
 the decision. No newer stable tag exists as of the 2026-10-22 API review;
 related upstream PR 4068 remains open. The patch and strengthened segment/word
-regression are prepared; native build and runtime verification are pending.
+regression are implemented. Native run 39804070663 passed both builds and
+import checks. Desktop JFK, segment/word regressions on CPU and Vulkan, and
+five startup runs per backend passed. VAD-on outside-span segment words are
+zero after the fix versus 22 before, with 44 total words in both cases.
+All real-word timestamp intervals pass the 0.5 s tolerance. The fix is in
+verified draft engine-v2; this issue stays in progress until the Owner
+publishes it and the active dev/CI release pin is promoted.
 
 Recommend a PM-approved patch of the pinned native engine to map segment
 starts/ends and full JSON token times correctly at VAD gaps, followed by a new

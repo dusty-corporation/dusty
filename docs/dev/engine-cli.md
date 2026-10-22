@@ -68,5 +68,8 @@ The 2026-10-22 silence-fixture check found that the pinned v1.9.5 segment
 timestamp mapper linearly interpolates through synthetic VAD gaps. A boundary
 between speech near 10.56 s and 300.32 s mapped to 213.39 s. Full JSON token
 offsets remain on the compressed timeline, so they cannot be substituted
-directly. See ISSUE-007 and `docs/pm/benchmarks/m2/vad-check.md`. A PM-approved
-mapping strategy is required before timestamped outputs with VAD can be accepted.
+directly. See ISSUE-007 and `docs/pm/benchmarks/m2/vad-check.md` for the original
+failure. ADR 0018's approved native patch corrects this in draft engine-v2;
+desktop CPU and Vulkan segment/word checks pass within 0.5 s. Published
+engine-v1 remains affected until the Owner publishes engine-v2 and its active
+release pin is promoted.
