@@ -22,7 +22,7 @@ Use a fresh output folder under ignored `build/` for these public test outputs.
 | 4 | Add the same file again. | No duplicate row; duplicate count shown. |
 | 5 | Add the formats folder, then try dropping a folder and using Include subfolders. | Folder options are shown; supported recordings are added, duplicates ignored, and counts reported. |
 | 6 | Select a row, move it up/down using the right-click menu or Alt+Up/Alt+Down, and remove it using Remove; use Tab and Shift+Tab between controls. | Queue order/selection updates; removal does not delete the recording; keyboard focus is visible and can leave vocabulary hints. |
-| 7 | Open Options.... | A modal dialog opens without resizing or rearranging the main window; current choices remain summarized; only installed choices are selectable; Manage models is disabled with an explanation. |
+| 7 | Open the Options dialog. | A modal dialog opens without resizing or rearranging the main window; current choices remain summarized; only installed choices are selectable; Manage models is disabled with an explanation. |
 | 8 | Select Small English if installed, then inspect language/task. | Language is English and locked; incompatible translation is disabled with a plain explanation. |
 | 9 | Choose Use Medium instead if offered, or select Medium and Translate to English. | The valid combination is selected. On Processor only, the slow-choice warning appears without blocking Start. Return to Tiny and Transcribe for the remaining public English tests. |
 | 10 | Enter more than about 800 characters of harmless example vocabulary hints, then shorten them. | Soft warning appears and clears; field is multi-line with helper/example text. Do not send the field contents back. |

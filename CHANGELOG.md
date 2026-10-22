@@ -29,3 +29,5 @@ All notable changes to Dusty will be documented here. This project follows Keep 
   minimal native patch in the published engine-v2 prerelease.
 - Explicit replacement choice when a resumed batch model is unavailable;
   Google Drive streaming mount detection for sync-folder warnings.
+- PM-reviewed modal options, simpler recording actions and formats, phase labels,
+  named collision/error/summary dialogs, and measured light/dark control contrast.
