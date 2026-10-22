@@ -29,6 +29,18 @@ refuses to overwrite CSV, Markdown, or public JSON. `-Quick` runs tiny,
 small, Large-v3-Turbo q5_0, and Large-v3 q5_0 on CPU and Vulkan in one
 call. Public JSON has the local model path redacted before it is saved.
 
+The optional focused thread sweep is packaged in a third draft,
+[`bench-kit-m1c`](https://github.com/dusty-corporation/dusty/releases/tag/untagged-e940287cf69ed749a576).
+Its zip is 46,255,430 bytes with SHA-256
+`774ec9535ccb21e8392990b192cd2ca4a8eb096f357121a025ab2b4f14c2d251`.
+`-Quick -SweepModel small-f16 -Threads '4,8,10'` runs that one model at
+three thread counts on CPU and Vulkan. Windows PowerShell's `-File`
+argument binding treated the previous integer-array form `4,8,10` as
+one value, so the runner now parses the comma-separated text itself.
+The local sweep smoke test produced three rows per backend. These used
+a short public fixture and a temporary test manifest, so they are not
+Owner hardware evidence. All three draft kit releases remain drafts.
+
 An extracted copy was tested in a plain folder with only the tiny model
 copied into `models/` and a temporary one-model manifest. The bundled
 CPU binary completed a public 660-second reference run, wrote CSV,

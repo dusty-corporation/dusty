@@ -14,15 +14,15 @@ Process startup and backend setup consume a small share of a run, so
 batches of short files do not spend most of their time reinitializing.
 
 ## Actual
-The PM reports an apparent fixed cost of about 40 seconds per Iris Xe run:
-tiny took 48 seconds and small took 88 seconds. The desktop GPU appears to
-spend about 9 seconds. These numbers are preliminary and do not isolate
-startup from model load or inference time.
+The PM reports an apparent fixed cost of about 40 seconds per Iris Xe run.
+The public CSV records tiny at 48.268 seconds and small at 87.760 seconds
+on ThinkPad Vulkan, versus 9.877 and 14.004 seconds on desktop Vulkan.
+These wall times do not isolate startup from model load or inference time.
 
 ## Evidence
-PM Phase B observation on the ThinkPad proxy. Preserve the full public
-CSV and engine timing evidence under `docs/pm/benchmarks/m1/` when it
-arrives. No private recording content belongs in this issue.
+PM Phase B observation, now backed by the ThinkPad and desktop public
+Vulkan CSVs under `docs/pm/benchmarks/m1/`. No private recording content
+belongs in this issue.
 
 ## Proposed investigation for M2
 Measure process launch, Vulkan pipeline creation, model load, and inference
