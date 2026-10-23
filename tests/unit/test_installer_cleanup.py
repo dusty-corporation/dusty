@@ -80,3 +80,18 @@ def test_cleanup_unknown_metadata_schema_is_preserved(tmp_path):
     paths = RuntimePaths(tmp_path, root / "models", ROOT / "resources", root)
     assert not cleanup(paths, remove_models=True)
     assert (root / "settings.json").exists()
+
+
+def test_cleanup_preserves_empty_saved_output_folder(tmp_path):
+    root = tmp_path / "Dusty"
+    output = root / "custom-transcripts"
+    output.mkdir(parents=True)
+    (root / "settings.json").write_text(
+        json.dumps({"schema_version": 1, "output_dir": str(output)})
+    )
+    paths = RuntimePaths(tmp_path, root / "models", ROOT / "resources", root)
+    assert not cleanup(paths, remove_models=True)
+    assert output.is_dir()
+    assert (root / "settings.json").exists()
+    assert not cleanup(paths, remove_models=True)
+    assert output.is_dir()

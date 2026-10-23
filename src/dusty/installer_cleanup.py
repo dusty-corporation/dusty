@@ -42,6 +42,9 @@ def _cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
                 if not isinstance(data, dict) or data.get("schema_version") != 1:
                     return False
                 inspect(data)
+        owned_root = root.resolve()
+        if any(p.is_relative_to(owned_root) or owned_root.is_relative_to(p) for p in protected):
+            return False
         candidates = list(metadata)
         candidates += [
             p for p in (root / "logs").glob("*") if re.fullmatch(r"dusty\.log(?:\.[1-5])?", p.name)
@@ -75,6 +78,12 @@ def _cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
             (p for p in root.rglob("*") if p.is_dir()), key=lambda p: len(p.parts), reverse=True
         )
         for path in [*directories, root]:
+            resolved = path.resolve()
+            if any(
+                resolved == p or resolved.is_relative_to(p) or p.is_relative_to(resolved)
+                for p in protected
+            ):
+                continue
             if not remove_models and (
                 path == root / "models" or path.is_relative_to(root / "models")
             ):

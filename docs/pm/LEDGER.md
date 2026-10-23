@@ -291,3 +291,11 @@ No further implementation or tests were started after the Owner requested this c
   downstream. Audit metadata remains available even on failure. Nine focused
   installer tests pass. Continue compilation and M4 documentation independently;
   this is a morning policy decision, not an observed S0 license violation.
+
+- 39915503372 compiled the unsigned draft successfully (34586726 bytes,
+  SHA-256 8f7d644fe54570e16a4ee841f96060348b91d33f52a5cfe39266188c522bdc45).
+  The installer policy gate then failed exactly for InnoSetup; binary artifact
+  skipped, audit metadata retained. App review artifact is separately available.
+- Final cleanup regression also preserves empty internal output folders and the
+  metadata protecting them across repeated attempts. Ten focused installer tests
+  pass; the draft is not installed on the Owner machine. Final CI rerun follows.
