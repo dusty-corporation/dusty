@@ -38,9 +38,14 @@ The spike adds an actual-file inventory and fail-closed bundled-content gate.
 
 ## Fix / proposed fix
 
-PM decision required before any distributable bundle. Per spike instructions,
-list findings without swapping binaries, dependencies or license policy. Complete
-source-level linkage and copyright reconciliation before deciding an approach.
+PM decision, 2026-10-22: narrow required Visual C++ runtime exception (ADR 0020),
+exclude Windows UCRT/API-set runtime DLLs and Mesa, include libffi's MIT notice,
+and remove runtime lxml (ADR 0019). These approved changes are pending the
+explicit required-platform PE-import stop in ISSUE-015. No clearance is claimed.
+
+The initial spike listed findings without changing binaries, dependencies or
+license policy. The approved changes above must be implemented and verified
+before any distributable bundle or license-clearance claim.
 
 ## Regression test added
 
