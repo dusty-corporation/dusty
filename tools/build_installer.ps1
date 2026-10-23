@@ -18,16 +18,16 @@ $process = Start-Process -FilePath $bootstrap -ArgumentList @(
 ) -Wait -PassThru -WindowStyle Hidden
 if ($process.ExitCode -ne 0) { throw 'Pinned Inno compiler setup failed' }
 $iscc = Join-Path $compilerDir 'ISCC.exe'
-$version = (Get-Item -LiteralPath $iscc).VersionInfo
-$numericVersion = '{0}.{1}.{2}' -f $version.FileMajorPart, $version.FileMinorPart, $version.FileBuildPart
-Write-Host "Inno compiler file version: $($version.FileVersion); numeric: $numericVersion"
-if ($numericVersion -ne '6.7.3') {
-    throw 'Unexpected Inno compiler numeric version'
-}
+# The pinned ISCC launcher resource is intentionally 0.0.0.0. Its loaded
+# compiler engine supplies the authoritative version in the compilation banner.
 & (Join-Path $repo '.venv/Scripts/python.exe') (Join-Path $repo 'installer/generate_iss.py') --bundle $Bundle
 if ($LASTEXITCODE -ne 0) { throw 'Installer input generation failed' }
-& $iscc /Qp (Join-Path $work 'dusty.iss')
+$compilerOutput = @(& $iscc (Join-Path $work 'dusty.iss') 2>&1)
+$compilerOutput | ForEach-Object { Write-Host $_ }
 if ($LASTEXITCODE -ne 0) { throw 'Draft installer compilation failed' }
+if ($compilerOutput -notcontains 'Compiler engine version: Inno Setup 6.7.3') {
+    throw 'Unexpected Inno compiler engine version'
+}
 $installers = @(Get-ChildItem -LiteralPath (Join-Path $work 'output') -Filter '*.exe')
 if ($installers.Count -ne 1) { throw 'Expected exactly one unsigned draft installer' }
 $installer = $installers[0]

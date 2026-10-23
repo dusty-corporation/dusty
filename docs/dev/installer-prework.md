@@ -18,6 +18,10 @@ Compiler pin: `packaging/licenses/inno/source.json`; official
 [6.7.3 release](https://github.com/jrsoftware/issrc/releases/tag/is-6_7_3),
 source commit c7af86b4b2fd03371185df2b09a1dca8d472ab70.
 Major 6 remains the ADR 0008 choice; this prework does not upgrade to Inno 7.
+The pinned source's ISCC.versionandicon.res has fixed version 0.0.0.0; ISCC is
+a launcher. The actual engine version is checked against the compilation banner
+(ISCC.dpr calls ISDllGetVersion and prints the engine title/version). Checking
+the launcher's Windows FileVersion as 6.7.3 was incorrect and failed closed.
 The unmodified Inno copyright and website notices are retained; its full license
 is included in the installer terms and installed licenses folder.
 

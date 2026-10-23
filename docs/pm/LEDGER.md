@@ -256,3 +256,8 @@ No further implementation or tests were started after the Owner requested this c
   exact numeric 6.7.3 fields with both forms printed, retaining the bootstrap hash pin.
 - Cleanup now reports preserved unknown content instead of silently implying
   complete removal. Added independent audit notes for ownership and the Inno ABI.
+
+- Verified pinned upstream ISCC.dpr and its binary version resource: launcher
+  FileVersion is intentionally 0.0.0.0. The actual engine is reported by
+  ISDllGetVersion in the compile banner. Replaced the incorrect launcher version
+  assumption with exact engine-banner 6.7.3 verification, retaining bootstrap SHA.
