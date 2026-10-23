@@ -15,3 +15,12 @@ promote an item to an issue if it affects correctness, privacy or licensing.
 4. **Qt task retention:** MainWindow and ModelManager retain completed QThread
    objects for safe lifetime handling. Review long-session retention and teardown;
    current acceptance tests cover the normal close/cancel paths.
+5. **Installer cleanup ownership:** the M5 helper deliberately preserves unknown
+   content and refuses corrupt protection metadata or reparse points. Review
+   leftover reporting, uncommon output locations and mutation races independently;
+   recursive wildcard deletion is intentionally absent.
+6. **Installer ABI boundary:** Inno 6's PE32 Job Object record is explicitly
+   sized and architecture-gated. Review marshalling and cancellation/termination
+   on a standard-user VM before treating the draft as installer acceptance.
+
+7. **Installer runtime attribution:** ADR 0023 verification uses pinned upstream source/build selection and exact received runtime hashes, not a recovered linker map or independent reproducible Inno build. Audit the selected units, notice/source archive and the boundary between installer-only exceptions and the processing-app gate.

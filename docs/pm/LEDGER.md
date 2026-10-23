@@ -414,3 +414,208 @@ No further implementation or tests were started after the Owner requested this c
   evidence, CI and both source/packaged WFP attribution. Developer docs updated.
 - Next and final action: draft PR M4_model_manager into main, then stop.
   m5-packaging-spike and m6-docs remain untouched; no rebase or user-doc edits.
+
+
+## Imported M5 spike history (historical states, see Phase 1 below)
+
+| M5-S1 | M5 | Authorized packaging-only spike | done | Final split onedir layout verified locally and in 39884809028; windowed GUI/console fetch, shared verified bin/resources; 205 files, no models bundled | - |
+| M5-S2 | M5 | Actual bundle license inventory, notices and CycloneDX SBOM | done | 39884809028: 205 actual files, 12 providers, schema-valid CycloneDX 1.6, complete notices/EULA and license gate passed; final evidence in M5-interim-4.md | ISSUE-013 resolved |
+| M5-S3 | M5 | Packaged self-test under calibrated WFP audit | done | 39884809028 packaging job: selftest passed, connection_events=0, calibration_blocked_event=true; source offline job green; local CPU/Vulkan and GUI smoke passed | - |
+| M5-S4 | M5 | Redistribution license clearance | done | ADR 0020/0019; 39884809028 packaging job license gate passed, 205 actual files/12 providers, original notices and protective EULA retained | ISSUE-013 resolved |
+| M5-S5 | M5 | Processing native dependency network boundary | done | Runtime lxml removed; calibrated packaged WFP zero events, 64-PE exact-pin gate, GUI smoke and full local 159-pass suite; docs/dev/packaging-offline-pe-final.md | ISSUE-014 resolved; ISSUE-015 resolved |
+| M5-S6 | M5 | PM-approved DOCX, split bundle and license remediation | done | f266d98 implementation fully green in 39884809028; 159 local passes/1 skip, 158 CI passes/2 expected skips plus real-network pass, coverage 94.4%; final report M5-interim-4.md | ISSUE-013/014/015/016 resolved |
+| M5-S7 | M5 | ADR 0019 standard-library DOCX implementation | done | 5ba88dd; unchanged DOCX goldens plus python-docx openability/Unicode/empty metadata pass; runtime closure and bundle exclude docx/lxml, export coverage 98.6% | ISSUE-014 resolved |
+| M5-S8 | M5 | Owner-verified Persian fixture documentation | done | m3-gui docs-only 2a6e065 pushed; Owner confirmed [107, 122) s is a complete Farsi quatrain; AUDIO_SOURCES.md and M3 report updated | - |
+| M5-S9 | M5 | Community redistribution evidence and protective terms | done | Owner exact regular CRT pins f266d98; 11 needed copies/5 names byte-identical locally and in CI, hashes/versions/importers and 3 original PDFs retained, EULA included, future installer checklist updated | ISSUE-013 and ISSUE-016 resolved |
+
+| M5-S10 | M5 | Carry final accepted M3 UI polish | doing | M3 merged locally into spike; GUI smoke profile now declares its explicit synthetic output folder so it tests the main window under the folder-based Welcome rule; final CI pending | - |
+
+### M5 resync with M4, 2026-10-23
+
+- Rebased all 19 packaging commits onto M4 aab3ec6; conflicts were limited to
+  additive workflow jobs and ledger task states. Retained current M4 evidence,
+  accepted M5 issue resolutions, split runtime paths, stdlib DOCX and exact PE/CRT pins.
+- Feature rebase d402a38 pushed with explicit lease; no main changes or PR.
+- Added the packaged Model Manager download WFP scenario to packaging CI and
+  artifact evidence. Full rebased suite running; bundle/PE/license/GUI/WFP results pending.
+- M4 screenshot draft uploaded: m4-screenshots-aab3ec6.zip, 76 PNGs, 3605372 bytes,
+  SHA-256 1d7d30ea6d3e83824502f77dcfd22122f5178be8f2800ebeccdebcb15594e7f6.
+
+### M5 synchronized bundle acceptance, 2026-10-23
+
+- Local full suite: 179 passed, 1 CI-only skip in 197.64 s; coverage 94.4%.
+- Rebuilt split bundle: 205 files, 161929803 bytes. Layout, all 64 PE exact-pin
+  checks, packaged GUI window startup/close, notices/SBOM and bundle licenses pass.
+- CI 39910562031 at 5ca1180: packaged job green, original offline self-test
+  connection_events=0; packaged Model Manager GUI events=0, fetch allowed=4,
+  fetch blocked=0; both positive controls calibrated. Source offline job green;
+  full checks job still running at this checkpoint.
+- Optional installer prework is starting only on m5-packaging-spike. Inno Setup
+  stays at approved major 6, pinned stable 6.7.3; no local machine installation,
+  publishing, PR or Owner settings changes. Fresh-machine acceptance remains Owner work.
+
+### Installer prework: safe data cleanup
+
+- Added a hidden offline uninstall entry point on M5 only. Removes recognized
+  settings/history/log/work files and optionally catalog model files; preserves
+  unknown content, output folders and recordings. Refuses linked/junction data
+  and corrupt protection metadata. An overlapping saved output prevents cleanup
+  before any metadata is deleted, so subsequent attempts remain safe.
+- Five cleanup tests passed (including both keep/remove model choices); two
+  generator license/trust-anchor tests passed. No cleanup ran against real app data.
+
+### Installer prework: generated draft and pinned compiler
+
+- ADR 0022 records the PM's bundled dusty-fetch decision. Generator retains the
+  manifest trust anchor, creates full Apache/NOTICE/Microsoft EULA acceptance,
+  catalog selection plus VAD, verify/reuse/download/verify and self-test gates.
+- Per-user lowest-privilege layout, Start Menu/optional Desktop shortcut, retry,
+  incomplete exit code, child Job Object containment and model-removal checkbox
+  drafted. Safe cleanup tests pass; no Owner machine installation or data cleanup.
+- Inno 6.7.3 official bootstrap SHA pinned; CI compilation/artifact only. Source
+  license retained, SmartScreen/checksum guidance added. Seven focused tests pass;
+  real compilation, full regression and fresh-machine behavior still need evidence.
+
+### Installer draft verification follow-up
+
+- Full local regression after draft additions: 186 passed, 1 CI-only skip in
+  184.24 s; strict coverage 94.5%. Seven focused license/cleanup tests pass again.
+- CI 39912687607 packaging job passed all app bundle, PE, GUI, license and WFP
+  steps but stopped before compilation at Unexpected Inno compiler version.
+  The text FileVersion check did not expose its numeric identity; changed to
+  exact numeric 6.7.3 fields with both forms printed, retaining the bootstrap hash pin.
+- Cleanup now reports preserved unknown content instead of silently implying
+  complete removal. Added independent audit notes for ownership and the Inno ABI.
+
+- Verified pinned upstream ISCC.dpr and its binary version resource: launcher
+  FileVersion is intentionally 0.0.0.0. The actual engine is reported by
+  ISDllGetVersion in the compile banner. Replaced the incorrect launcher version
+  assumption with exact engine-banner 6.7.3 verification, retaining bootstrap SHA.
+
+- Actual engine banner verified as Inno Setup 6.7.3 in 39913542021. Compilation
+  then rejected generated line 211: Invalid section tag. An indented Pascal
+  array literal began with '[' at line start, which Inno's section parser treats
+  as a section. Moved the bracket onto the preceding expression; no behavior or
+  acceptance gate changed. M4 report sync rebase changed only docs/ledger.
+
+- Hardened uninstall ownership further: unfamiliar metadata schemas are preserved,
+  and discovery-time filesystem failures return the same redacted failure result.
+  Eight focused installer tests pass. Added the stale README introduction to the
+  M6 documentation backlog instead of widening this milestone's product scope.
+
+- 39914143568 reached Pascal compilation; line 260 rejected the pre-6.6
+  CreateCustomForm signature. Verified the documented four-argument 6.7.3 API,
+  updated the constructor and removed obsolete writable size properties.
+- Compiler bootstrap now also compares its installed license text with the
+  pinned source terms, in addition to the binary hash and exact engine version.
+
+### ISSUE-017: installer-only license policy gap
+
+- SPDX identifies the pinned wrapper license as InnoSetup, distinct from the
+  allowlisted BSD/Zlib names. ADR 0008 selects the tool but does not record a
+  license exception. Filed S1 ISSUE-017 and proposed ADR 0023; no allowlist change.
+- Cancelled our own 39914802080 before its installer compile/upload steps; no
+  workflow was deleted. App bundle remains separately audited and allowed.
+- Added an installer-wrapper gate using allowed_license plus a negative test.
+  It intentionally fails pending PM clearance, and installer binary upload is
+  downstream. Audit metadata remains available even on failure. Nine focused
+  installer tests pass. Continue compilation and M4 documentation independently;
+  this is a morning policy decision, not an observed S0 license violation.
+
+- 39915503372 compiled the unsigned draft successfully (34586726 bytes,
+  SHA-256 8f7d644fe54570e16a4ee841f96060348b91d33f52a5cfe39266188c522bdc45).
+  The installer policy gate then failed exactly for InnoSetup; binary artifact
+  skipped, audit metadata retained. App review artifact is separately available.
+- Final cleanup regression also preserves empty internal output folders and the
+  metadata protecting them across repeated attempts. Ten focused installer tests
+  pass; the draft is not installed on the Owner machine. Final CI rerun follows.
+
+### Final overnight code verification, 2026-10-23
+
+- 0adc037 local full suite: 189 passed, 1 CI-only skip in 174.00 s; 94.5% strict
+  coverage. CI 39916465602 source checks: 188 passed, 2 expected skips in
+  274.44 s, real-network integration and all quality/app policy gates passed.
+- Earlier 39915503372 source run missed the 200 ms responsiveness limit at
+  229.671 ms; final run passes the unchanged test. No skip, retry plugin,
+  threshold increase or product workaround was introduced.
+- Final packaged app: 207 files/161936952 bytes, all 64 PE pins, license gate,
+  GUI smoke and both WFP scenarios pass. Offline processing 0; Model Manager
+  GUI 0, fetch allowed 4/blocked 0, calibrated controls and verified assets.
+- Final installer compiles: 34593012 bytes, SHA-256
+  a63903ef8020bc4e469365fb36aa88b5ae68e518124dbde0acf0882a2da0b632.
+  Only the installer wrapper license gate fails as intended (ISSUE-017); binary
+  upload skipped, audit artifact retained. No unallowlisted binary was shipped.
+- M5-interim-5.md records the morning license decision and remaining VM/release
+  acceptance. M4 app review artifact: run 39916465602, m4-review-bundle,
+  artifact 12484769263. Final cross-branch report/documentation sync is next.
+
+### Final branch synchronization
+
+| ID | Milestone | Task | Status | Evidence | Issues |
+|---|---|---|---|---|---|
+| M5-R2 | M5 prework | Carry completed M4 and final handoff forward | done | Rebased onto M4 3b874d3; diff against pre-rebase 87f08cb contains only M4 report/ledger, implementation unchanged; final code gates remain 39916465602 evidence | - |
+| M5-P1 | M5 prework | Per-user installer source, compiler and safe cleanup | done for prework | Compiles with pinned 6.7.3; 10 focused tests; final local 189/1 skip and CI 188/2 skips; full VM acceptance remains future work | - |
+| M5-P2 | M5 prework | Installer wrapper license clearance | blocked | InnoSetup rejected without an engineer exception; binary upload skipped; audit metadata and proposed ADR 0023 retained | ISSUE-017 |
+| M5-P3 | M5 | Complete installer-wide inventory, installed-app audit and VM/release gates | todo | After PM license decision: complete wrapper/subcomponent SBOM and notices, rerun license/installed-app WFP, then Owner standard-user VM checklist and Owner-controlled release | ISSUE-017 |
+
+Both feature branches are pushed. No implementation changes were made during
+this final report rebase; no additional optional testing or next-milestone work
+is needed. Return the workspace to m4-downloader with a clean tree for the Owner.
+
+### PM-approved overnight continuation, 2026-10-23
+
+- ISSUE-017 resolved: ADR 0023 Accepted by PM, exact InnoSetup exception only in installer context. App dependencies still reject it; focused positive/negative test passes.
+- Installer-wide inventory and CI lifecycle acceptance now in progress. M6 docs and desktop long-recording tests explicitly authorized by PM; Owner machine install is not required tonight.
+
+### Installer acceptance and static inventory checkpoint
+
+- Implemented explicit silent terms/download consent and explicit keep/remove-models uninstall choices; interactive choices remain unchanged. CI lifecycle harness covers installed WFP self-test, PE gate, verified Tiny/VAD, upgrade with downloader blocked, both uninstall modes and untouched output sentinel. Verification is pending CI, not claimed passed.
+- Extended installer SBOM/notices with source-identified static components. ISSUE-018 records six unapproved/provenance findings; installer artifact remains blocked. ISSUE-017 wrapper-only approval remains resolved. Eleven focused installer tests now include narrow scope and inventory/notice tamper regressions.
+- Desktop packaged long-recording Small CPU run is active in an isolated repository profile; no Owner app-data writes. CIM initially needed approved escalation. Turbo Vulkan follows automatically.
+
+- Long-recording harness/provenance checked in: repeated public-domain Swineherd, 7920.1875 s, packaged shared coordinator, CPU Small then Vulkan Turbo, VAD on, isolated profile. The run is still active; no measurements or cleanup success are claimed yet. M5 checklist now distinguishes CI automation from remaining standard-user VM acceptance.
+
+### Installer CI follow-up
+
+- CI 39923879707: checks and source offline pass; compiled installer installs, downloads Tiny/VAD, passes installed calibrated WFP (0 events) and 64-PE gate. Lifecycle then fails because harness assumed unins000.exe. Pinned Setup.Install generates uninsNNN names; harness now reads the exact per-user registered UninstallString, validates its folder and reports the phase. Next CI run must establish both uninstall results.
+- Installer-wide gate reports five static license entries plus unresolved Delphi provenance; no installer artifact uploaded. M6 guides pushed separately at a206740. Local full suite: 190 passed/1 skip, 94.5% strict coverage.
+
+- Added installed-file inventory: every payload file must match the audited bundle, with only the exact Inno notice and generated uninsNNN runtime records allowed. Changed/extra-file negative test passes; inventory is retained with acceptance evidence.
+- Desktop Small CPU endurance completed: 7920.1875 s input, 1060.9096 s wall, RTF 0.13395, sampled tree working set 2612928512 bytes, work bytes 253446078, exit 0, done on CPU, zero remaining work files. Turbo Vulkan is active. Final benchmark summary awaits both runs.
+
+### S0 containment and final overnight handoff
+
+- ISSUE-019 OPEN S0: ac06dad enabled the exact wrapper exception before the full static inventory. Run 39922816919 uploaded m5-installer-draft-unsigned, artifact 12488875272, compressed 34115983 bytes. Installer 34591385 bytes, SHA-256 f70f1ede9923d605f3ec1b3d072a1f4ed7c9e3d4da3c7fb2111fb05af64ec14d. Owner must remove this artifact; the agent cannot delete it. All implementation stopped on discovery.
+- Later run 39924971496 at 126aedb completed all installer lifecycle checks: explicit silent per-user install, bundled Tiny/VAD download, installed WFP self-test with 0 events, 64-PE gate, blocked-downloader upgrade with unchanged model hashes/mtimes, both uninstall choices, unchanged external output sentinel. Only the intended installer-wide license gate fails; binary upload skipped. CI checks: 189 passed/2 expected skips; separate network integration 1 passed.
+- Source and packaged WFP processing 0; Model Manager GUI 0, fetch allowed 4/blocked 0 in both layouts. App license and GUI gates pass. Payload 213 files/161951722 bytes. Final installed-file identity gate has a passing negative unit test but its final CI run was cancelled for the S0 stop.
+- Requested cancellation of active CI 39925428852 and 39925218957. 39924971496 was already completed. Stopped the remaining local final-coverage process tree; its unfinished run is not evidence. No release/PR/merge/settings change, no artifact deletion.
+- Both endurance runs had completed before discovery: Small CPU 1060.9096 s/RTF 0.133950; Turbo Vulkan 268.3786 s/RTF 0.033885 for 7920.1875 s public-domain repeated audio. Both Done/exit 0, requested backend, zero work files AND directories. Summary in docs/pm/benchmarks/m6/desktop-long-recording.md; raw files remain ignored.
+- M6 docs pushed separately at a206740: user guides, privacy, CONTRIBUTING, README. Exact HIPAA paragraph, local links and dash checks pass. No M6 app code. That branch still needs later M5 follow-ups carried forward after authorization to resume.
+- M5-interim-6.md records Owner morning actions, incident root cause, all completed evidence and incomplete gates. Next: Owner removes artifact and PM reviews static licenses/S0, then authorizes resumption and final CI/VM acceptance. No further implementation while S0 is open. Incident documentation uses [skip ci] only to preserve the stop; no skipped run is claimed green.
+
+### PM-authorized installer license resolution and resumed acceptance
+
+- Owner deleted artifact 12488875272; read-only API returns HTTP 404. PM reclassified ISSUE-019 to process S1, resolved with upload gating and a negative CI regression. No further containment required; work resumed as instructed.
+- ISSUE-018 resolved by ADR 0023 amendment: exact installer-only unmodified runtime exceptions. Pinned source/build review selects Setup.e32 + SetupLdr.e32, verifies Pascal Script references and only NewUxTheme/NewUxTheme.TmSchema JEDI units. The original two source files and full MPL are retained for the installer, with exact source hashes and all component notices. App allowlist unchanged.
+- Added explicit upload condition and source/offline/negative-regression dependencies; live CI test deliberately fails a synthetic license gate and asserts upload is skipped. Nine focused tests pass. Full source/installed/licensing/CI revalidation next; no final pass claim yet.
+
+- Resumed source gates: ruff/format (124 files), mypy (69 sources), three source policies pass. Actual generator script command exposed a tools import-path regression; fixed its direct-script path setup and added a subprocess entry-point regression. The targeted pytest attempt collided with the active full run using the same .pytest-tmp and produced 3 setup errors (WinError 32); the initial pass-count note was incorrect and is corrected here. The real --help command now succeeds. A serial full rerun is required.
+
+- Added retained-source tamper coverage and compiler-bootstrap receipt verification. The failed concurrency attempt is not acceptance evidence; final full source/CI checks will run with one pytest process per workspace.
+
+- Serial final source suite: 197 passed/1 CI-only skip in 179.59 s, strict coverage 94.5%. Earlier overlapping-pytest attempt had one GUI resume failure after temp deletion plus 3 setup errors; no test was weakened. Local split bundle, app license, GUI smoke and 64-PE gate pass.
+- CI 39984075122 found a source-fetch HTTP 404: the earlier pin c7af86b is an annotated tag object, not its commit. Verified GitHub git/ref -> git/tag -> commit 4adf37ed7f3fd2bd11c6836ba056e3de170fbabf, corrected provenance/current docs, retained both IDs. All reviewed source/JEDI hashes verify from that exact commit; actual original-source ZIP generation and 7 focused regressions pass. Binary/version unchanged. Final CI rerun follows.
+
+### Resumed M5 acceptance complete, 2026-10-23
+
+| ID | Milestone | Task | Status | Evidence | Issues |
+|---|---|---|---|---|---|
+| M5-P2 | M5 prework | Scoped wrapper and static runtime license approval | done | ADR 0023 amendment; pinned actual units, complete notices and original JEDI source; installer license gate green 39985711346 | ISSUE-017/018 resolved |
+| M5-P3 | M5 prework | Inventory and installed acceptance gates | done for CI | 216 payload files/161989319 bytes; 221 installed files byte-checked; 64 PE gate; installed calibrated WFP 0; full lifecycle passes | VM manual acceptance remains |
+| M5-P4 | M5 prework | Upload ordering regression | done | Synthetic failing gate produces skipped upload; production requires source/offline/regression + successful license/installed gates; green 39985711346 | ISSUE-019 resolved process S1 |
+| M6-D1 | M6 prework | Carry current M5 into docs branch | done | M6 e1c7758 carries the complete M5 implementation and interim-7 report, docs-only delta | - |
+
+- Final code CI 39985711346 at fa5fbcb: all four jobs green, source 196 passed/2 expected skips plus real-network integration 1 passed. Local serial 197 passed/1 skip, 94.5% strict coverage; lint/types/policies pass.
+- Unsigned installer only as CI artifact 12516525534, 34618916 bytes, SHA-256 4ea17b60157593ff989c06e9d6d8e745b8e25ba61f0bb77478706ee58e1a2720. No release upload. Full notice/SBOM/runtime/installed acceptance audit artifact 12516480610.
+- Source, packaged and installed processing WFP events 0. Source/packaged Manager GUI 0, fetch allowed 4/blocked 0. Silent install with Tiny/VAD, verified upgrade while downloader blocked, both uninstall choices and unchanged output sentinel pass. Owner clean-VM checklist remains.
+- M5-interim-7.md supersedes historical interim-6 stop instructions. No outstanding containment or license decision for ISSUE-018/019. Final report-only branch heads will be checked in CI before handoff; no new product work begins.

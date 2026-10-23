@@ -3,7 +3,7 @@
 import logging
 from pathlib import Path
 
-from dusty.privacy.logging import RedactionFilter, configure_logger
+from dusty.privacy.logging import RedactionFilter, RotatingFileHandler, configure_logger
 from dusty.privacy.sync import is_synced, sync_roots
 
 
@@ -20,6 +20,25 @@ def test_canary_never_reaches_log(tmp_path: Path) -> None:
     assert not RedactionFilter().filter(
         logging.LogRecord("dusty", logging.INFO, "", 0, "C:\\Users\\Jane\\clip.wav", (), None)
     )
+
+
+def test_local_log_rotation_is_bounded_and_retains_filter(tmp_path: Path) -> None:
+    handler = RotatingFileHandler(
+        tmp_path / "bounded.log", maxBytes=40, backupCount=2, encoding="utf-8"
+    )
+    handler.addFilter(RedactionFilter())
+    try:
+        for _ in range(10):
+            handler.handle(logging.LogRecord("dusty", logging.INFO, "", 0, "status=done", (), None))
+        handler.handle(
+            logging.LogRecord("dusty", logging.INFO, "", 0, "CANARY_RECORDING", (), None)
+        )
+    finally:
+        handler.close()
+    paths = list(tmp_path.glob("bounded.log*"))
+    assert len(paths) == 3
+    assert all(path.stat().st_size <= 40 for path in paths)
+    assert all("CANARY" not in path.read_text() for path in paths)
 
 
 def test_sync_root_detection(tmp_path: Path) -> None:

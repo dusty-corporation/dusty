@@ -2,7 +2,6 @@
 
 import logging
 import re
-from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 _PATH = re.compile(r"(?i)(?:[a-z]:\\|/users/|/home/|\\users\\|\\onedrive\\)")
@@ -17,6 +16,31 @@ _FIELDS = re.compile(
     r"large-v3-turbo-q8_0)|backend=(?:cpu|vulkan)|(?:decode_sec|process_sec|"
     r"first_progress_sec|timing_[a-z]+_ms)=[0-9.]+))*$"
 )
+
+
+class RotatingFileHandler(logging.FileHandler):
+    """Bound local files without importing logging.handlers' socket transports."""
+
+    def __init__(self, filename: Path, *, maxBytes: int, backupCount: int, encoding: str):
+        super().__init__(filename, encoding=encoding)
+        self.maxBytes, self.backupCount = maxBytes, backupCount
+
+    def emit(self, record: logging.LogRecord) -> None:
+        if self.stream:
+            self.stream.flush()
+        path = Path(self.baseFilename)
+        size = len((self.format(record) + self.terminator).encode(self.encoding or "utf-8"))
+        if path.exists() and path.stat().st_size + size > self.maxBytes:
+            if self.stream:
+                self.stream.close()
+            for index in range(self.backupCount - 1, 0, -1):
+                previous = path.with_name(f"{path.name}.{index}")
+                if previous.exists():
+                    previous.replace(path.with_name(f"{path.name}.{index + 1}"))
+            if self.backupCount:
+                path.replace(path.with_name(f"{path.name}.1"))
+            self.stream = self._open()
+        super().emit(record)
 
 
 class RedactionFilter(logging.Filter):

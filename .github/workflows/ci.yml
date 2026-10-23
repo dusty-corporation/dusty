@@ -85,3 +85,132 @@ jobs:
             build/model-download-*/summary.json
             build/model-download-*/download-result.json
           if-no-files-found: warn
+
+  installer-upload-regression:
+    runs-on: windows-latest
+    steps:
+      - name: Simulate passing installed acceptance
+        id: installer_acceptance
+        run: exit 0
+      - name: Deliberately fail the synthetic license gate
+        id: installer_licenses
+        continue-on-error: true
+        run: exit 1
+      - name: Upload must never run after that failure
+        id: installer_upload
+        if: success() && steps.installer_licenses.outcome == 'success' && steps.installer_acceptance.outcome == 'success'
+        run: throw 'Regression - a failing installer license gate allowed upload'
+      - name: Prove the upload was skipped
+        if: always()
+        run: |
+          if ('${{ steps.installer_licenses.outcome }}' -ne 'failure') { throw 'Synthetic negative gate did not fail' }
+          if ('${{ steps.installer_upload.outcome }}' -ne 'skipped') { throw 'Upload was not skipped after gate failure' }
+
+  packaging-spike:
+    needs: [checks, offline, installer-upload-regression]
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Install locked dependencies
+        run: |
+          python -m pip install uv==0.8.18
+          uv python install 3.12.11
+          if ($LASTEXITCODE -ne 0) { throw 'Pinned Python installation failed' }
+          uv sync --locked --python 3.12.11
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency setup failed' }
+      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: |
+            build/downloads
+            build/bin
+            build/models
+          key: ${{ runner.os }}-m2-assets-${{ hashFiles('native/versions.toml') }}
+      - name: Fetch pinned engine-v2 inputs
+        run: uv run python tools/fetch_dev_binaries.py
+      - name: Build separate onedir bundles and verify VC redist provenance
+        run: |
+          uv run python -m tools.build_bundle 2>&1 | Tee-Object -FilePath build/packaging-build.log
+          if ($LASTEXITCODE -ne 0) { throw 'PyInstaller build failed' }
+      - name: Enforce Qt exclusions and executable layout
+        run: uv run python tools/check_bundle.py dist/Dusty
+      - name: Offline PE imports and exact platform hashes
+        run: uv run python tools/check_pe_imports.py dist/Dusty/dusty --native dist/Dusty/bin
+      - name: Smoke-test packaged Qt window
+        run: uv run python tools/smoke_packaged_gui.py dist/Dusty
+      - name: Inventory bundle and generate draft notices and SBOM
+        run: uv run python -m tools.inventory_bundle dist/Dusty
+      - name: Validate WFP event parser
+        run: ./tests/offline/test_wfp_events.ps1
+      - name: Packaged Tiny download and calibrated WFP self-test
+        run: ./tools/test_network_isolation.ps1 -Bundle dist/Dusty
+      - name: Packaged Model Manager download and separate process WFP counts
+        run: ./tools/test_model_download_isolation.ps1 -Bundle dist/Dusty
+      - name: Audit every bundled file against the license allowlist
+        run: |
+          uv run python tools/check_licenses.py --bundle dist/Dusty --inventory build/packaging/audit/inventory.json 2>&1 | Tee-Object -FilePath build/packaging/audit/license-findings.txt
+          if ($LASTEXITCODE -ne 0) { throw 'Bundle contains unresolved or unapproved licenses; see audit evidence' }
+      - name: Preserve audit evidence only, never unapproved binaries
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: packaging-spike-audit
+          path: |
+            build/packaging/audit
+            build/packaging-build.log
+            build/pyinstaller/dusty/warn-dusty.txt
+            build/offline-*/summary.json
+            build/model-download-*/summary.json
+            build/model-download-*/download-result.json
+          if-no-files-found: error
+      - name: Preserve audited review bundle for the Owner
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: m4-review-bundle
+          path: dist/Dusty
+          if-no-files-found: error
+      - name: Compile unsigned installer draft with pinned Inno Setup 6
+        run: ./tools/build_installer.ps1
+      - name: Installer wrapper redistribution license policy
+        run: uv run python -m tools.inventory_installer
+      - name: Silent install upgrade uninstall and installed WFP acceptance
+        id: installer_acceptance
+        run: ./tools/test_installer.ps1
+      - name: Installer-wide redistribution license policy
+        id: installer_licenses
+        if: always()
+        run: uv run python tools/check_installer_licenses.py
+      - name: Preserve unsigned installer as CI artifact only
+        id: installer_upload
+        if: success() && steps.installer_licenses.outcome == 'success' && steps.installer_acceptance.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: m5-installer-draft-unsigned
+          path: |
+            build/installer/output
+            build/installer/inputs.json
+            build/installer/LICENSE.txt
+            build/packaging/audit/sbom.cdx.json
+            build/installer/sbom.cdx.json
+            build/installer/THIRD_PARTY_NOTICES.md
+            build/installer/installer-jedi-source.zip
+          if-no-files-found: error
+      - name: Preserve installer draft audit metadata even when policy blocks binaries
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: m5-installer-draft-audit
+          path: |
+            build/installer/inputs.json
+            build/installer/LICENSE.txt
+            build/installer/output/installer.json
+            build/installer/output/SHA256SUMS.txt
+            build/installer/license-findings.txt
+            build/installer/inventory.json
+            build/installer/sbom.cdx.json
+            build/installer/THIRD_PARTY_NOTICES.md
+            build/installer/acceptance/*.json
+            build/installer/runtime-inputs.json
+          if-no-files-found: warn

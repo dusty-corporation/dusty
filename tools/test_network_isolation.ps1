@@ -1,4 +1,8 @@
-param([string]$Python = '.venv/Scripts/python.exe')
+param(
+    [string]$Python = '.venv/Scripts/python.exe',
+    [string]$Bundle = '',
+    [switch]$InstalledModels
+)
 
 $ErrorActionPreference = 'Stop'
 if ($env:GITHUB_ACTIONS -ne 'true') { throw 'This system-audit test runs only on the disposable GitHub runner' }
@@ -11,8 +15,14 @@ $pythonPath = (Resolve-Path -LiteralPath $Python).Path
 $basePython = (& $pythonPath -c 'import sys; print(sys._base_executable)').Trim()
 if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve the Python base interpreter' }
 $programs = @($pythonPath, $basePython)
+$nativeRoot = Join-Path $repo 'build/bin'
+if ($Bundle) {
+    $Bundle = (Resolve-Path -LiteralPath $Bundle).Path
+    $nativeRoot = Join-Path $Bundle 'bin'
+    $programs += (Join-Path $Bundle 'dusty/dusty.exe')
+}
 foreach ($relative in @('cpu/whisper-cli.exe', 'vulkan/whisper-cli.exe', 'ffmpeg/ffmpeg.exe', 'ffmpeg/ffprobe.exe')) {
-    $programs += (Resolve-Path -LiteralPath (Join-Path $repo "build/bin/$relative")).Path
+    $programs += (Resolve-Path -LiteralPath (Join-Path $nativeRoot $relative)).Path
 }
 $programs = @($programs | Select-Object -Unique)
 $runId = [guid]::NewGuid().ToString('N')
@@ -24,9 +34,9 @@ $oldLocal = $env:LOCALAPPDATA
 $oldQpa = $env:QT_QPA_PLATFORM
 $savedAudit = $false
 
-function Invoke-TestPython([string[]]$Arguments) {
+function Invoke-TestPython([string[]]$Arguments, [string]$Executable = $pythonPath) {
     $psi = [Diagnostics.ProcessStartInfo]::new()
-    $psi.FileName = $pythonPath
+    $psi.FileName = $Executable
     $psi.WorkingDirectory = $repo
     $psi.UseShellExecute = $false
     $psi.CreateNoWindow = $true
@@ -60,6 +70,12 @@ function Read-ConnectionEvents([datetime]$Since) {
 }
 
 try {
+    if (-not $InstalledModels) { $env:LOCALAPPDATA = Join-Path $work 'user' }
+    if ($Bundle -and -not $InstalledModels) {
+        # Explicit network activity finishes before the audit window begins.
+        $fetchArgs = @('download', '--id', 'tiny', '--dest', (Join-Path $env:LOCALAPPDATA 'Dusty/models'), '--manifest', (Join-Path $Bundle 'resources/models.json'))
+        $null = Invoke-TestPython -Executable (Join-Path $Bundle 'dusty-fetch/dusty-fetch.exe') -Arguments $fetchArgs
+    }
     & auditpol /backup "/file:$snapshot" | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Audit policy backup failed' }
     $savedAudit = $true
@@ -87,22 +103,31 @@ try {
     }
     if (-not $calibrated) { throw 'WFP control did not produce a blocked-connection audit event' }
     $marker = (Get-WinEvent -LogName Security -MaxEvents 1).RecordId
-    $env:LOCALAPPDATA = Join-Path $work 'user'
-    $selftest = Invoke-TestPython -Arguments @('-m', 'dusty', '--self-test', '--backend', 'auto', '--model', 'tiny')
-    if ($selftest -ne 'OK') { throw 'Offline self-test did not report success' }
-    $batch = Invoke-TestPython -Arguments @('-m', 'dusty', '--headless-batch', 'tests/fixtures/audio/formats/jfk.wav', '--out', (Join-Path $work 'outputs'), '--backend', 'auto', '--model', 'tiny')
-    $expectedBatch = "added=1 unsupported=0 duplicates=0`ndone OK"
-    if (($batch -replace "`r`n", "`n") -cne $expectedBatch) { throw 'Offline batch did not report success' }
-    $env:QT_QPA_PLATFORM = 'offscreen'
-    $gui = Invoke-TestPython -Arguments @('tests/offline/gui_batch.py', (Join-Path $work 'gui-outputs'))
-    if ($gui -cne 'gui batch passed') { throw 'Offline GUI batch did not report success' }
+    if (-not $InstalledModels) { $env:LOCALAPPDATA = Join-Path $work 'user' }
+    if ($Bundle) {
+        # A windowed executable has no stdout handle. Exit zero means the real
+        # hash/decode/transcription/keyword checks passed; also require its log.
+        $null = Invoke-TestPython -Executable (Join-Path $Bundle 'dusty/dusty.exe') -Arguments @('--self-test', '--backend', 'auto', '--model', 'tiny')
+        $log = Join-Path $env:LOCALAPPDATA 'Dusty/logs/dusty.log'
+        if (-not (Select-String -LiteralPath $log -Pattern 'status=done' -Quiet)) { throw 'Packaged self-test success log missing' }
+    } else {
+        $selftest = Invoke-TestPython -Arguments @('-m', 'dusty', '--self-test', '--backend', 'auto', '--model', 'tiny')
+        if ($selftest -ne 'OK') { throw 'Offline self-test did not report success' }
+        $batch = Invoke-TestPython -Arguments @('-m', 'dusty', '--headless-batch', 'tests/fixtures/audio/formats/jfk.wav', '--out', (Join-Path $work 'outputs'), '--backend', 'auto', '--model', 'tiny')
+        $expectedBatch = "added=1 unsupported=0 duplicates=0`ndone OK"
+        if (($batch -replace "`r`n", "`n") -cne $expectedBatch) { throw 'Offline batch did not report success' }
+        $env:QT_QPA_PLATFORM = 'offscreen'
+        $gui = Invoke-TestPython -Arguments @('tests/offline/gui_batch.py', (Join-Path $work 'gui-outputs'))
+        if ($gui -cne 'gui batch passed') { throw 'Offline GUI batch did not report success' }
+    }
     Start-Sleep -Seconds 3
     $events = Read-ConnectionEvents $began
     $violations = @(Get-DustyConnectionEvents -Events $events -Programs $programs -AfterRecordId $marker -ExcludeProcessId $controlPid)
-    $summary = @{calibration_blocked_event=$true; selftest='passed'; batch='passed'; gui='passed'; connection_events=$violations.Count}
+    $summary = @{calibration_blocked_event=$true; selftest='passed'; packaged=[bool]$Bundle; installed_models=[bool]$InstalledModels; connection_events=$violations.Count}
+    if (-not $Bundle) { $summary.batch = 'passed'; $summary.gui = 'passed' }
     $summary | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $work 'summary.json') -Encoding utf8
     if ($violations.Count) { throw "S0: processing_connection_events=$($violations.Count)" }
-    'WFP calibration passed; selftest passed; batch passed; gui passed; connection_events=0'
+    $summary | ConvertTo-Json -Compress
 } finally {
     foreach ($name in $rules) { Remove-NetFirewallRule -Name $name }
     if ($savedAudit) {

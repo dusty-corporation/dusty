@@ -22,7 +22,20 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--headless-batch", nargs="+", metavar="FILE")
     parser.add_argument("--out")
     parser.add_argument("--check-model-download", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--uninstall-data", choices=("keep-models", "remove-models"), help=argparse.SUPPRESS
+    )
     args = parser.parse_args(argv)
+
+    if args.uninstall_data:
+        from dusty.installer_cleanup import cleanup
+        from dusty.runtime_paths import resolve_paths
+
+        return (
+            0
+            if cleanup(resolve_paths(), remove_models=args.uninstall_data == "remove-models")
+            else 1
+        )
 
     if args.check_model_download:
         from pathlib import Path

@@ -513,3 +513,44 @@ FETCH_ERRORS = {
     "PROTOCOL": "The downloader did not finish correctly. Try the download again.",
     "DELETE": "The downloaded model could not be deleted.",
 }
+
+# Inno Setup custom messages are generated from this same plain-language source.
+INSTALLER = {
+    "ChooseModels": "Choose transcription models",
+    "ChooseModelsHelp": "Choose at least one. Voice detection is included automatically.",
+    "ChooseModelsDetails": (
+        "Best quality suits a working graphics card. Balanced is good on any computer."
+    ),
+    "NeedModel": "Choose at least one transcription model.",
+    "DownloadPage": "Download and check transcription files",
+    "DownloadPageHelp": (
+        "Dusty will use its separate downloader, then test transcription on this computer."
+    ),
+    "DownloadConsent": (
+        "Dusty will connect to github.com to download %1 MB and will not send your recordings, "
+        "transcripts, or vocabulary hints."
+    ),
+    "DownloadWorking": "Downloading and checking transcription files...",
+    "DownloadFailed": (
+        "A download or verification failed (code %1). Check your connection and free disk space, "
+        "then retry. Installation is not ready yet."
+    ),
+    "SelfTestWorking": "Testing transcription on this computer...",
+    "SelfTestFailed": (
+        "The transcription test failed. Installation is not ready yet. Retry, or close Setup "
+        "and contact the person helping you install Dusty."
+    ),
+    "RemoveModels": "Also remove downloaded models",
+    "RemoveModelsHelp": (
+        "Recordings and folders with transcripts are kept. Uncheck this to keep downloaded "
+        "models for a future installation."
+    ),
+    "CleanupKept": (
+        "Some app data was kept because Dusty could not safely identify it. "
+        "Your recordings and transcripts were not removed."
+    ),
+    "DesktopShortcut": "Create a desktop shortcut",
+    "StopInstall": (
+        "Stop installation? Verified files are kept. Run Setup again to pick up the download."
+    ),
+}

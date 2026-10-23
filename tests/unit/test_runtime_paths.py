@@ -24,7 +24,9 @@ def test_installed_paths_ignore_development_environment(tmp_path: Path) -> None:
         "DUSTY_MODELS_DIR": str(tmp_path / "wrong"),
         "LOCALAPPDATA": str(tmp_path / "user"),
     }
-    paths = resolve_paths(frozen=True, executable=tmp_path / "install/dusty.exe", environment=env)
+    paths = resolve_paths(
+        frozen=True, executable=tmp_path / "install/dusty/dusty.exe", environment=env
+    )
     assert paths.bin_dir == tmp_path / "install/bin"
     assert paths.models_dir == tmp_path / "user/Dusty/models"
     assert paths.resources_dir == tmp_path / "install/resources"

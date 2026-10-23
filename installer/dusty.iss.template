@@ -1,0 +1,302 @@
+; Draft M5 prework. Compile with pinned Inno Setup 6.7.3; no publishing.
+[Setup]
+AppId={{7B3110E8-7983-41AC-A0ED-F6EB13DBB72A}
+AppName=Dusty
+AppVersion=@@VERSION@@
+DefaultDirName={localappdata}\Programs\Dusty
+DefaultGroupName=Dusty
+PrivilegesRequired=lowest
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
+MinVersion=10.0
+DisableWelcomePage=no
+DisableProgramGroupPage=yes
+LicenseFile=LICENSE.txt
+OutputDir=output
+OutputBaseFilename=Dusty-@@VERSION@@-draft-unsigned
+Compression=lzma2
+SolidCompression=yes
+WizardStyle=modern light
+UninstallDisplayIcon={app}\dusty\dusty.exe
+SetupIconFile=@@BUNDLE@@\resources\icons\dusty.ico
+SignedUninstaller=no
+CloseApplications=yes
+RestartApplications=no
+
+[Tasks]
+Name: desktopicon; Description: "{cm:DesktopShortcut}"; Flags: unchecked
+
+[Files]
+Source: "@@BUNDLE@@\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "@@INNO_LICENSE@@"; DestDir: "{app}\licenses"; DestName: "inno-setup.txt"; Flags: ignoreversion
+Source: "@@INSTALLER_NOTICES@@"; DestDir: "{app}\licenses"; DestName: "installer-THIRD_PARTY_NOTICES.md"; Flags: ignoreversion
+Source: "@@JEDI_SOURCE@@"; DestDir: "{app}\licenses"; DestName: "installer-jedi-source.zip"; Flags: ignoreversion
+
+[Icons]
+Name: "{userprograms}\Dusty"; Filename: "{app}\dusty\dusty.exe"
+Name: "{userdesktop}\Dusty"; Filename: "{app}\dusty\dusty.exe"; Tasks: desktopicon
+
+[CustomMessages]
+@@MESSAGES@@
+
+[Code]
+type
+  TJobLimits32 = array[0..111] of Byte;
+  TMemoryStatus = record
+    Length, Load: LongWord;
+    TotalPhysical, AvailablePhysical, TotalPageFile, AvailablePageFile: Int64;
+    TotalVirtual, AvailableVirtual, AvailableExtendedVirtual: Int64;
+  end;
+
+function WinCreateJob(Security, Name: LongWord): LongWord;
+  external 'CreateJobObjectW@kernel32.dll stdcall';
+function WinSetJob(Job: LongWord; Kind: Integer; var Info: TJobLimits32; Length: LongWord): Boolean;
+  external 'SetInformationJobObject@kernel32.dll stdcall';
+function WinCurrentProcess: LongWord;
+  external 'GetCurrentProcess@kernel32.dll stdcall';
+function WinAssignJob(Job, Process: LongWord): Boolean;
+  external 'AssignProcessToJobObject@kernel32.dll stdcall';
+function WinTerminateJob(Job: LongWord; Code: LongWord): Boolean;
+  external 'TerminateJobObject@kernel32.dll stdcall';
+function WinMemoryStatus(var Info: TMemoryStatus): Boolean;
+  external 'GlobalMemoryStatusEx@kernel32.dll stdcall';
+
+var
+  ModelsPage: TInputOptionWizardPage;
+  DownloadPage: TWizardPage;
+  ProgressPage: TOutputMarqueeProgressWizardPage;
+  ModelIds: TArrayOfString;
+  ModelBytes: array of Int64;
+  InstallationReady: Boolean;
+  RemoveModels: Boolean;
+  LastFetchCode: Integer;
+  DownloadActive: Boolean;
+  DownloadJob: LongWord;
+
+function InitializeSetup: Boolean;
+var
+  Info: TJobLimits32;
+  I: Integer;
+begin
+  { Silent deployment is explicit consent, not a suppressed affirmative dialog. }
+  Result := False;
+  if WizardSilent then
+    if (ExpandConstant('{param:ACCEPTTERMS|}') <> 'yes') or
+       (ExpandConstant('{param:ALLOWDOWNLOAD|}') <> 'yes') then Exit;
+  { Inno 6 Setup is PE32. The compiler gate asserts this; no x64 struct guessing. }
+  for I := 0 to 111 do Info[I] := 0;
+  Info[17] := $20; { JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE, DWORD at offset 16. }
+  DownloadJob := WinCreateJob(0, 0);
+  Result := (DownloadJob <> 0) and WinSetJob(DownloadJob, 9, Info, 112);
+  if Result then Result := WinAssignJob(DownloadJob, WinCurrentProcess);
+  { Keep the non-inheritable handle until process exit: all children die with Setup. }
+end;
+
+function GraphicsCandidate: Boolean;
+var
+  Memory: TMemoryStatus;
+  Names: TArrayOfString;
+  Enabled: Cardinal;
+  I: Integer;
+begin
+  Result := False;
+  Memory.Length := 64;
+  if not WinMemoryStatus(Memory) then Exit;
+  if Memory.TotalPhysical < 16000000000 then Exit;
+  if not FileExists(ExpandConstant('{sys}\vulkan-1.dll')) then Exit;
+  if not RegGetValueNames(HKLM64, 'SOFTWARE\Khronos\Vulkan\Drivers', Names) then Exit;
+  for I := 0 to GetArrayLength(Names) - 1 do
+    if RegQueryDWordValue(HKLM64, 'SOFTWARE\Khronos\Vulkan\Drivers', Names[I], Enabled) then
+      if (Enabled = 0) and FileExists(Names[I]) then Result := True;
+end;
+
+function Quoted(Value: String): String;
+begin
+  Result := '"' + Value + '"';
+end;
+
+function Fetch(Command, Id: String): Boolean;
+var
+  Code: Integer;
+begin
+  Result := Exec(ExpandConstant('{app}\dusty-fetch\dusty-fetch.exe'),
+    Command + ' --id ' + Quoted(Id) + ' --dest ' +
+    Quoted(ExpandConstant('{localappdata}\Dusty\models')) + ' --manifest ' +
+    Quoted(ExpandConstant('{app}\resources\models.json')),
+    ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, Code);
+  Result := Result and (Code = 0);
+  LastFetchCode := Code;
+end;
+
+function EnsureModel(Id: String): Boolean;
+begin
+  Result := Fetch('verify', Id);
+  while not Result do begin
+    Result := Fetch('download', Id) and Fetch('verify', Id);
+    if not Result then
+      if SuppressibleMsgBox(FmtMessage(CustomMessage('DownloadFailed'), [IntToStr(LastFetchCode)]),
+        mbError, MB_RETRYCANCEL, IDCANCEL) <> IDRETRY then Exit;
+  end;
+end;
+
+procedure InitializeWizard;
+var
+  I: Integer;
+  Requested: String;
+  DefaultModel: String;
+begin
+  ModelsPage := CreateInputOptionPage(wpLicense, CustomMessage('ChooseModels'),
+    CustomMessage('ChooseModelsHelp'), CustomMessage('ChooseModelsDetails'), False, True);
+  SetArrayLength(ModelIds, @@MODEL_COUNT@@);
+  SetArrayLength(ModelBytes, @@MODEL_COUNT@@);
+@@MODEL_SETUP@@
+  DefaultModel := 'small';
+  if GraphicsCandidate then DefaultModel := 'large-v3-turbo-q8_0';
+  Requested := ExpandConstant('{param:MODELS|}') ;
+  if Requested = '' then Requested := DefaultModel;
+  for I := 0 to GetArrayLength(ModelIds) - 1 do
+    ModelsPage.Values[I] := Pos(',' + ModelIds[I] + ',', ',' + Requested + ',') > 0;
+  DownloadPage := CreateCustomPage(wpInstalling, CustomMessage('DownloadPage'),
+    CustomMessage('DownloadPageHelp'));
+  ProgressPage := CreateOutputMarqueeProgressPage(CustomMessage('DownloadPage'),
+    CustomMessage('DownloadWorking'));
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+var
+  I, Selected, Code: Integer;
+  Bytes: Int64;
+  First: String;
+begin
+  Result := True;
+  if CurPageID = ModelsPage.ID then begin
+    Selected := 0;
+    for I := 0 to GetArrayLength(ModelIds) - 1 do
+      if ModelsPage.Values[I] then Selected := Selected + 1;
+    Result := Selected > 0;
+    if not Result then SuppressibleMsgBox(CustomMessage('NeedModel'), mbError, MB_OK, IDOK);
+  end;
+  if (CurPageID = DownloadPage.ID) and not InstallationReady then begin
+    Bytes := @@VAD_BYTES@@;
+    First := '';
+    for I := 0 to GetArrayLength(ModelIds) - 1 do
+      if ModelsPage.Values[I] then begin
+        Bytes := Bytes + ModelBytes[I];
+        if First = '' then First := ModelIds[I];
+      end;
+    if First = '' then begin Result := False; Exit; end;
+    if not WizardSilent then
+      if SuppressibleMsgBox(FmtMessage(CustomMessage('DownloadConsent'), [
+        IntToStr((Bytes + 999999) div 1000000)]), mbConfirmation, MB_OKCANCEL, IDCANCEL) <> IDOK then
+        begin Result := False; Exit; end;
+    ProgressPage.Show;
+    ProgressPage.Animate;
+    DownloadActive := True;
+    try
+      for I := 0 to GetArrayLength(ModelIds) - 1 do
+        if ModelsPage.Values[I] then
+          if not EnsureModel(ModelIds[I]) then begin Result := False; Exit; end;
+      if not EnsureModel('silero-vad') then begin Result := False; Exit; end;
+      ProgressPage.SetText(CustomMessage('SelfTestWorking'), '');
+      Result := Exec(ExpandConstant('{app}\dusty\dusty.exe'),
+        '--self-test --backend auto --model ' + Quoted(First),
+        ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, Code);
+      Result := Result and (Code = 0);
+      if not Result then SuppressibleMsgBox(CustomMessage('SelfTestFailed'), mbError, MB_OK, IDOK);
+      InstallationReady := Result;
+    finally
+      DownloadActive := False;
+      ProgressPage.Hide;
+    end;
+  end;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  { Silent installs do not wait for a post-install custom-page interaction. }
+  if (CurStep = ssPostInstall) and WizardSilent then
+    if not NextButtonClick(DownloadPage.ID) then
+      RaiseException(CustomMessage('SelfTestFailed'));
+end;
+
+procedure CancelButtonClick(CurPageID: Integer; var Cancel, Confirm: Boolean);
+begin
+  if DownloadActive then begin
+    Cancel := False;
+    Confirm := False;
+    if SuppressibleMsgBox(CustomMessage('StopInstall'), mbConfirmation, MB_YESNO, IDNO) = IDYES then
+      WinTerminateJob(DownloadJob, 130);
+  end;
+end;
+
+function GetCustomSetupExitCode: Integer;
+begin
+  if InstallationReady then Result := 0 else Result := 10;
+end;
+
+function InitializeUninstall: Boolean;
+var
+  Page: TSetupForm;
+  Choice: TNewCheckBox;
+  Help: TNewStaticText;
+  Confirm, Cancel: TNewButton;
+begin
+  Result := False;
+  RemoveModels := True;
+  if UninstallSilent then begin
+    if ExpandConstant('{param:REMOVEMODELS|}') = 'yes' then begin
+      RemoveModels := True;
+      Result := True;
+    end else if ExpandConstant('{param:REMOVEMODELS|}') = 'no' then begin
+      RemoveModels := False;
+      Result := True;
+    end;
+    Exit;
+  end;
+  Page := CreateCustomForm(ScaleX(480), ScaleY(180), False, False);
+  try
+    Page.Caption := 'Dusty';
+    Choice := TNewCheckBox.Create(Page);
+    Choice.Parent := Page;
+    Choice.SetBounds(ScaleX(20), ScaleY(20), ScaleX(440), ScaleY(24));
+    Choice.Caption := CustomMessage('RemoveModels');
+    Choice.Checked := True;
+    Help := TNewStaticText.Create(Page);
+    Help.Parent := Page;
+    Help.SetBounds(ScaleX(20), ScaleY(55), ScaleX(440), ScaleY(60));
+    Help.AutoSize := False;
+    Help.WordWrap := True;
+    Help.Caption := CustomMessage('RemoveModelsHelp');
+    Confirm := TNewButton.Create(Page);
+    Confirm.Parent := Page;
+    Confirm.SetBounds(ScaleX(260), ScaleY(130), ScaleX(95), ScaleY(28));
+    Confirm.Caption := SetupMessage(msgButtonOK);
+    Confirm.ModalResult := mrOk;
+    Confirm.Default := True;
+    Cancel := TNewButton.Create(Page);
+    Cancel.Parent := Page;
+    Cancel.SetBounds(ScaleX(365), ScaleY(130), ScaleX(95), ScaleY(28));
+    Cancel.Caption := SetupMessage(msgButtonCancel);
+    Cancel.ModalResult := mrCancel;
+    Cancel.Cancel := True;
+    Result := Page.ShowModal = mrOk;
+    RemoveModels := Choice.Checked;
+  finally
+    Page.Free;
+  end;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  Mode: String;
+  Code: Integer;
+  Success: Boolean;
+begin
+  if CurUninstallStep = usUninstall then begin
+    if RemoveModels then Mode := 'remove-models' else Mode := 'keep-models';
+    Success := Exec(ExpandConstant('{app}\dusty\dusty.exe'), '--uninstall-data ' + Mode,
+      ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, Code);
+    if not Success or (Code <> 0) then
+      SuppressibleMsgBox(CustomMessage('CleanupKept'), mbInformation, MB_OK, IDOK);
+  end;
+end;

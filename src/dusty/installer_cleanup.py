@@ -1,0 +1,106 @@
+"""Remove only recognized app-owned data, never arbitrary output directories."""
+
+import json
+import re
+from pathlib import Path
+from uuid import UUID
+
+from dusty.models import load_manifest
+from dusty.runtime_paths import RuntimePaths
+
+
+def _cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
+    """Return False if uncertain data was preserved; emit no paths or content."""
+    root = paths.user_dir
+    if not root.exists():
+        return True
+    protected: set[Path] = set()
+    metadata = [root / "settings.json", root / "state/queue.json"]
+    metadata += list(root.glob("settings.json.corrupt-*"))
+    metadata += list((root / "state").glob("queue.json.corrupt-*"))
+
+    def inspect(value: object, key: str = "") -> None:
+        if isinstance(value, dict):
+            for name, item in value.items():
+                inspect(item, name)
+        elif isinstance(value, list):
+            for item in value:
+                inspect(item, key)
+        elif key in {"output_dir", "outputs", "source"} and isinstance(value, str):
+            protected.add(Path(value).resolve())
+
+    def linked(path: Path) -> bool:
+        return path.is_symlink() or path.is_junction()
+
+    try:
+        # Reparse points anywhere in the owned subtree make cleanup uncertain.
+        if linked(root) or any(linked(p) for p in root.rglob("*")):
+            return False
+        for path in metadata:
+            if path.exists():
+                data = json.loads(path.read_text(encoding="utf-8"))
+                if not isinstance(data, dict) or data.get("schema_version") != 1:
+                    return False
+                inspect(data)
+        owned_root = root.resolve()
+        if any(p.is_relative_to(owned_root) or owned_root.is_relative_to(p) for p in protected):
+            return False
+        candidates = list(metadata)
+        candidates += [
+            p for p in (root / "logs").glob("*") if re.fullmatch(r"dusty\.log(?:\.[1-5])?", p.name)
+        ]
+        work_names = {"audio.wav", "raw.json", "raw-cpu.json", "raw-vulkan.json"}
+        for directory in (root / "work").glob("*"):
+            try:
+                UUID(directory.name)
+            except ValueError:
+                if directory.name not in {"probe", "selftest"}:
+                    continue
+            candidates += [directory / name for name in work_names]
+        if remove_models:
+            manifest = load_manifest(paths.resources_dir / "models.json")
+            names = [m.file_name for m in manifest.models.values()] + [manifest.vad_file_name]
+            candidates += [
+                root / "models" / (name + suffix)
+                for name in names
+                for suffix in ("", ".part", ".lock")
+            ]
+        # Decide before deleting metadata: another attempt must retain protection.
+        for path in candidates:
+            resolved = path.resolve()
+            if any(resolved == p or resolved.is_relative_to(p) for p in protected):
+                return False
+        for path in candidates:
+            if path.is_file():
+                path.unlink()
+        # Only empty directories disappear. Unknown files and user outputs stay.
+        directories = sorted(
+            (p for p in root.rglob("*") if p.is_dir()), key=lambda p: len(p.parts), reverse=True
+        )
+        for path in [*directories, root]:
+            resolved = path.resolve()
+            if any(
+                resolved == p or resolved.is_relative_to(p) or p.is_relative_to(resolved)
+                for p in protected
+            ):
+                continue
+            if not remove_models and (
+                path == root / "models" or path.is_relative_to(root / "models")
+            ):
+                continue
+            try:
+                path.rmdir()
+            except OSError:
+                pass
+        remaining = list(root.iterdir()) if root.exists() else []
+        return not any(remove_models or p != root / "models" for p in remaining)
+    except (OSError, ValueError, TypeError):
+        return False
+
+
+def cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
+    """Contain filesystem failures even during initial metadata discovery."""
+    try:
+        return _cleanup(paths, remove_models=remove_models)
+    except (OSError, ValueError, TypeError):
+        return False

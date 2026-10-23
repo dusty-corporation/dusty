@@ -1,8 +1,14 @@
 # Backlog
 
+- Fully MSVC-free build: consider MinGW Python/Qt if a strictly free-software distribution channel is needed; this would remove the only Microsoft-licensed bundled files.
+
+- Bundle size: after packaging and licensing decisions, evaluate harmless unused translations and exporter helpers collected by upstream hooks; retain the verified CPU variants and required runtime behavior.
+
 Record optional improvements, optimizations, and work outside V1 here instead of implementing them during the current milestone. Each item has one line of context. Inclusion does not approve a dependency, architecture change, or prohibited feature. Required acceptance work remains in `LEDGER.md`.
 
 ## Optimizations and optional improvements
+
+- Refresh the README's historical M0 introduction during M6 documentation work; current capability and release instructions need a user-focused overview.
 
 - Remove the native VAD patch: when whisper.cpp PR 4068 or an equivalent timestamp fix reaches a stable release, verify it, upgrade the pin, rerun native/VAD regressions, and drop our patch (ADR 0018).
 - Vulkan pipeline caching: defer unless future measured workloads justify it; ThinkPad probe resolved ISSUE-004 with no significant recurring overhead.
@@ -32,3 +38,5 @@ Record optional improvements, optimizations, and work outside V1 here instead of
 
 - CUDA backend: proprietary runtime redistribution conflicts with NN-5; backlog inclusion does not authorize it.
 - Automatic updates or update checks: conflicts with NN-4; retain explicit manual updates.
+
+- Refresh pinned GitHub Actions for Node 24 after review; current pinned actions pass but CI warns that Node 20 actions are forced onto Node 24.
