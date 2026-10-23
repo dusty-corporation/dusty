@@ -6,8 +6,9 @@ M4 engineering acceptance is complete: Model Manager downloads, verifies,
 resumes, cancels and deletes models through a separate dusty-fetch process.
 All M4 quality gates and CI pass; calibrated WFP found zero GUI connections
 during real downloads. The synchronized M5 split bundle also passes its PE,
-license, GUI and packaged WFP gates. ThinkPad visual/functional acceptance and
-clean-machine installer acceptance remain Owner work; no PR was opened.
+license, GUI and packaged WFP gates. Optional installer prework compiles, but
+binary upload is held for the PM's InnoSetup license-policy decision (ISSUE-017).
+ThinkPad review and clean-machine installer acceptance remain Owner work; no PR was opened.
 
 ### Branches
 
@@ -19,7 +20,8 @@ clean-machine installer acceptance remain Owner work; no PR was opened.
   Packaged acceptance is green at 5ca1180. Optional installer prework is draft
   only: ADR 0022, generated per-user setup, complete license acceptance,
   bundled downloader/self-test gates, conservative uninstall cleanup and
-  artifact-only CI. Its compiler follow-up is separate from M4 acceptance.
+  audit-only CI. Compilation passes; installer binary upload is blocked by its
+  separate license gate. See M5-interim-5.md on that branch.
 - `main`: unchanged by the engineer; no merge, publication or repository-setting change.
 
 ### Owner actions for the morning
@@ -28,11 +30,17 @@ clean-machine installer acceptance remain Owner work; no PR was opened.
    and run the six ThinkPad checks in section 8. Send pass/fail by number.
 2. Give the PM this report. Wait for PM acceptance before a PR against main;
    the Owner controls merge and publication.
-3. Review M5's unsigned installer draft separately on a fresh standard-user
-   Windows 11 VM using docs/pm/M5-checklist.md. No installer was run on the
-   Owner's desktop. Fresh install, cancel/resume, failed install/retry, upgrade,
-   both uninstall choices and installed-app WFP remain M5 acceptance work.
-4. Keep the real Surface Vulkan smoke test on the required pre-M7 list. It
+3. Ask the PM to resolve M5 ISSUE-017: approve proposed ADR 0023's narrow
+   InnoSetup exception (recommended), or replace the approved Inno architecture.
+   The full license permits redistribution but its distinct identifier is not
+   in SPEC 10.2's allowlist; no exception was added by the engineer. Only audit
+   metadata is uploaded. This is an M5 policy decision, not an M4 blocker.
+4. After license clearance and remaining installer inventory, review an installable
+   M5 draft on a fresh standard-user Windows 11 VM using docs/pm/M5-checklist.md.
+   No installer was run on the Owner's desktop. Fresh install, cancel/resume,
+   failed install/retry, upgrade, both uninstall choices and installed-app WFP
+   remain M5 acceptance work.
+5. Keep the real Surface Vulkan smoke test on the required pre-M7 list. It
    does not block M4 and has not been replaced by a hosted-runner result.
 
 ## 2. Acceptance criteria
@@ -80,9 +88,11 @@ clean-machine installer acceptance remain Owner work; no PR was opened.
 | Three policy checks | Passed: check_no_network.py, check_no_huggingface.py, check_licenses.py |
 | M4 implementation CI | [39909561630](https://github.com/dusty-corporation/dusty/actions/runs/39909561630), 01bcc73, green |
 | M4 renderer/evidence CI | [39910270912](https://github.com/dusty-corporation/dusty/actions/runs/39910270912), aab3ec6, green |
+| M4 report/checkpoint CI | [39913841073](https://github.com/dusty-corporation/dusty/actions/runs/39913841073), 34256af, green; subsequent report changes are documentation only |
 | M5 after M4 rebase | [39910562031](https://github.com/dusty-corporation/dusty/actions/runs/39910562031), 5ca1180, all jobs green; 178 CI passes/2 expected skips, real-network integration separately passed |
 | Rebased M5 local suite | 179 passed, 1 CI-only skip; 197.64 s; 94.4% coverage |
 | Packaged gates | 64 PE files checked against exact pins; layout, license/SBOM, GUI smoke and both WFP scenarios passed |
+| Final M5 prework code | [39916465602](https://github.com/dusty-corporation/dusty/actions/runs/39916465602), 0adc037: source 188 passed/2 expected skips, 94.5%; all app gates and installer compile pass; installer-only Inno license gate deliberately fails |
 
 The ordinary suite skips the explicit CI-only real-network test. Hosted CI
 also skips Vulkan transcript comparison when there is no usable Vulkan device;
@@ -125,7 +135,9 @@ PM's ADR 0022 bundled-fetch decision instead of Inno's built-in HTTP downloader.
 
 ## 6. Issues
 
-No new S0/S1 issue found in M4. AUDIT-NOTES.md records non-urgent review areas;
+No new S0/S1 issue found in M4. M5's ISSUE-017 (S1, open) records the installer
+wrapper license-policy gap; proposed ADR 0023 has not been accepted.
+AUDIT-NOTES.md records non-urgent review areas;
 enterprise proxy support remains in BACKLOG.md. Previously accepted M5 licensing
 and native-import resolutions were retained during the rebase.
 
@@ -133,16 +145,28 @@ and native-import resolutions were retained during the rebase.
 
 PM acceptance after screenshot/ThinkPad review. No unresolved M4 architecture,
 privacy or licensing decision. Installer fresh-machine acceptance is a separate
-M5 gate, not implied by this report.
+M5 gate, not implied by this report. The separate M5 license decision is described
+in the morning list and M5-interim-5.md; it does not change M4's app allowlist.
 
 ## 8. Short ThinkPad check list
 
-Use the audited m4-review-bundle artifact from the final M5 CI run referenced
-in the overnight follow-up below. Unzip into a new folder, keeping dusty,
-dusty-fetch, bin, resources and licenses side by side. Launch dusty/dusty.exe;
-do not move either executable out of its folder. For an isolated no-models
-review, set LOCALAPPDATA to a new review folder in the same PowerShell session
-before launching; this avoids changing your existing Dusty profile/models.
+Use the audited [app review artifact](https://github.com/dusty-corporation/dusty/actions/runs/39916465602/artifacts/12484769263).
+The run is red solely at the installer license gate; source and all app gates
+are green. No repo clone or Python is needed. In a folder of your choice:
+
+```powershell
+gh run download 39916465602 --repo dusty-corporation/dusty --name m4-review-bundle --dir Dusty-M4-review
+$dustyReviewData = Join-Path $PWD 'Dusty-M4-review-data'
+$dustyReviewPreviousLocal = $env:LOCALAPPDATA
+$env:LOCALAPPDATA = $dustyReviewData
+Start-Process .\Dusty-M4-review\dusty\dusty.exe -Wait
+$env:LOCALAPPDATA = $dustyReviewPreviousLocal
+```
+
+This uses an isolated profile for the no-models test and preserves your current
+profile/models. Repeat the environment/launch lines for a relaunch. Keep dusty,
+dusty-fetch, bin, resources and licenses side by side. Do not move the executables
+out of their folders. Allow about 10-15 minutes plus model download time.
 
 1. **Empty state/layout:** no models means Start disabled with its reason
    centered above a full-width button. Output-folder line remains visible.
@@ -187,6 +211,20 @@ estimate or unperformed hardware result is asserted.
 
 ## Overnight follow-up
 
-Installer compilation and final review-artifact details are recorded here once
-the M5 draft follow-up completes. M4 implementation and its screenshot draft
-are already verified; no PR has been opened.
+- M5 final local tests: 189 passed/1 CI-only skip, 174.00 s; 94.5% coverage.
+  Final source CI: 188 passed/2 expected skips, 274.44 s. An earlier M5 source
+  run (39915503372) observed a 229.671 ms Qt event gap; the unchanged 200 ms
+  test passed in final verification. No threshold or test was weakened.
+- Latest app bundle: 207 files, 161,936,952 bytes; all 64 PE checks and app
+  license/GUI/WFP gates pass. The two files added over the 205-file baseline
+  are Inno license/provenance text; no PE was added.
+- Unsigned installer draft compiled: 34,593,012 bytes. Its binary was not
+  uploaded; m5-installer-draft-audit contains only hash/size/terms and findings.
+  InnoSetup is a distinct [SPDX license](https://spdx.org/licenses/InnoSetup.html),
+  absent from the allowlist. Proposed ADR 0023 and ISSUE-017 are on M5; PM
+  clearance and a complete installer-wide inventory are required before distribution.
+- No PR, merge, publication, settings change or new milestone beyond the
+  explicitly authorized M5 prework. All code and reports are committed/pushed;
+  final branch synchronization changes documentation only.
+- Long-dash check: `rg -n '[\x{2013}\x{2014}]' AGENTS.md README.md LICENSE NOTICE src tools tests docs installer packaging native modelpipeline .github pyproject.toml uv.lock`.
+  Output: none (exit 1, no matches). SPEC and the Owner's M4 brief were not edited.

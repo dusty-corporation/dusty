@@ -173,3 +173,18 @@ No further implementation or tests were started after the Owner requested this c
 - Screenshots are a new draft m4-screenshots release, not published. M5 was
   synchronized and its app gates passed in 39910562031. Optional installer
   prework remains isolated to M5; its compilation follow-up is not M4 acceptance.
+
+### M4 final morning handoff
+
+- M4 engineering complete and CI green at 34256af / 39913841073; final report
+  adds documentation only. Screenshot draft remains m4-screenshots-aab3ec6.zip.
+- ThinkPad app review: 39916465602 artifact m4-review-bundle; no clone/Python
+  needed. Six-step isolated-profile instructions are in M4-report.md.
+- Synchronized M5 app gates all pass on final code 0adc037: source 188 passes,
+  2 expected skips; local 189 passes/1 skip, 94.5%; PE/license/GUI and WFP pass.
+- Optional installer compiles but binary upload is intentionally held for M5
+  ISSUE-017 / proposed ADR 0023 (InnoSetup not in the allowlist). No exception
+  was granted by the engineer. Morning PM policy decision and later VM checks
+  are documented; no PR, merge, publishing or repository-setting change.
+- No em/en dash matches in the report's recorded repository search; no SPEC or
+  Owner brief edit. Final M5 rebase carries this documentation only, then stop.
