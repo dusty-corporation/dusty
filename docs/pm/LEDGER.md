@@ -780,3 +780,12 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   updated. Prepared local-link and prohibited-dash checks: zero findings.
 - Tracked UTF-8 text scan via git ls-files -z: em/en dash matches: 0. Host scale
   unchanged; all development changes stay in whisper_app.
+
+### M6 docs v2 pushed, return to M5
+
+- m6-docs-v2 8a91934 pushed normally from M5 20cce6b. User/privacy/contributing
+  docs updated to current behavior, README links added, no application code.
+- Verified reference heads unchanged: m5-packaging-spike 95dd90b, m6-docs c855b52.
+- Returned to m5-installer. Remaining overnight work: latest native review PNGs,
+  draft screenshot upload, final tagged release/true two-version upgrade evidence,
+  final report hashes/counts and clean checkpoint. Owner/PM checks remain manual.

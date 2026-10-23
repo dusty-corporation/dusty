@@ -93,3 +93,15 @@ PM-approved ADRs 0019 to 0023 and subsequent decisions supersede the original
 MIT/python-docx/shared-folder/Inno-downloader assumptions. Models are not bundled.
 Installer failure simulations in screenshots are review-only. Standard-user,
 SmartScreen, visual scaling and physical GPU tests remain Owner evidence.
+
+## M6 documentation prework branch
+
+Authorized optional prework is pushed on m6-docs-v2 at 8a91934, based on
+m5-installer 20cce6b (same final application/installer behavior at that point).
+It contains user guides, privacy, CONTRIBUTING and README guide links only,
+plus its ledger entry. It covers current installer pages, failed-model outcomes,
+model deletion/voice-detection blocking, normal-stop versus crash partials,
+seven-day cleanup and SmartScreen. Exact SPEC 9.6 wording is retained.
+Reference m6-docs (c855b52) and m5-packaging-spike (95dd90b) remain untouched.
+No M6 acceptance or PR is claimed. Later M5 evidence-only report updates are on
+m5-installer; the documentation branch is available for PM review after M5.
