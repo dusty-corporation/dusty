@@ -210,3 +210,16 @@ No further implementation or tests were started after the Owner requested this c
   artifact evidence. Full rebased suite running; bundle/PE/license/GUI/WFP results pending.
 - M4 screenshot draft uploaded: m4-screenshots-aab3ec6.zip, 76 PNGs, 3605372 bytes,
   SHA-256 1d7d30ea6d3e83824502f77dcfd22122f5178be8f2800ebeccdebcb15594e7f6.
+
+### M5 synchronized bundle acceptance, 2026-10-23
+
+- Local full suite: 179 passed, 1 CI-only skip in 197.64 s; coverage 94.4%.
+- Rebuilt split bundle: 205 files, 161929803 bytes. Layout, all 64 PE exact-pin
+  checks, packaged GUI window startup/close, notices/SBOM and bundle licenses pass.
+- CI 39910562031 at 5ca1180: packaged job green, original offline self-test
+  connection_events=0; packaged Model Manager GUI events=0, fetch allowed=4,
+  fetch blocked=0; both positive controls calibrated. Source offline job green;
+  full checks job still running at this checkpoint.
+- Optional installer prework is starting only on m5-packaging-spike. Inno Setup
+  stays at approved major 6, pinned stable 6.7.3; no local machine installation,
+  publishing, PR or Owner settings changes. Fresh-machine acceptance remains Owner work.
