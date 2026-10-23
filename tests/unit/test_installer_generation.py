@@ -40,6 +40,10 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     assert "DownloadTemporaryFile(" not in text
     assert "UninstallDelete" not in text  # No broad recursive deletion of user data.
     assert "--self-test --backend auto --model" in text
+    assert "{param:ACCEPTTERMS|}" in text
+    assert "{param:ALLOWDOWNLOAD|}" in text
+    assert "{param:REMOVEMODELS|}" in text
+    assert "CurStep = ssPostInstall" in text
 
 
 def test_installer_rejects_tampered_catalog(tmp_path):

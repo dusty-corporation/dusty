@@ -1,0 +1,47 @@
+[
+  {
+    "name": "pascal-script",
+    "version": "bundled at is-6_7_3",
+    "license": "LicenseRef-RemObjects-PascalScript",
+    "source": "https://github.com/jrsoftware/issrc/blob/is-6_7_3/Components/UniPs/LICENSE.md",
+    "source_sha256": "a08799bb2385a3af99a9bbb7c746d0ad9ac7dd07be0fb1473f2f4d1dc3e11bd1",
+    "notice": "pascal-script.txt",
+    "notice_sha256": "17ee694df8e71f10e43cf49514745b84101615665b78875a73aa864364dd969f"
+  },
+  {
+    "name": "lzma-sdk",
+    "version": "25.01",
+    "license": "LicenseRef-Public-Domain-Code",
+    "source": "https://github.com/jrsoftware/issrc/blob/is-6_7_3/Components/Lzma2/7zC.txt",
+    "source_sha256": "e5cc6089348474fc82631365932b1aa09df26a8cfc9f320bbb2509a7b3fc7a0c",
+    "notice": "lzma-sdk.txt",
+    "notice_sha256": "da5f94fe41c10526b81582373182d17c5b2857398a002da2e3932ea10a04071d"
+  },
+  {
+    "name": "lzma-loader",
+    "version": "4.40/4.43",
+    "license": "LicenseRef-LZMA-SDK-Linking-Exception",
+    "source": "https://github.com/jrsoftware/issrc/blob/is-6_7_3/Projects/Src/Compression.LZMA1SmallDecompressor/LzmaDecode/LzmaDecodeSize.c",
+    "source_sha256": "54d7395db7e426b2d2a313806cadd3601060ac593b60c46045992ef540898277",
+    "notice": "lzma-loader.txt",
+    "notice_sha256": "e479a4faa004defceb5c11dc84ad7dc1e6677839df82379e941aa8f8659d83ff"
+  },
+  {
+    "name": "jedi-uxtheme",
+    "version": "bundled at is-6_7_3",
+    "license": "MPL-1.1",
+    "source": "https://github.com/jrsoftware/issrc/blob/is-6_7_3/Components/NewUxTheme.pas",
+    "source_sha256": "53a326b5408522fbbb27882bbbbe32126907af7c489dd906a5d2c448ced14081",
+    "notice": "jedi-uxtheme.txt",
+    "notice_sha256": "fa35556beada49098434bd31ed2314e93e23282c1afbedc778fbe1a50e8233f8"
+  },
+  {
+    "name": "hash-utilities",
+    "version": "bundled at is-6_7_3",
+    "license": "LicenseRef-Public-Domain-Code",
+    "source": "https://github.com/jrsoftware/issrc/blob/is-6_7_3/Components/SHA256.pas",
+    "source_sha256": "5dccbe5cb66750d6870d2551ccea79519bb0f42ff40fa1ff58620825b2eed152",
+    "notice": "hash-utilities.txt",
+    "notice_sha256": "90c696e2dea20c57d785f64081d931c626c4db007b650b4282c44bd3e83b29aa"
+  }
+]

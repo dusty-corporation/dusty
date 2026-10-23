@@ -336,3 +336,9 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 
 - ISSUE-017 resolved: ADR 0023 Accepted by PM, exact InnoSetup exception only in installer context. App dependencies still reject it; focused positive/negative test passes.
 - Installer-wide inventory and CI lifecycle acceptance now in progress. M6 docs and desktop long-recording tests explicitly authorized by PM; Owner machine install is not required tonight.
+
+### Installer acceptance and static inventory checkpoint
+
+- Implemented explicit silent terms/download consent and explicit keep/remove-models uninstall choices; interactive choices remain unchanged. CI lifecycle harness covers installed WFP self-test, PE gate, verified Tiny/VAD, upgrade with downloader blocked, both uninstall modes and untouched output sentinel. Verification is pending CI, not claimed passed.
+- Extended installer SBOM/notices with source-identified static components. ISSUE-018 records six unapproved/provenance findings; installer artifact remains blocked. ISSUE-017 wrapper-only approval remains resolved. Eleven focused installer tests now include narrow scope and inventory/notice tamper regressions.
+- Desktop packaged long-recording Small CPU run is active in an isolated repository profile; no Owner app-data writes. CIM initially needed approved escalation. Turbo Vulkan follows automatically.

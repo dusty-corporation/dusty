@@ -25,6 +25,25 @@ def check() -> list[str]:
     return findings
 
 
+def check_inventory(path: Path) -> list[str]:
+    inventory = json.loads(path.read_text(encoding="utf-8"))
+    findings = []
+    expected = json.loads((ROOT / "packaging/licenses/inno/components.json").read_text())
+    actual = inventory["wrapper_components"]
+    if actual[1:] != expected or actual[0]["name"] != "inno-setup-installer":
+        findings.append("Installer static inventory differs from the pinned source review")
+    for item in actual:
+        notice = ROOT / "packaging/licenses/inno" / item["notice"]
+        if hashlib.sha256(notice.read_bytes()).hexdigest() != item["notice_sha256"]:
+            findings.append(f"Installer notice hash changed: {item['name']}")
+        if not allowed_license(item["name"], item["license"], installer_wrapper=True):
+            findings.append(f"Installer component {item['name']}: unapproved {item['license']}")
+    # The source distribution does not establish the proprietary compiler's
+    # static RTL/VCL provenance. Do not label it InnoSetup on the engineer's say-so.
+    findings.append("Installer Delphi RTL/VCL redistribution provenance requires PM review")
+    return findings
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -32,6 +51,11 @@ def main() -> int:
     )
     args = parser.parse_args()
     findings = check()
+    inventory = ROOT / "build/installer/inventory.json"
+    if not inventory.exists():
+        findings.append("Installer-wide inventory missing")
+    else:
+        findings.extend(check_inventory(inventory))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text("\n".join(findings) + "\n", encoding="utf-8", newline="\n")
     print("\n".join(findings) if findings else "Installer license check passed")

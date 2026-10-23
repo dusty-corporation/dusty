@@ -76,6 +76,11 @@ var
   Info: TJobLimits32;
   I: Integer;
 begin
+  { Silent deployment is explicit consent, not a suppressed affirmative dialog. }
+  Result := False;
+  if WizardSilent then
+    if (ExpandConstant('{param:ACCEPTTERMS|}') <> 'yes') or
+       (ExpandConstant('{param:ALLOWDOWNLOAD|}') <> 'yes') then Exit;
   { Inno 6 Setup is PE32. The compiler gate asserts this; no x64 struct guessing. }
   for I := 0 to 111 do Info[I] := 0;
   Info[17] := $20; { JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE, DWORD at offset 16. }
@@ -178,9 +183,10 @@ begin
         if First = '' then First := ModelIds[I];
       end;
     if First = '' then begin Result := False; Exit; end;
-    if SuppressibleMsgBox(FmtMessage(CustomMessage('DownloadConsent'), [
-      IntToStr((Bytes + 999999) div 1000000)]), mbConfirmation, MB_OKCANCEL, IDCANCEL) <> IDOK then
-      begin Result := False; Exit; end;
+    if not WizardSilent then
+      if SuppressibleMsgBox(FmtMessage(CustomMessage('DownloadConsent'), [
+        IntToStr((Bytes + 999999) div 1000000)]), mbConfirmation, MB_OKCANCEL, IDCANCEL) <> IDOK then
+        begin Result := False; Exit; end;
     ProgressPage.Show;
     ProgressPage.Animate;
     DownloadActive := True;
@@ -201,6 +207,14 @@ begin
       ProgressPage.Hide;
     end;
   end;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  { Silent installs do not wait for a post-install custom-page interaction. }
+  if (CurStep = ssPostInstall) and WizardSilent then
+    if not NextButtonClick(DownloadPage.ID) then
+      RaiseException(CustomMessage('SelfTestFailed'));
 end;
 
 procedure CancelButtonClick(CurPageID: Integer; var Cancel, Confirm: Boolean);
@@ -227,7 +241,16 @@ var
 begin
   Result := False;
   RemoveModels := True;
-  if UninstallSilent then Exit;
+  if UninstallSilent then begin
+    if ExpandConstant('{param:REMOVEMODELS|}') = 'yes' then begin
+      RemoveModels := True;
+      Result := True;
+    end else if ExpandConstant('{param:REMOVEMODELS|}') = 'no' then begin
+      RemoveModels := False;
+      Result := True;
+    end;
+    Exit;
+  end;
   Page := CreateCustomForm(ScaleX(480), ScaleY(180), False, False);
   try
     Page.Caption := 'Dusty';

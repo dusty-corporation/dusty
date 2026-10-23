@@ -1,0 +1,25 @@
+unit SHA256;
+
+{
+  SHA256.pas: System.Hash.pas wrapper in the style of the old versions of MD5.pas and SHA1.pas
+  Author: Martijn Laan
+  License for SHA256.pas: Public domain, no copyright claimed
+}
+
+interface
+
+uses
+  System.Hash;
+
+type
+  TSHA256Context = record
+    hash: THashSHA2;
+  end;
+  TSHA256Digest = array[0..31] of Byte;
+
+procedure SHA256Init(var ctx: TSHA256Context);
+procedure SHA256Update(var ctx: TSHA256Context; const buffer; len: Cardinal);
+function SHA256Final(var ctx: TSHA256Context): TSHA256Digest;
+
+function SHA256Buf(const Buffer; Len: Cardinal): TSHA256Digest;
+function SHA256DigestsEqual(const A, B: TSHA256Digest): Boolean;

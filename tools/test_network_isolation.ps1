@@ -1,6 +1,7 @@
 param(
     [string]$Python = '.venv/Scripts/python.exe',
-    [string]$Bundle = ''
+    [string]$Bundle = '',
+    [switch]$InstalledModels
 )
 
 $ErrorActionPreference = 'Stop'
@@ -69,8 +70,8 @@ function Read-ConnectionEvents([datetime]$Since) {
 }
 
 try {
-    $env:LOCALAPPDATA = Join-Path $work 'user'
-    if ($Bundle) {
+    if (-not $InstalledModels) { $env:LOCALAPPDATA = Join-Path $work 'user' }
+    if ($Bundle -and -not $InstalledModels) {
         # Explicit network activity finishes before the audit window begins.
         $fetchArgs = @('download', '--id', 'tiny', '--dest', (Join-Path $env:LOCALAPPDATA 'Dusty/models'), '--manifest', (Join-Path $Bundle 'resources/models.json'))
         $null = Invoke-TestPython -Executable (Join-Path $Bundle 'dusty-fetch/dusty-fetch.exe') -Arguments $fetchArgs
@@ -102,7 +103,7 @@ try {
     }
     if (-not $calibrated) { throw 'WFP control did not produce a blocked-connection audit event' }
     $marker = (Get-WinEvent -LogName Security -MaxEvents 1).RecordId
-    $env:LOCALAPPDATA = Join-Path $work 'user'
+    if (-not $InstalledModels) { $env:LOCALAPPDATA = Join-Path $work 'user' }
     if ($Bundle) {
         # A windowed executable has no stdout handle. Exit zero means the real
         # hash/decode/transcription/keyword checks passed; also require its log.
@@ -122,7 +123,7 @@ try {
     Start-Sleep -Seconds 3
     $events = Read-ConnectionEvents $began
     $violations = @(Get-DustyConnectionEvents -Events $events -Programs $programs -AfterRecordId $marker -ExcludeProcessId $controlPid)
-    $summary = @{calibration_blocked_event=$true; selftest='passed'; packaged=[bool]$Bundle; connection_events=$violations.Count}
+    $summary = @{calibration_blocked_event=$true; selftest='passed'; packaged=[bool]$Bundle; installed_models=[bool]$InstalledModels; connection_events=$violations.Count}
     if (-not $Bundle) { $summary.batch = 'passed'; $summary.gui = 'passed' }
     $summary | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $work 'summary.json') -Encoding utf8
     if ($violations.Count) { throw "S0: processing_connection_events=$($violations.Count)" }

@@ -153,6 +153,11 @@ jobs:
       - name: Compile unsigned installer draft with pinned Inno Setup 6
         run: ./tools/build_installer.ps1
       - name: Installer wrapper redistribution license policy
+        run: uv run python -m tools.inventory_installer
+      - name: Silent install upgrade uninstall and installed WFP acceptance
+        run: ./tools/test_installer.ps1
+      - name: Installer-wide redistribution license policy
+        if: always()
         run: uv run python tools/check_installer_licenses.py
       - name: Preserve unsigned installer as CI artifact only
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -163,6 +168,8 @@ jobs:
             build/installer/inputs.json
             build/installer/LICENSE.txt
             build/packaging/audit/sbom.cdx.json
+            build/installer/sbom.cdx.json
+            build/installer/THIRD_PARTY_NOTICES.md
           if-no-files-found: error
       - name: Preserve installer draft audit metadata even when policy blocks binaries
         if: always()
@@ -175,4 +182,8 @@ jobs:
             build/installer/output/installer.json
             build/installer/output/SHA256SUMS.txt
             build/installer/license-findings.txt
+            build/installer/inventory.json
+            build/installer/sbom.cdx.json
+            build/installer/THIRD_PARTY_NOTICES.md
+            build/installer/acceptance/*.json
           if-no-files-found: warn
