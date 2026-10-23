@@ -344,3 +344,8 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Desktop packaged long-recording Small CPU run is active in an isolated repository profile; no Owner app-data writes. CIM initially needed approved escalation. Turbo Vulkan follows automatically.
 
 - Long-recording harness/provenance checked in: repeated public-domain Swineherd, 7920.1875 s, packaged shared coordinator, CPU Small then Vulkan Turbo, VAD on, isolated profile. The run is still active; no measurements or cleanup success are claimed yet. M5 checklist now distinguishes CI automation from remaining standard-user VM acceptance.
+
+### Installer CI follow-up
+
+- CI 39923879707: checks and source offline pass; compiled installer installs, downloads Tiny/VAD, passes installed calibrated WFP (0 events) and 64-PE gate. Lifecycle then fails because harness assumed unins000.exe. Pinned Setup.Install generates uninsNNN names; harness now reads the exact per-user registered UninstallString, validates its folder and reports the phase. Next CI run must establish both uninstall results.
+- Installer-wide gate reports five static license entries plus unresolved Delphi provenance; no installer artifact uploaded. M6 guides pushed separately at a206740. Local full suite: 190 passed/1 skip, 94.5% strict coverage.
