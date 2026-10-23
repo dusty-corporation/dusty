@@ -9,6 +9,17 @@ from pathlib import Path
 from tools.release_version import versions
 
 
+def verify_checksum(file: Path, sums: Path) -> None:
+    """Check a previously gated installer before the upgrade test executes it."""
+    matches = []
+    for line in sums.read_text(encoding="utf-8").splitlines():
+        fields = line.split("  ", 1)
+        if len(fields) == 2 and fields[1] == file.name:
+            matches.append(fields[0])
+    if len(matches) != 1 or matches[0] != hashlib.sha256(file.read_bytes()).hexdigest():
+        raise ValueError("Previous installer checksum missing, duplicated or mismatched")
+
+
 def stage(source: Path, output: Path, tag: str) -> None:
     _, display, _ = versions(tag)
     if output.exists():

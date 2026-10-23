@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.release_assets import stage
+from tools.release_assets import stage, verify_checksum
 from tools.release_version import apply, versions
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -61,3 +61,19 @@ def test_draft_release_upload_requires_reusable_gates():
     assert "--verify-tag --draft --prerelease" in text
     assert "continue-on-error" not in text
     assert text.index("Stage approved assets") < text.index("gh release create")
+
+
+def test_prior_installer_is_verified_before_execution(tmp_path):
+    file = tmp_path / "setup.exe"
+    file.write_bytes(b"gated installer")
+    sums = tmp_path / "SHA256SUMS.txt"
+    line = hashlib.sha256(file.read_bytes()).hexdigest() + "  setup.exe\n"
+    sums.write_text(line)
+    verify_checksum(file, sums)
+    sums.write_text(line + line)
+    with pytest.raises(ValueError):
+        verify_checksum(file, sums)
+    sums.write_text(line)
+    file.write_bytes(b"changed installer")
+    with pytest.raises(ValueError):
+        verify_checksum(file, sums)

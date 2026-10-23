@@ -207,10 +207,12 @@ jobs:
           PREVIOUS_TAG: ${{ inputs.previous_tag || '' }}
         run: |
           if ($env:PREVIOUS_TAG) {
-            gh release download $env:PREVIOUS_TAG --repo '${{ github.repository }}' --pattern '*.exe' --dir build/previous-release
+            gh release download $env:PREVIOUS_TAG --repo '${{ github.repository }}' --pattern '*.exe' --pattern SHA256SUMS.txt --dir build/previous-release
             if ($LASTEXITCODE -ne 0) { throw 'Previous gated draft installer download failed' }
             $older = @(Get-ChildItem build/previous-release -Filter '*.exe')
             if ($older.Count -ne 1) { throw 'Expected one previous installer' }
+            uv run python -c 'from pathlib import Path; from tools.release_assets import verify_checksum; import sys; verify_checksum(Path(sys.argv[1]), Path(sys.argv[2]))' $older[0].FullName build/previous-release/SHA256SUMS.txt
+            if ($LASTEXITCODE -ne 0) { throw 'Previous installer checksum verification failed' }
             ./tools/test_installer.ps1 -PreviousInstaller $older[0].FullName
           } else { ./tools/test_installer.ps1 }
       - name: Installer-wide redistribution license policy
