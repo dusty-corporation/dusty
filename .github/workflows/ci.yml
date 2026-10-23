@@ -198,6 +198,8 @@ jobs:
         run: ./tools/build_installer.ps1
       - name: Installer wrapper redistribution license policy
         run: uv run python -m tools.inventory_installer
+      - name: Installer download audit negative parser cases
+        run: ./tests/offline/test_installer_download_events.ps1
       - name: Silent install upgrade uninstall and installed WFP acceptance
         id: installer_acceptance
         env:

@@ -728,3 +728,20 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   standard user, draft transfer, and all SPEC 11.6 cases with expected results.
 - VirtualBox is explicitly CPU-only acceptance, not substitute evidence for a
   physical Vulkan GPU. Owner must run and return the numbered results.
+
+### M5 audit/self-review checkpoint
+
+- Local full source: 257 passed/1 expected skip, 94.6% strict-package coverage
+  in 193.37 s. Ruff/format (135 files), mypy (75), all three policy checks pass.
+- Correctness fix: normal Cancel or Finish without after a failed transfer now
+  removes only the active known partial, after child shutdown. Crash remains
+  resumable. Generator regression covers both busy and failed normal-close paths.
+- Installer WFP parser negative cases reject allowed/blocked events from Setup
+  EXE/temp runtime, GUI, engine and decoder, and missing fetch-positive evidence.
+  The negative test caught PowerShell array-concatenation precedence in Setup
+  image matching; corrected it before treating any new audit as acceptance.
+- First approved test tag v0.5.0-m5.1 is running (40037642063). Its older Setup
+  matcher is superseded; final acceptance must use the corrected next test tag.
+- Added a true two-version upgrade path: next tag downloads the previous gated
+  draft, checks increasing numeric versions, and preserves verified model hashes
+  and write times while blocking downloader egress during upgrade.

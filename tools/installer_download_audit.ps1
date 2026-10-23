@@ -50,7 +50,7 @@ function Complete-InstallerAudit($State, [string]$Installer, [string]$Work) {
         $fields = @{}
         foreach ($field in $xml.Event.EventData.Data) { $fields[$field.Name]=$field.InnerText }
         $name = [IO.Path]::GetFileName([string]$fields.Application)
-        if ($name -in @($setupStem+'.exe',$setupStem+'.tmp')) { $counts.installer++ }
+        if ($name -in @(($setupStem+'.exe'),($setupStem+'.tmp'))) { $counts.installer++ }
         elseif ($name -eq 'dusty.exe') { $counts.gui++ }
         elseif ($name -in @('whisper-cli.exe','ffmpeg.exe','ffprobe.exe')) { $counts.native++ }
         elseif ($name -eq 'dusty-fetch.exe') {
