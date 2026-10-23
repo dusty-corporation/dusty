@@ -16,7 +16,7 @@ from test_downloader import tls as tls
 
 from dusty.app import messages as M
 from dusty.app.dialogs import TextDialog
-from dusty.app.model_manager import VOICE_ID, DownloadDialog, ModelManager, ModelWorker
+from dusty.app.model_manager import VOICE_ID, DownloadDialog, ModelManager, ModelWorker, format_size
 from dusty.app.window import MainWindow
 from dusty.app.workers import Prepared
 from dusty.models import ModelRegistry, load_manifest
@@ -63,7 +63,8 @@ def models(tmp_path, qtbot, monkeypatch, request):
         )
         qtbot.addWidget(dialog)
         dialog.show()
-        qtbot.waitUntil(lambda: dialog.message.text() == M.MODELS_READY and not dialog.busy)
+        qtbot.waitUntil(lambda: bool(dialog.workers) and not dialog.busy)
+        assert dialog.workers[-1].failure is None
         return dialog
 
     return SimpleNamespace(
@@ -96,7 +97,7 @@ def test_catalog_statuses_space_and_confirmation_download_progress(models, qtbot
     confirm = DownloadDialog(("tiny", VOICE_ID), models.registry, dialog)
     qtbot.addWidget(confirm)
     assert M.DOWNLOAD_CONFIRM.format(
-        names="Tiny, Voice detection", mb=2 * len(DATA) / 1_000_000
+        names="Tiny and Voice detection", size=format_size(2 * len(DATA))
     ) in [label.text() for label in confirm.findChildren(QLabel)]
     assert M.VOICE_MODEL in confirm.findChildren(QLabel)[0].text()
     dialog.download()
@@ -211,7 +212,7 @@ def test_main_prompts_live_update_and_preserves_explicit_choice(models, qtbot, m
     )
     assert view.start_hint.text() == M.NO_MODELS
     assert view.download_recommended_button.isVisible() and not view.start_button.isEnabled()
-    assert M.MODEL_NAMES["small"] in view.warning.text()
+    assert view.warning.text() == M.MISSING_RECOMMENDATION.format(name="Small")
     opened = []
     monkeypatch.setattr(view, "open_model_manager", lambda **kw: opened.append(kw["focus_id"]))
     view.download_recommended_button.click()
@@ -302,7 +303,7 @@ def test_main_window_close_cancels_model_child_without_orphan(models, qtbot, mon
         dialog = view.model_manager
         if dialog is None:
             return
-        if not started and not dialog.busy and dialog.message.text() == M.MODELS_READY:
+        if not started and not dialog.busy and bool(dialog.workers):
             started.append(True)
             QTimer.singleShot(0, dialog.download_button.click)
         elif part.exists() and part.stat().st_size > 0 and not view.closing:
@@ -398,12 +399,13 @@ def test_selected_last_and_voice_deletion_clear_choice_without_replacement(
     monkeypatch.setattr(TextDialog, "exec", accept)
     dialog.delete()
     wait_done(dialog, qtbot)
-    assert M.DELETE_SELECTED in confirmations
+    assert M.DELETE_SELECTED.format(name="Tiny") in confirmations
     assert view.model_choice.currentIndex() == -1 and view.installed == ("small",)
-    assert view.model_choice.placeholderText() == M.CHOOSE_MODEL
+    assert view.model_choice.placeholderText() == M.MODEL_PLACEHOLDER
     assert M.NO_MODEL_SELECTED in view.choices_summary.text()
     assert view.start_hint.text() == M.CHOOSE_MODEL
-    assert view.choose_model_button.isVisible() and not view.start_button.isEnabled()
+    assert not hasattr(view, "choose_model_button")
+    assert view.options_button.isVisible() and not view.start_button.isEnabled()
     assert view.status.text() != M.READY
     assert not view.download_recommended_button.isVisible()
     assert load_settings(view.paths.user_dir / "settings.json")["model_id"] is None
@@ -426,7 +428,7 @@ def test_selected_last_and_voice_deletion_clear_choice_without_replacement(
     dialog.table.selectRow(dialog.ids.index(VOICE_ID))
     dialog.delete()
     wait_done(dialog, qtbot)
-    assert M.DELETE_VOICE in confirmations
+    assert M.DELETE_VOICE.format(name=M.VOICE_MODEL) in confirmations
     assert view.start_hint.text() == M.VAD_MISSING
     assert not view.start_button.isEnabled()
     for key in ("small", "tiny"):
@@ -518,3 +520,117 @@ def test_backend_recommendation_change_preserves_a_deliberate_model_choice(model
     view._device_prepared(Prepared(view.installed, True, {}, vad_installed=True))
     assert view._recommendation == "large-v3-turbo-q8_0"
     assert view.model_choice.currentData() == "small"
+
+
+@pytest.mark.parametrize(
+    ("size", "expected"),
+    [
+        (874_200_000, "874.2\u00a0MB"),
+        (999_900_000, "999.9\u00a0MB"),
+        (999_999_999, "1.0\u00a0GB"),
+        (1_000_000_000, "1.0\u00a0GB"),
+        (1_533_000_000, "1.5\u00a0GB"),
+    ],
+)
+def test_model_size_units_keep_number_and_unit_together(size, expected):
+    assert format_size(size) == expected
+
+
+def test_consent_joins_names_with_and_and_uses_catalog_size_units(models, qtbot):
+    for ids in (("large-v3-turbo-q8_0", VOICE_ID), ("medium",)):
+        dialog = DownloadDialog(ids, models.registry)
+        qtbot.addWidget(dialog)
+        text = dialog.findChildren(QLabel)[0].text()
+        assert "," not in text
+        assert "\u00a0" in text
+        assert " MB" not in text and " GB" not in text
+        if len(ids) == 2:
+            assert "Large v3 Turbo and Voice detection" in text
+        else:
+            assert "1.5\u00a0GB" in text
+    manager = models.create()
+    medium = manager.ids.index("medium")
+    assert manager.table.item(medium, 2).text() == "1.5\u00a0GB"
+
+
+def test_checked_feedback_only_after_explicit_verify_with_installed_files(models, qtbot):
+    empty = models.create()
+    assert empty.message.text() == M.EMPTY_CELL
+    empty.verify_button.click()
+    wait_done(empty, qtbot)
+    assert empty.message.text() == M.EMPTY_CELL
+    models.file.write_bytes(DATA)
+    dialog = models.create()
+    assert dialog.statuses["tiny"] == "installed"
+    assert dialog.message.text() == M.EMPTY_CELL
+    dialog.verify_button.click()
+    wait_done(dialog, qtbot)
+    assert dialog.message.text() == M.MODELS_READY
+    # A newly opened dialog must not inherit the previous Verify all feedback.
+    fresh = models.create()
+    assert fresh.message.text() == M.EMPTY_CELL
+    models.file.unlink()
+    dialog.verify_button.click()
+    wait_done(dialog, qtbot)
+    assert dialog.message.text() == M.EMPTY_CELL
+
+
+def test_progress_names_active_download_and_does_not_repeat_percent(models, qtbot):
+    dialog = models.create()
+    dialog._progress(
+        {
+            "id": "large-v3-turbo-q8_0",
+            "event": "downloading",
+            "bytes": 291_400_000,
+            "total": 874_200_000,
+        }
+    )
+    assert dialog.message.text() == "Downloading Large v3 Turbo"
+    assert dialog.progress.value() == 33
+    assert dialog.progress_text.text() == "291.4\u00a0MB of 874.2\u00a0MB"
+    assert "%" not in dialog.progress_text.text()
+
+
+@pytest.mark.parametrize(
+    ("key", "selected", "voice", "expected"),
+    [
+        ("tiny", None, False, "Delete Tiny? You can download it again later."),
+        (
+            "small",
+            "small",
+            False,
+            "Delete Small? It is the model chosen in Options. You can download it again later.",
+        ),
+        (VOICE_ID, None, True, M.DELETE_VOICE.format(name=M.VOICE_MODEL)),
+    ],
+)
+def test_delete_confirmation_names_file_and_explains_recovery(
+    models, qtbot, monkeypatch, key, selected, voice, expected
+):
+    file_name = (
+        models.registry.manifest.vad_file_name
+        if key == VOICE_ID
+        else models.registry.manifest.models[key].file_name
+    )
+    (models.paths.models_dir / file_name).write_bytes(DATA)
+    dialog = models.create(selected=lambda: selected, voice=voice)
+    dialog.table.selectRow(dialog.ids.index(key))
+    texts = []
+
+    def reject(confirm):
+        texts.extend(label.text() for label in confirm.findChildren(QLabel))
+        return QDialog.DialogCode.Rejected
+
+    monkeypatch.setattr(TextDialog, "exec", reject)
+    dialog.delete_button.click()
+    assert texts == [expected]
+    assert "You can download it again later." in expected
+    assert (models.paths.models_dir / file_name).exists()
+
+
+@pytest.mark.parametrize(("vulkan", "name"), [(False, "Small"), (True, "Large v3 Turbo")])
+def test_empty_model_recommendation_uses_only_short_model_name(models, qtbot, vulkan, name):
+    view = MainWindow(models.paths, interactive=False)
+    qtbot.addWidget(view)
+    view.apply_prepared(Prepared((), vulkan, {}, vad_installed=False))
+    assert view.warning.text() == f"The recommended model, {name}, is not installed yet."

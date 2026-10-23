@@ -275,7 +275,7 @@ class MainWindow(QMainWindow):
         options = QWidget()
         form = QFormLayout(options)
         self.model_choice = QComboBox()
-        self.model_choice.setPlaceholderText(M.CHOOSE_MODEL)
+        self.model_choice.setPlaceholderText(M.MODEL_PLACEHOLDER)
         self.model_choice.setAccessibleName(M.MODEL)
         form.addRow(M.MODEL, self.model_choice)
         self.model_details = self._label(M.EMPTY_CELL)
@@ -357,7 +357,6 @@ class MainWindow(QMainWindow):
         self.overall.setRange(0, 1000)
         self.overall.setTextVisible(False)
         bottom.addWidget(self.overall, 1)
-        self.choose_model_button = self._button(M.OPTIONS, self.open_options)
         self.start_hint = self._label(M.EMPTY_CELL, warning=True)
         self.start_hint.setStyleSheet("font-size: 16px")
         self.start_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -370,7 +369,6 @@ class MainWindow(QMainWindow):
         self.start_button.setDefault(True)
         layout.addLayout(bottom)
         layout.addWidget(self.start_hint)
-        layout.addWidget(self.choose_model_button)
         layout.addWidget(self.start_button)
         self.setCentralWidget(body)
         for combo in (self.model_choice, self.task_choice, self.language_choice):
@@ -767,7 +765,7 @@ class MainWindow(QMainWindow):
                 index, M.RECOMMENDED.format(name=name) if candidate == recommended else name
             )
         if self.ready and not self.installed:
-            unavailable = M.MISSING_RECOMMENDATION.format(name=M.MODEL_NAMES[recommended])
+            unavailable = M.MISSING_RECOMMENDATION.format(name=M.MODEL_TECHNICAL[recommended])
             warning = unavailable + ("\n" + warning if warning else "")
         self.resume_model_button.setVisible(bool(self._missing_resume_model))
         self.resume_model_button.setText(
@@ -816,8 +814,6 @@ class MainWindow(QMainWindow):
             hint = M.SELF_TEST_RUNNING
         elif not self.model.jobs and not hint:
             hint = M.ADD_RECORDINGS_FIRST
-        self.choose_model_button.setVisible(bool(self.ready and self.installed and not model))
-        self.choose_model_button.setEnabled(not self.running)
         self.start_hint.setText(hint)
         self.start_hint.setVisible(bool(hint))
         self.warning.setText(warning or M.EMPTY_CELL)
