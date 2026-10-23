@@ -54,4 +54,6 @@
 
 | M4-R1 | M4 | Preserve Owner brief and rebase feature branches | done | Owner brief preserved byte-for-byte in stash and build/m4-transition; M4 rebase tests 135 passed/1 CI-only skip, M5 165 passed/1 skip; both pushed with explicit feature-branch leases; M3 brief archived and unchanged M4 brief committed as 7de0372 | - |
 
-| M4-01 | M4 | Carry-over Start layout, recommendation labels and dark contrast | doing | Owner M4 brief read fully; implementing before Model Manager | - |
+| M4-01 | M4 | Carry-over Start layout, recommendation labels and dark contrast | done | Start stays full width (including running/disabled), centered reason above; recommendation suffix simplified; dark disabled text contrast tested at least 4.5:1. Alt+Arrow routing handles table shortcut overrides explicitly; 25 Qt/theme tests and lint/types pass | - |
+
+| M4-02 | M4 | Model Manager and isolated downloader child | doing | Implementing manifest statuses, confirmation/progress/cancel/resume/verify/delete rules and main-window prompts using the accepted downloader CLI | - |

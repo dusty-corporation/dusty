@@ -31,6 +31,9 @@ MOVE_UP = "Move up"
 MOVE_DOWN = "Move down"
 CLEAR = "Clear list"
 START = "Start"
+ADD_RECORDINGS_FIRST = "Add recordings to start."
+START_RUNNING = "A transcription is in progress."
+SELF_TEST_RUNNING = "Checking the transcription model..."
 CANCEL_CURRENT = "Cancel current file"
 CANCEL_ALL = "Cancel all"
 OPTIONS = "Options..."
@@ -75,7 +78,7 @@ MODEL_DETAILS = {
     "medium": "Slower",
 }
 
-RECOMMENDED = "{name} (Recommended)"
+RECOMMENDED = "{name}, recommended"
 MISSING_RECOMMENDATION = "{name} is recommended but is not installed. Choose an installed model."
 NO_MODELS = "No verified models are installed. Model downloads will be available in Model Manager."
 MANAGE_MODELS = "Manage models"

@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import cast
 from uuid import UUID
 
-from PySide6.QtCore import QByteArray, Qt, QThread, QTimer, QUrl, Slot
-from PySide6.QtGui import QAction, QCloseEvent, QDesktopServices, QStandardItemModel
+from PySide6.QtCore import QByteArray, QEvent, Qt, QThread, QTimer, QUrl, Slot
+from PySide6.QtGui import QAction, QCloseEvent, QDesktopServices, QKeyEvent, QStandardItemModel
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -189,6 +189,7 @@ class MainWindow(QMainWindow):
         self.table = QTableView()
         self.table.setAccessibleName(M.APP_NAME)
         self.table.setModel(self.model)
+        self.table.installEventFilter(self)
         self.table.setTabKeyNavigation(False)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
@@ -348,8 +349,7 @@ class MainWindow(QMainWindow):
         bottom.addWidget(self.overall, 1)
         self.start_hint = self._label(M.EMPTY_CELL, warning=True)
         self.start_hint.setStyleSheet("font-size: 16px")
-        self.start_hint.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        bottom.addWidget(self.start_hint, 1)
+        self.start_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.cancel_current_button = self._button(M.CANCEL_CURRENT, self.cancel_current)
         self.cancel_all_button = self._button(M.CANCEL_ALL, self.cancel_all)
         bottom.addWidget(self.cancel_current_button)
@@ -357,8 +357,9 @@ class MainWindow(QMainWindow):
         self.start_button = self._button(M.START, self.start_batch)
         self.start_button.setObjectName("startButton")
         self.start_button.setDefault(True)
-        bottom.addWidget(self.start_button)
         layout.addLayout(bottom)
+        layout.addWidget(self.start_hint)
+        layout.addWidget(self.start_button)
         self.setCentralWidget(body)
         for combo in (self.model_choice, self.task_choice, self.language_choice):
             combo.currentIndexChanged.connect(self._rules)
@@ -575,6 +576,20 @@ class MainWindow(QMainWindow):
         if self.ready:
             self._save_settings()
 
+    def eventFilter(self, watched, event) -> bool:
+        if (
+            watched is getattr(self, "table", None)
+            and isinstance(event, QKeyEvent)
+            and event.modifiers() == Qt.KeyboardModifier.AltModifier
+            and event.key() in {Qt.Key.Key_Up, Qt.Key.Key_Down}
+            and event.type() in {QEvent.Type.ShortcutOverride, QEvent.Type.KeyPress}
+        ):
+            if event.type() == QEvent.Type.KeyPress:
+                self.move_selected(-1 if event.key() == Qt.Key.Key_Up else 1)
+            event.accept()
+            return True
+        return super().eventFilter(watched, event)
+
     def _list_context_menu(self, point) -> None:
         index = self.table.indexAt(point)
         if index.isValid() and not self.table.selectionModel().isRowSelected(index.row()):
@@ -702,8 +717,18 @@ class MainWindow(QMainWindow):
             hint = M.TRANSLATE_DISABLED
         elif not any(box.isChecked() for box in self.formats.values()):
             hint = M.NO_FORMATS
+        if self.running:
+            hint = M.START_RUNNING
+        elif not self.ready:
+            hint = M.PREPARING
+        elif self.scanner and self.scanner.isRunning():
+            hint = M.SCANNING
+        elif any(isinstance(task, SelfTestWorker) and task.isRunning() for task in self._tasks):
+            hint = M.SELF_TEST_RUNNING
+        elif not self.model.jobs and not hint:
+            hint = M.ADD_RECORDINGS_FIRST
         self.start_hint.setText(hint)
-        self.start_hint.setVisible(bool(hint) and not self.running)
+        self.start_hint.setVisible(bool(hint))
         self.warning.setText(warning or M.EMPTY_CELL)
         self.warning.setVisible(bool(warning))
         self.choices_summary.setText(
@@ -788,7 +813,7 @@ class MainWindow(QMainWindow):
         )
         self.cancel_current_button.setVisible(self.running)
         self.cancel_all_button.setVisible(self.running)
-        self.start_button.setVisible(not self.running)
+        self.start_button.setVisible(True)
         self.overall.setVisible(self.running)
         self._rules()
 

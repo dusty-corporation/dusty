@@ -137,6 +137,7 @@ def apply_theme(app: QApplication, mode: str = "system") -> None:
     palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, QColor("#87968d"))
     app.setPalette(palette)
     edge = CONTROL_COLORS["dark" if dark else "light"]["edge"]
+    disabled_start_ink = "#23372c" if dark else "#edf3ef"
     base = colors[QPalette.ColorRole.Base]
     button = colors[QPalette.ColorRole.Button]
     ink = colors[QPalette.ColorRole.Text]
@@ -147,7 +148,7 @@ def apply_theme(app: QApplication, mode: str = "system") -> None:
             border: 1px solid {edge}; border-radius: 6px; }}
         QPushButton#startButton, QPushButton#primaryButton {{ background: #256847; color: white;
             font-weight: 600; padding: 12px 32px; }}
-        QPushButton#startButton:disabled {{ background: {edge}; color: #edf3ef; }}
+        QPushButton#startButton:disabled {{ background: {edge}; color: {disabled_start_ink}; }}
         QFrame#dropArea {{ border: 2px dashed {edge}; border-radius: 12px; }}
         QLabel#title {{ font-size: 24px; font-weight: 600; }}
         QLabel#dropTitle {{ font-size: 18px; font-weight: 600; }}
