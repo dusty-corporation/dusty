@@ -812,3 +812,31 @@ def test_forced_gui_death_kills_fetch_job_and_recent_partial_resumes(models, qtb
     wait_done(dialog, qtbot)
     assert models.tls.requests == [None, f"bytes={offset}-"]
     assert models.file.read_bytes() == DATA and not part.exists()
+
+
+def test_failed_installer_test_keeps_models_and_shows_empty_options_choice(models, qtbot):
+    from dusty.installer_support import clear_failed_selection
+    from dusty.queue.storage import load_settings, save_settings
+
+    models.file.write_bytes(DATA)
+    file = models.paths.user_dir / "settings.json"
+    save_settings(
+        file,
+        {
+            "schema_version": 1,
+            "model_id": "tiny",
+            "output_dir": str(models.paths.user_dir / "outputs"),
+            "vad": False,
+        },
+    )
+    clear_failed_selection(models.paths)
+    view = MainWindow(models.paths, interactive=False)
+    qtbot.addWidget(view)
+    view.apply_prepared(Prepared(("tiny",), False, load_settings(file)))
+    assert models.file.read_bytes() == DATA
+    assert view.model_choice.currentData() is None
+    assert view.start_hint.text() == M.CHOOSE_MODEL
+    assert view.warning.text() == M.INSTALLER_TEST_WARNING
+    view.model_choice.setCurrentIndex(view.model_choice.findData("tiny"))
+    view._selftest_result(True)
+    assert load_settings(file)["installer_test_failed"] is False
