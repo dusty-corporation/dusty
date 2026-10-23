@@ -74,6 +74,8 @@ No Owner recording is stored here.
 - Excerpt: source interval [107, 122) seconds, Persian quatrain 2, excluding
   the following English reading. Transcribe with Medium recognizes Persian
   script; Translate produces English instead.
+- Owner-verified by listening on 2026-10-22: [107, 122) seconds contains a
+  complete spoken Farsi quatrain.
 - Independent reference: Edward Henry Whinfield's 1883 bilingual edition,
   [quatrain 2](https://archive.org/details/quatrains1883omaruoft), says
   "burns as fire". The test checks that keyword, another reference concept

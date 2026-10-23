@@ -102,9 +102,9 @@ English reading. The independent reference is [Whinfield's 1883 bilingual
 edition, quatrain 2](https://archive.org/details/quatrains1883omaruoft); the
 translation smoke test checks the reference concept "burns as fire", another
 source concept and English output. This is a loose translation-content check,
-not a WER or literary-quality claim. The Owner can listen to that exact source
-interval and compare the quatrain; no new human listening confirmation is
-claimed in this report.
+not a WER or literary-quality claim. On 2026-10-22 the Owner confirmed by
+listening that the exact source interval [107, 122) seconds is a complete
+spoken Farsi quatrain. The fixture is now Owner-verified.
 
 Prohibited-character verification (all tracked repository text):
 
