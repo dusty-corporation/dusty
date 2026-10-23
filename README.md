@@ -10,7 +10,7 @@ Dusty's own code is licensed under Apache-2.0. See [LICENSE](LICENSE) and
 [NOTICE](NOTICE). The Owner, the sole contributor, authorized the change to
 provide an explicit patent grant for future contributors. Third-party components
 retain their own licenses and notices.
-# Windows SmartScreen warning (unsigned draft builds)
+## Windows SmartScreen warning (unsigned draft builds)
 
 Dusty's V1 installer is unsigned. Windows may show "Windows protected your PC".
 After checking that you downloaded the expected build and its checksum, select
