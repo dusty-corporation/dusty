@@ -22,6 +22,11 @@ CONTROL_COLORS = {
     "dark": {"edge": "#9eafa5", "window": "#19231f", "base": "#101a16", "button": "#2a3c32"},
 }
 
+DISABLED_COLORS = {
+    "light": {"ink": "#606964", "background": "#e4e8e5", "edge": "#8b958f"},
+    "dark": {"ink": "#a8b0ab", "background": "#25302b", "edge": "#69766f"},
+}
+
 
 def contrast_ratio(first: str, second: str) -> float:
     """WCAG sRGB relative luminance ratio for control-boundary verification."""
@@ -52,6 +57,10 @@ class ControlStyle(QProxyStyle):
             dark = option.palette.window().color().lightness() < 128
             edge = QColor(CONTROL_COLORS["dark" if dark else "light"]["edge"])
             accent = QColor("#8ed4b0" if dark else "#185d3b")
+            if not option.state & QStyle.StateFlag.State_Enabled:
+                disabled = DISABLED_COLORS["dark" if dark else "light"]
+                edge = QColor(disabled["edge"])
+                accent = QColor(disabled["ink"])
             painter.setPen(QPen(edge, 2))
             painter.setBrush(option.palette.base())
             if element == QStyle.PrimitiveElement.PE_IndicatorRadioButton:
@@ -133,11 +142,15 @@ def apply_theme(app: QApplication, mode: str = "system") -> None:
     }
     for role, color in colors.items():
         palette.setColor(role, QColor(color))
-    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, QColor("#87968d"))
-    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, QColor("#87968d"))
+    disabled = DISABLED_COLORS["dark" if dark else "light"]
+    for role in (
+        QPalette.ColorRole.Text,
+        QPalette.ColorRole.WindowText,
+        QPalette.ColorRole.ButtonText,
+    ):
+        palette.setColor(QPalette.ColorGroup.Disabled, role, QColor(disabled["ink"]))
     app.setPalette(palette)
     edge = CONTROL_COLORS["dark" if dark else "light"]["edge"]
-    disabled_start_ink = "#23372c" if dark else "#edf3ef"
     base = colors[QPalette.ColorRole.Base]
     button = colors[QPalette.ColorRole.Button]
     ink = colors[QPalette.ColorRole.Text]
@@ -148,7 +161,12 @@ def apply_theme(app: QApplication, mode: str = "system") -> None:
             border: 1px solid {edge}; border-radius: 6px; }}
         QPushButton#startButton, QPushButton#primaryButton {{ background: #256847; color: white;
             font-weight: 600; padding: 12px 32px; }}
-        QPushButton#startButton:disabled {{ background: {edge}; color: {disabled_start_ink}; }}
+        QPushButton:disabled, QPushButton#startButton:disabled,
+        QPushButton#primaryButton:disabled, QToolButton:disabled,
+        QComboBox:disabled, QSpinBox:disabled, QPlainTextEdit:disabled {{
+            background: {disabled["background"]}; color: {disabled["ink"]};
+            border: 1px solid {disabled["edge"]}; }}
+        QCheckBox:disabled, QRadioButton:disabled {{ color: {disabled["ink"]}; }}
         QFrame#dropArea {{ border: 2px dashed {edge}; border-radius: 12px; }}
         QLabel#title {{ font-size: 24px; font-weight: 600; }}
         QLabel#dropTitle {{ font-size: 18px; font-weight: 600; }}
