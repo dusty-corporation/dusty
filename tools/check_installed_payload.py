@@ -14,13 +14,21 @@ def digest(path: Path) -> str:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-def check(installed: Path, bundle: Path) -> tuple[list[str], list[dict[str, str]]]:
+def check(
+    installed: Path, bundle: Path, installer_dir: Path = ROOT / "build/installer"
+) -> tuple[list[str], list[dict[str, str]]]:
     expected = {
         file.relative_to(bundle).as_posix(): digest(file)
         for file in bundle.rglob("*")
         if file.is_file()
     }
     expected["licenses/inno-setup.txt"] = digest(ROOT / "packaging/licenses/inno/license.txt")
+    expected["licenses/installer-THIRD_PARTY_NOTICES.md"] = digest(
+        installer_dir / "THIRD_PARTY_NOTICES.md"
+    )
+    expected["licenses/installer-jedi-source.zip"] = digest(
+        installer_dir / "installer-jedi-source.zip"
+    )
     findings = []
     checked = []
     seen = set()

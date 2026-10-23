@@ -17,6 +17,7 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     (bundle / "resources").mkdir(parents=True)
     manifest = ROOT / "resources/models.json"
     shutil.copyfile(manifest, bundle / "resources/models.json")
+    (bundle / "THIRD_PARTY_NOTICES.md").write_text("Audited app notices\n")
     output = tmp_path / "generated"
     script = generate(output, bundle)
     license_text = (output / "LICENSE.txt").read_text(encoding="utf-8")

@@ -16,7 +16,7 @@ OutputDir=output
 OutputBaseFilename=Dusty-@@VERSION@@-draft-unsigned
 Compression=lzma2
 SolidCompression=yes
-WizardStyle=modern
+WizardStyle=modern light
 UninstallDisplayIcon={app}\dusty\dusty.exe
 SetupIconFile=@@BUNDLE@@\resources\icons\dusty.ico
 SignedUninstaller=no
@@ -29,6 +29,8 @@ Name: desktopicon; Description: "{cm:DesktopShortcut}"; Flags: unchecked
 [Files]
 Source: "@@BUNDLE@@\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "@@INNO_LICENSE@@"; DestDir: "{app}\licenses"; DestName: "inno-setup.txt"; Flags: ignoreversion
+Source: "@@INSTALLER_NOTICES@@"; DestDir: "{app}\licenses"; DestName: "installer-THIRD_PARTY_NOTICES.md"; Flags: ignoreversion
+Source: "@@JEDI_SOURCE@@"; DestDir: "{app}\licenses"; DestName: "installer-jedi-source.zip"; Flags: ignoreversion
 
 [Icons]
 Name: "{userprograms}\Dusty"; Filename: "{app}\dusty\dusty.exe"
