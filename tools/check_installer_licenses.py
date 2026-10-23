@@ -30,7 +30,11 @@ def check_inventory(path: Path) -> list[str]:
     findings = []
     expected = json.loads((ROOT / "packaging/licenses/inno/components.json").read_text())
     actual = inventory["wrapper_components"]
-    if actual[1:] != expected or actual[0]["name"] != "inno-setup-installer":
+    if (
+        actual[1:] != expected
+        or actual[0]["name"] != "inno-setup-installer"
+        or actual[0]["license"] != "InnoSetup"
+    ):
         findings.append("Installer static inventory differs from the pinned source review")
     for item in actual:
         notice = ROOT / "packaging/licenses/inno" / item["notice"]

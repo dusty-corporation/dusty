@@ -56,6 +56,8 @@ function Save-UserState {
 }
 
 Install-App
+& (Join-Path $repo '.venv/Scripts/python.exe') (Join-Path $PSScriptRoot 'check_installed_payload.py') $install --output (Join-Path $work 'installed-files.json')
+if ($LASTEXITCODE -ne 0) { throw 'Installed file inventory failed' }
 Save-UserState
 & (Join-Path $PSScriptRoot 'test_network_isolation.ps1') -Bundle $install -InstalledModels
 if ($LASTEXITCODE -ne 0) { throw 'Installed WFP self-test failed' }

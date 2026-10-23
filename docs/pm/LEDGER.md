@@ -349,3 +349,6 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 
 - CI 39923879707: checks and source offline pass; compiled installer installs, downloads Tiny/VAD, passes installed calibrated WFP (0 events) and 64-PE gate. Lifecycle then fails because harness assumed unins000.exe. Pinned Setup.Install generates uninsNNN names; harness now reads the exact per-user registered UninstallString, validates its folder and reports the phase. Next CI run must establish both uninstall results.
 - Installer-wide gate reports five static license entries plus unresolved Delphi provenance; no installer artifact uploaded. M6 guides pushed separately at a206740. Local full suite: 190 passed/1 skip, 94.5% strict coverage.
+
+- Added installed-file inventory: every payload file must match the audited bundle, with only the exact Inno notice and generated uninsNNN runtime records allowed. Changed/extra-file negative test passes; inventory is retained with acceptance evidence.
+- Desktop Small CPU endurance completed: 7920.1875 s input, 1060.9096 s wall, RTF 0.13395, sampled tree working set 2612928512 bytes, work bytes 253446078, exit 0, done on CPU, zero remaining work files. Turbo Vulkan is active. Final benchmark summary awaits both runs.
