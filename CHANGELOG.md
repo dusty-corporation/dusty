@@ -50,6 +50,8 @@ All notable changes to Dusty will be documented here. This project follows Keep 
 - Owner-reviewed model deletion and empty selection, fresh downloads after cancel,
   name-first model labels, clearer consent and main prompts, and disabled/selected
   control contrast in both themes.
+- Final Model Manager wording, MB/GB sizing, progress labels and explicit
+  verification feedback.
 
 ### Changed
 
