@@ -84,3 +84,39 @@ on Ctrl+C; a hard kill can leave a shorter .part that is safe to resume.
 
 Environment proxies are deliberately not followed: their destinations are not
 part of this allowlist. Explicit proxy support is outside this limited scope.
+
+## GUI integration and audit attribution (M4)
+
+The offline GUI never imports dusty_fetch. It starts the existing CLI via
+run_job_process, suspended until assigned to a kill-on-close Windows Job Object.
+Source uses the current Python interpreter with `-m dusty_fetch`; the split
+package uses `../dusty-fetch/dusty-fetch.exe` relative to dusty/dusty.exe.
+Both command resolutions have unit tests; packaged behavior is verified in M5 CI.
+
+Each CLI JSON event additionally includes `pid`, its real `os.getpid()` value.
+This is ephemeral parent/child audit metadata, not a filename, URL or user-content
+log. Windows interpreter launchers can have a different PID from the interpreter
+that opens sockets, so the OS create-process PID alone is insufficient. The GUI
+validates event type, counts, manifest total and positive PID; raw stderr is discarded.
+
+Model Manager re-hashes locally, protects selected/last models from deletion,
+and only offers installed models for transcription. Voice detection is listed
+separately and is included in both consent and total download size when required
+by Skip silent parts. Consent precedes every download request. No host, proxy or
+TLS override was added to the production CLI. Tests inject loopback trust only
+in a separate test helper process, with the GUI audit hook still installed.
+
+`tools/test_model_download_isolation.ps1` runs on disposable Windows CI only.
+A positive blocked WFP event calibrates auditing. The real guarded Dusty entry
+then opens the actual Model Manager, explicitly simulates its consent button,
+downloads Tiny plus voice detection and verifies live installed-choice updates.
+The GUI must produce zero 5156/5157 events and the reported child PIDs must
+produce positive allowed events and zero blocked events. Counts are retained;
+addresses, signed redirect URLs and user paths are not emitted.
+
+In source form both processes share Python's image: the download phase attributes
+by actual PIDs after removing its calibration block. The separate existing
+processing acceptance still blocks Python. In split-package form the GUI image
+stays blocked while the separate downloader is allowed. That phase additionally
+checks all events from the GUI executable. `--check-model-download` is a hidden
+CI-only acceptance entry, not a user-facing feature; ordinary use is rejected.

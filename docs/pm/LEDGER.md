@@ -134,3 +134,18 @@
    checks in M4-report.md, then stop. Do not open a PR against main until PM acceptance.
 
 No further implementation or tests were started after the Owner requested this checkpoint.
+
+
+## M4 overnight continuation, 2026-10-23
+
+- Recovered clean m4-downloader at 3883ef7; no uncommitted work to preserve.
+- Checkpoint protocol suite now passes 31 tests, including exact cancellation
+  event/PID metadata. Added entry/menu/main-window shutdown coverage: 12 manager
+  tests passed, plus the guarded real GUI/local-TLS exercise passed separately.
+- AUDIT-NOTES.md records the requested private cache API review and other
+  non-urgent boundaries for the independent M6 audit; no optional refactor started.
+- Model Manager WFP scenario is implemented for source and split-package paths,
+  with real GUI/consent exercise, calibrated auditing and separate GUI/fetch PID
+  counts. Local tests use only TLS loopback; Windows firewall changes remain CI-only.
+- Next: obtain real CI WFP evidence, complete screenshots and full M4 gates,
+  then sync/reverify M5. Installer drafts are separately authorized only after that.

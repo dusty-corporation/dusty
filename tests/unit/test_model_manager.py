@@ -3,11 +3,13 @@
 import hashlib
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QDialog, QLabel
 from test_downloader import CERTS, DATA
 from test_downloader import tls as tls
@@ -66,6 +68,7 @@ def models(tmp_path, qtbot, monkeypatch, request):
 
     return SimpleNamespace(
         paths=paths,
+        command=command,
         registry=registry,
         create=create,
         tls=server,
@@ -258,3 +261,103 @@ def test_closing_manager_cancels_child_and_preserves_resumable_part(models, qtbo
     qtbot.waitUntil(lambda: not dialog.busy and not dialog.isVisible(), timeout=15000)
     assert part.exists() and not models.file.exists()
     assert dialog.workers[-1].cancelled.is_set()
+
+
+@pytest.mark.parametrize("entry", ["tools", "options"])
+def test_model_manager_is_reachable_from_tools_and_options(models, qtbot, monkeypatch, entry):
+    view = MainWindow(models.paths, interactive=False)
+    qtbot.addWidget(view)
+    view.apply_prepared(Prepared((), False, {"output_dir": str(models.paths.user_dir)}))
+    view.show()
+    seen = []
+
+    def dismiss():
+        dialog = view.model_manager
+        if dialog is not None and not dialog.busy:
+            seen.append(dialog.selected_id())
+            dialog.accept()
+
+    timer = QTimer()
+    timer.timeout.connect(dismiss)
+    timer.start(20)
+    if entry == "tools":
+        view.manage_models_action.trigger()
+    else:
+        view.options_dialog.show()
+        view.manage_models_button.click()
+        view.options_dialog.hide()
+    timer.stop()
+    assert seen and view.model_manager is not None
+
+
+def test_main_window_close_cancels_model_child_without_orphan(models, qtbot, monkeypatch):
+    models.tls.mode = "slow"
+    monkeypatch.setattr("dusty.app.model_manager.resolve_fetch_command", lambda: models.command)
+    view = MainWindow(models.paths, interactive=False)
+    qtbot.addWidget(view)
+    view.apply_prepared(Prepared((), False, {"output_dir": str(models.paths.user_dir)}))
+    view.show()
+    started = []
+    part = models.file.with_suffix(".bin.part")
+
+    def drive():
+        dialog = view.model_manager
+        if dialog is None:
+            return
+        if not started and not dialog.busy and dialog.message.text() == M.MODELS_READY:
+            started.append(True)
+            QTimer.singleShot(0, dialog.download_button.click)
+        elif part.exists() and part.stat().st_size > 0 and not view.closing:
+            view.close()
+
+    timer = QTimer()
+    timer.timeout.connect(drive)
+    timer.start(20)
+    QTimer.singleShot(0, lambda: view.open_model_manager(focus_id="tiny"))
+    qtbot.waitUntil(lambda: bool(started) and not view.isVisible(), timeout=15000)
+    timer.stop()
+    assert part.exists() and not models.file.exists()
+    assert not any(worker.isRunning() for worker in view._tasks)
+
+
+def test_real_entry_download_check_refuses_non_ci_use(models):
+    environment = {**os.environ, "GITHUB_ACTIONS": "false"}
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "dusty",
+            "--check-model-download",
+            "--out",
+            str(models.paths.user_dir),
+        ],
+        env=environment,
+        capture_output=True,
+        timeout=30,
+    )
+    assert result.returncode == 2
+    assert not (models.paths.user_dir / "download-result.json").exists()
+
+
+def test_guarded_real_gui_download_exercise_with_local_tls(models):
+    environment = {**os.environ, "GITHUB_ACTIONS": "true", "QT_QPA_PLATFORM": "offscreen"}
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(CERTS / "gui_download_check.py"),
+            str(models.tls.port),
+            str(CERTS / "localhost.pem"),
+            str(models.paths.resources_dir),
+            str(models.paths.user_dir),
+            str(models.paths.user_dir / "audit"),
+        ],
+        env=environment,
+        capture_output=True,
+        timeout=45,
+    )
+    assert result.returncode == 0, result.stderr.decode("utf-8", "replace")
+    evidence = json.loads((models.paths.user_dir / "audit/download-result.json").read_text())
+    assert evidence["verified"] and evidence["consent_confirmed"] and evidence["guard_installed"]
+    assert len(evidence["fetch_pids"]) == 2
+    assert evidence["gui_pid"] not in evidence["fetch_pids"]
+    assert len(models.tls.requests) == 2

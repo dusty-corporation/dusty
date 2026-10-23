@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 import socket
 import ssl
 import subprocess
@@ -235,7 +236,7 @@ def test_ctrl_c_emits_redacted_cancel_and_leaves_resumable_part(tls, monkeypatch
     monkeypatch.setattr(cli, "emit", interrupt)
     assert main(args(tls), client=tls.client) == Exit.CANCELLED
     events = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
-    assert events[-1] == {"event": "cancelled", "code": "CANCELLED"}
+    assert events[-1] == {"event": "cancelled", "code": "CANCELLED", "pid": os.getpid()}
     assert not (tls.dest / tls.asset.file_name).exists()
     assert list(tls.dest.glob("*.part"))
     monkeypatch.setattr(cli, "emit", original)

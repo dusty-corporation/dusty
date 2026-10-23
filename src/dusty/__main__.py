@@ -21,7 +21,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--backend", choices=("auto", "cpu", "vulkan"), default="auto")
     parser.add_argument("--headless-batch", nargs="+", metavar="FILE")
     parser.add_argument("--out")
+    parser.add_argument("--check-model-download", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
+
+    if args.check_model_download:
+        from pathlib import Path
+
+        from dusty.app.model_download_check import run_download_check
+
+        if not args.out:
+            return 2
+        return run_download_check(args.model, Path(args.out))
 
     if args.self_test:
         from dusty.privacy.logging import configure_logger
