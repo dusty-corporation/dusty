@@ -23,8 +23,8 @@ legal, or other important decisions.
   Short graphics-probe and self-test work also lives under the work folder.
 - `%LOCALAPPDATA%/Dusty/models/`: downloaded and hash-verified model data in an
   installed app. Development models/binaries use ignored `build/` directories.
-  Downloads use `.part` files until verification succeeds; cancellation may leave
-  a resumable partial model. A lock file coordinates downloads. These are model
+  Downloads use `.part` files until verification succeeds; cancelling or closing
+  Dusty during a download removes the partial. A lock file coordinates downloads. These are model
   data, not recordings.
 - `%LOCALAPPDATA%/Dusty/logs/`: rotating redacted diagnostics with statuses and
   numeric timings, not recording names/paths, transcript text or vocabulary hints.

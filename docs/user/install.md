@@ -38,7 +38,7 @@ that a file is safe.
 
 1. Read the license page, including Dusty's Apache-2.0 terms, NOTICE and the
    Microsoft Visual C++ runtime end-user terms. Continue only if you agree.
-2. Choose a transcription model. Balanced is a conservative choice on a computer
+2. Choose a transcription model. Small: Balanced, all languages is a conservative choice on a computer
    without a working graphics card. Voice detection is included automatically.
 3. Keep the suggested per-user app folder unless you have a reason to change it.
    Installation should not require administrator approval.

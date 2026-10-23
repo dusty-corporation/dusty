@@ -5,7 +5,7 @@
    because it may sync to OneDrive. The folder is remembered for next time.
 3. Check **Save transcripts to** below the recording list. If it says **Not chosen
    yet**, use **Choose folder**. Closing the welcome does not choose a folder.
-4. If you need a model, use **Manage models** or **Download it**. Confirm the
+4. If you need a model, use **Manage models** or **Download recommended model**. Confirm the
    explicit GitHub download and wait for **Installed**.
 5. Add a short recording, check your choices in **Options...**, and press **Start**.
 

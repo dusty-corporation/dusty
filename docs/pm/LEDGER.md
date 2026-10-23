@@ -454,3 +454,14 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   button-click regression; it passes. Carry this small correction forward too.
 - M5 merge required only preserving both additive ledger sections. No source
   conflict or license/runtime pin change. Packaging CI 39990617610 is running.
+
+
+### M6 documentation synchronized with M4 UX
+
+- Forward merge retains all packaging policies and the final missing-voice action
+  regression. Additive ledger conflict resolved by preserving both histories.
+- User models/first-run/troubleshooting and privacy docs now describe unrestricted
+  model deletion, explicit empty Options, name-first labels, recommendation only
+  in the empty-model state, and removal of cancelled/closed download partials.
+- No installer behavior or exact HIPAA wording changed. Next: final source and
+  packaged acceptance, M4 report with current artifacts and WFP counts.
