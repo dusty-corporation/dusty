@@ -250,8 +250,20 @@ begin
   Busy := True; CpuRetry := True; BeginTest;
 end;
 
+procedure CleanupActivePartial;
+var File: String;
+begin
+  if (Stage < -2) or (Stage > 2) or
+     (DownloadIndex < 0) or (DownloadIndex >= GetArrayLength(Downloads)) then Exit;
+  if Downloads[DownloadIndex] < 0 then File := '@@VAD_FILE@@'
+  else File := ModelFiles[Downloads[DownloadIndex]];
+  DeleteFile(ExpandConstant('{localappdata}\Dusty\models\') + File + '.part');
+end;
+
 procedure WithoutClick(Sender: TObject);
 begin
+  ReleaseChild;
+  CleanupActivePartial;
   Stage := 5;
   if TestFailed then begin
     Busy := StartChild(ExpandConstant('{app}\dusty\dusty.exe'), '--installer-clear');
@@ -395,19 +407,17 @@ begin
 end;
 
 procedure CancelButtonClick(CurPageID: Integer; var Cancel, Confirm: Boolean);
-var File: String;
 begin
   if Busy then begin
     Cancel := False; Confirm := False;
     if SuppressibleMsgBox(CustomMessage('StopInstall'), mbConfirmation, MB_YESNO, IDNO) = IDYES then begin
       ReleaseChild;
-      if Stage <= 2 then begin
-        if Downloads[DownloadIndex] < 0 then File := '@@VAD_FILE@@'
-        else File := ModelFiles[Downloads[DownloadIndex]];
-        DeleteFile(ExpandConstant('{localappdata}\Dusty\models\') + File + '.part');
-      end;
+      CleanupActivePartial;
       Busy := False; Cancel := True;
     end;
+  end else begin
+    ReleaseChild;
+    CleanupActivePartial;
   end;
 end;
 
