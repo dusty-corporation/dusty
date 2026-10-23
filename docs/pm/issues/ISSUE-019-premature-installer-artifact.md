@@ -1,8 +1,8 @@
 # ISSUE-019 - Installer uploaded before complete license review
 
-- Severity: S0 (NN-5)
+- Severity: S1 process issue (reclassified by PM, 2026-10-23)
 - Milestone: M5 installer prework
-- Status: Open, all implementation stopped
+- Status: Resolved, Owner deletion and upload-gate regression
 - Environment: public repository CI, Inno Setup 6.7.3, ac06dad
 
 ## Expected
@@ -57,5 +57,18 @@ licenses; the app allowlist remains unchanged.
 Current gate requires installer-wide inventory, checks exact static records and
 notice hashes, binds the compiled image and app payload to their inventories,
 and rejects unapproved identifiers. Negative inventory/notice tests pass.
-A CI-ordering regression specifically preventing this sequencing error remains
-to be added after PM authorizes work to resume. No S0 resolution is claimed.
+A CI regression now deliberately fails a synthetic license gate and proves that
+the upload step is skipped. Its condition must match the production upload, as
+asserted by a source test. Production explicitly requires successful license and
+installed acceptance outcomes, plus overall success. Packaging also depends on
+source/offline checks and that regression job; no production gate is allowed to
+continue on error. Final execution evidence is in the updated interim report.
+
+## PM resolution, 2026-10-23
+
+The Owner deleted artifact 12488875272. Read-only verification returns HTTP 404.
+PM reclassified this as process S1 going forward and authorized resumption with
+no further containment needed. Root cause: the installer upload step ran before
+the installer-wide license gate was in place and passing. The fix is an explicit
+upload dependency on that gate and the CI negative test above. Historical S0
+containment notes remain as an audit record, not a current stop condition.
