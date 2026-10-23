@@ -1,5 +1,9 @@
 # M5 interim 6 - Installer acceptance, documentation and S0 stop
 
+Historical report. Superseded by [M5-interim-7.md](M5-interim-7.md): Owner
+removed the artifact, PM resolved/reclassified ISSUE-019 and approved the scoped
+runtime exceptions. Its former stop/containment instructions are no longer current.
+
 ## Owner actions for the morning
 
 1. **Contain ISSUE-019:** remove only `m5-installer-draft-unsigned`, artifact
