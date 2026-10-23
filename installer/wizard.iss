@@ -448,6 +448,16 @@ begin
   if Metadata <> '' then SaveStringToFile(Metadata,
     '{"dpi":' + IntToStr(WindowDpi(WizardForm.Handle)) + '}', False);
   Page := WizardForm.CurPageID;
+  if (Wanted = 'directory') and (Page = ModelsPage.ID) then begin
+    { CreateAppDir=no keeps review builds harmless but skips this native page. }
+    ReviewShown := True;
+    WizardForm.InnerNotebook.ActivePage := WizardForm.SelectDirPage;
+    WizardForm.PageNameLabel.Caption := SetupMessage(msgWizardSelectDir);
+    WizardForm.PageDescriptionLabel.Caption := SetupMessage(msgSelectDirDesc);
+    WizardForm.DirEdit.Text := ExpandConstant('{param:DIR|C:\Users\Example\AppData\Local\Programs\Dusty}');
+    WizardForm.NextButton.Enabled := True;
+    Exit;
+  end;
   if ((Wanted = 'welcome') and (Page = wpWelcome)) or
      (((Wanted = 'models') or (Wanted = 'models-low-memory')) and (Page = ModelsPage.ID)) or
      ((Wanted = 'directory') and (Page = wpSelectDir)) or
