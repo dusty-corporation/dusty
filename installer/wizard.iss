@@ -443,7 +443,7 @@ end;
 
 #ifdef ReviewOnly
 procedure ReviewTick;
-var Wanted, Metadata: String; Page: Integer; Button: TNewButton;
+var Wanted, Metadata, Description: String; Page: Integer; Button: TNewButton;
 begin
   if ReviewShown then Exit;
   Wanted := ExpandConstant('{param:REVIEWPAGE|welcome}');
@@ -456,7 +456,9 @@ begin
     ReviewShown := True;
     WizardForm.InnerNotebook.ActivePage := WizardForm.SelectDirPage;
     WizardForm.PageNameLabel.Caption := SetupMessage(msgWizardSelectDir);
-    WizardForm.PageDescriptionLabel.Caption := SetupMessage(msgSelectDirDesc);
+    Description := SetupMessage(msgSelectDirDesc);
+    StringChangeEx(Description, '[name]', 'Dusty', True);
+    WizardForm.PageDescriptionLabel.Caption := Description;
     WizardForm.DirEdit.Text := ExpandConstant('{param:DIR|C:\Users\Example\AppData\Local\Programs\Dusty}');
     WizardForm.NextButton.Enabled := True;
     Exit;

@@ -77,3 +77,11 @@ def test_prior_installer_is_verified_before_execution(tmp_path):
     file.write_bytes(b"changed installer")
     with pytest.raises(ValueError):
         verify_checksum(file, sums)
+
+
+def test_upgrade_audits_the_new_installed_version():
+    text = (ROOT / "tools/test_installer.ps1").read_text()
+    before, after = text.split("$Installer = $currentInstaller", 1)
+    for gate in ("check_installed_payload.py", "test_network_isolation.ps1", "check_pe_imports.py"):
+        assert gate not in before
+        assert after.index(gate) < after.index("Uninstall-App 'no'")
