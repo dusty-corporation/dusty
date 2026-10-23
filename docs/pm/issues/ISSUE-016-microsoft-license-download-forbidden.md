@@ -2,7 +2,7 @@
 
 - Severity: S1
 - Milestone: M5 packaging spike
-- Status: Open, awaiting Owner
+- Status: Resolved
 - Environment: approved network escalation, Python 3.12.11 urllib HTTPS
 
 ## Steps to reproduce
@@ -40,6 +40,15 @@ or specify an approved way to obtain it. No license text is fabricated, and
 the narrow exception is not marked cleared until its required notice is present.
 
 ## Regression test added
+
+## Resolution, 2026-10-22
+
+The Owner supplied three browser-downloaded source PDFs and authorized using
+them. They are retained unchanged in packaging/licenses/microsoft, with source
+URLs, retrieval date and SHA-256 in sources.json and ADR 0020. The inbox was
+removed after moving and verifying all three files. No retry of the rejected
+request or other workaround occurred. Missing/changed documents or omitted full
+protective EULA now fail the bundled license gate in regression tests.
 
 None for an external vendor access failure. Existing license-gate work remains
 pending; no test or allowlist was weakened to conceal the missing license.
