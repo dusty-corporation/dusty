@@ -644,3 +644,19 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   ca53f763fe97ad32a591b18b05acb7b73b96b84121bc31de6b3a5e801b3dc2b0.
 - m5-packaging-spike remains 95dd90b; m6-docs remains c855b52. No PR, tags,
   releases, reference-branch changes or Owner-profile installation. Phase 1 stops.
+
+
+## M5 Step A/B authorized, 2026-10-23
+
+- PM approved temporary existing-payload extraction and a bounded, Job Object
+  model-free probe. Only integrated/discrete Vulkan devices count, excluding
+  known software implementations; Small fallback on failure/crash/timeout.
+- RAM minimum, failure completion preserving files/clearing selection, M4 crash
+  partial policy, prerelease version/assets approved. Self-test scope: each
+  selected model once on Auto plus smallest once on CPU and VAD verification.
+- Standalone diagnostic tools/bench/model-free-probe.ps1 requires only PowerShell
+  and the existing engine-v2 DLLs. Vulkan physical-device type and software
+  exclusions precede actual ggml initialization/4 KiB clear/synchronize. Child
+  waits for Job Object assignment; eight-second deadline; raw stderr discarded.
+- Desktop standalone result: real_gpu_found=true, model_file_opened=false.
+  ThinkPad commands next; Step B proceeds without waiting for Owner hardware.
