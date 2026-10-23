@@ -299,3 +299,22 @@ No further implementation or tests were started after the Owner requested this c
 - Final cleanup regression also preserves empty internal output folders and the
   metadata protecting them across repeated attempts. Ten focused installer tests
   pass; the draft is not installed on the Owner machine. Final CI rerun follows.
+
+### Final overnight code verification, 2026-10-23
+
+- 0adc037 local full suite: 189 passed, 1 CI-only skip in 174.00 s; 94.5% strict
+  coverage. CI 39916465602 source checks: 188 passed, 2 expected skips in
+  274.44 s, real-network integration and all quality/app policy gates passed.
+- Earlier 39915503372 source run missed the 200 ms responsiveness limit at
+  229.671 ms; final run passes the unchanged test. No skip, retry plugin,
+  threshold increase or product workaround was introduced.
+- Final packaged app: 207 files/161936952 bytes, all 64 PE pins, license gate,
+  GUI smoke and both WFP scenarios pass. Offline processing 0; Model Manager
+  GUI 0, fetch allowed 4/blocked 0, calibrated controls and verified assets.
+- Final installer compiles: 34593012 bytes, SHA-256
+  a63903ef8020bc4e469365fb36aa88b5ae68e518124dbde0acf0882a2da0b632.
+  Only the installer wrapper license gate fails as intended (ISSUE-017); binary
+  upload skipped, audit artifact retained. No unallowlisted binary was shipped.
+- M5-interim-5.md records the morning license decision and remaining VM/release
+  acceptance. M4 app review artifact: run 39916465602, m4-review-bundle,
+  artifact 12484769263. Final cross-branch report/documentation sync is next.

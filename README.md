@@ -26,3 +26,7 @@ Get-FileHash .\Dusty-*-draft-unsigned.exe -Algorithm SHA256
 Compare the entire hash with the entry for that exact filename. Stop if it differs.
 Current installer artifacts are for review and clean-machine testing, not a
 published release. The Owner controls publication.
+
+Installer binary upload is currently held for the Inno Setup license-policy
+decision in ISSUE-017. CI retains installer audit metadata; the separate audited
+app review bundle remains available for the Model Manager check.

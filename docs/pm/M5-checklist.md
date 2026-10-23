@@ -1,7 +1,8 @@
 # M5 installer and release checklist
 
-This remains an acceptance checklist. An unsigned installer draft is compiled as
-a CI artifact during authorized prework; it is not a published or accepted installer.
+This remains an acceptance checklist. An unsigned installer draft compiles in CI;
+ISSUE-017 blocks binary upload pending explicit InnoSetup policy clearance.
+Audit metadata is available; this is not a published or accepted installer.
 
 - [ ] Verify every Microsoft PE is a required vcruntime140*.dll/msvcp140*.dll
   copied unmodified from VS 2022 VC/redist release x64 Microsoft.VC143.CRT;

@@ -12,7 +12,9 @@ GUI smoke, offline self-test and Model Manager download WFP gates. Then run:
 The bootstrap refuses non-CI execution, downloads only the pinned official
 Inno Setup 6.7.3 compiler installer and checks its SHA-256 before execution.
 No compiler or installer has been installed on the Owner's computer.
-The output is an unsigned CI artifact, never an automatic release or tag.
+The compilation output is unsigned. ISSUE-017 currently blocks the installer
+binary artifact: InnoSetup is not in the redistribution allowlist. CI retains
+only installer audit metadata until PM clearance, never an automatic release or tag.
 
 Compiler pin: `packaging/licenses/inno/source.json`; official
 [6.7.3 release](https://github.com/jrsoftware/issrc/releases/tag/is-6_7_3),
