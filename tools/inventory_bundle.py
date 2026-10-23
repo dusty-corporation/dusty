@@ -36,6 +36,7 @@ def component(name: str, version: str, license_text: str, source: str, **extra) 
 def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
     analysis = json.loads(analysis_path.read_text(encoding="utf-8"))
     pins = tomllib.loads((ROOT / "native/versions.toml").read_text(encoding="utf-8"))
+    crt_records = json.loads((output / "crt-provenance.json").read_text(encoding="utf-8"))["files"]
     components = {
         "dusty": component(
             "dusty",
@@ -95,7 +96,7 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
             key = "microsoft-visual-cpp-runtime"
             components[key] = component(
                 key,
-                "VS2022-release-x64",
+                ",".join(sorted({item["version"] for item in crt_records})),
                 "LicenseRef-Microsoft-Visual-Cpp-Runtime",
                 "https://aka.ms/vs/17/redistribution",
                 linkage="shared",
@@ -294,9 +295,7 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
         "files": files,
         "embedded_modules": embedded,
         "total_bytes": sum(item["size"] for item in files),
-        "microsoft_runtime": json.loads(
-            (output / "crt-provenance.json").read_text(encoding="utf-8")
-        )["files"],
+        "microsoft_runtime": crt_records,
         "attribution_scope": (
             "Actual file/provider and embedded-module inventory; source notices retained"
         ),

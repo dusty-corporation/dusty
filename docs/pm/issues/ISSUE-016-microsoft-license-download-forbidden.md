@@ -50,5 +50,6 @@ removed after moving and verifying all three files. No retry of the rejected
 request or other workaround occurred. Missing/changed documents or omitted full
 protective EULA now fail the bundled license gate in regression tests.
 
-None for an external vendor access failure. Existing license-gate work remains
-pending; no test or allowlist was weakened to conceal the missing license.
+At the initial stop there was no regression for the external vendor access
+failure. Subsequent evidence/protective-term regressions now cover the retained
+documents; no test or allowlist was weakened to conceal a missing license.

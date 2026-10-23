@@ -107,12 +107,24 @@ def stage(bundle: Path, redist: Path, receipt: Path) -> None:
             shutil.copyfile(source, target)
             if sha256(source) != sha256(target):
                 raise ValueError("CRT copy changed bytes")
+            with pefile.PE(str(source)) as executable:
+                fixed = executable.VS_FIXEDFILEINFO[0]
+                version = ".".join(
+                    str(part)
+                    for part in (
+                        fixed.FileVersionMS >> 16,
+                        fixed.FileVersionMS & 0xFFFF,
+                        fixed.FileVersionLS >> 16,
+                        fixed.FileVersionLS & 0xFFFF,
+                    )
+                )
             records.append(
                 {
                     "path": target.relative_to(bundle).as_posix(),
                     "source": str(source.resolve()),
                     "redist": str(redist.resolve()),
                     "sha256": sha256(target),
+                    "version": version,
                     "basis": "VS2022-Community-section-4/Visual-C++-Runtime-Files",
                 }
             )

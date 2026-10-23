@@ -64,7 +64,9 @@ def crt_evidence(tmp_path: Path):
     return bundle, {"microsoft_runtime": [record]}
 
 
-@pytest.mark.parametrize("mutation", ["none", "bytes", "receipt", "debug", "pdf", "terms"])
+@pytest.mark.parametrize(
+    "mutation", ["none", "bytes", "receipt", "debug", "pdf", "terms", "other-ms"]
+)
 def test_microsoft_exception_requires_evidence(crt_evidence, mutation: str) -> None:
     bundle, inventory = crt_evidence
     record = inventory["microsoft_runtime"][0]
@@ -82,6 +84,8 @@ def test_microsoft_exception_requires_evidence(crt_evidence, mutation: str) -> N
         (bundle / "licenses/microsoft/community-2022.pdf").write_bytes(b"changed")
     elif mutation == "terms":
         (bundle / "THIRD_PARTY_NOTICES.md").write_text("terms omitted", encoding="utf-8")
+    elif mutation == "other-ms":
+        shutil.copyfile(bundle / "vcruntime140.dll", bundle / "unapproved-microsoft.dll")
     actual = {
         path.relative_to(bundle).as_posix(): path for path in bundle.rglob("*") if path.is_file()
     }

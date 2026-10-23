@@ -131,6 +131,25 @@ def check_bundle(bundle: Path, inventory_path: Path) -> list[str]:
             approved = False
         if not approved:
             findings.append(f"{key}: unapproved or unknown bundled license: {expression}")
+    texts = json.loads(
+        (Path(__file__).resolve().parents[1] / "packaging/licenses/sources.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    required_texts = []
+    if "libffi" in components:
+        required_texts.append("libffi-MIT.txt")
+    if "ffmpeg" in components:
+        required_texts.append("ffmpeg-LGPL-2.1.txt")
+    if "pyside6-essentials" in components:
+        required_texts.extend(("qt-LGPL-3.0.txt", "qt-GPL-3.0-reference.txt"))
+    for name in required_texts:
+        path = bundle / "licenses" / name
+        if (
+            not path.is_file()
+            or hashlib.sha256(path.read_bytes()).hexdigest() != texts[name]["sha256"]
+        ):
+            findings.append(f"Missing or changed required license text: {name}")
     findings.extend(check_microsoft(bundle, inventory, actual))
     return findings
 
