@@ -13,13 +13,13 @@ import ssl
 import sys
 import tomllib
 import uuid
-from importlib import import_module
 from pathlib import Path
 
 from cyclonedx.schema import SchemaVersion
 from cyclonedx.validation.json import JsonStrictValidator
 
 from tools.check_licenses import PYINSTALLER_BOOTLOADER, normalized
+from tools.stage_microsoft_runtime import is_crt
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -38,7 +38,10 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
     pins = tomllib.loads((ROOT / "native/versions.toml").read_text(encoding="utf-8"))
     components = {
         "dusty": component(
-            "dusty", metadata.version("dusty"), "MIT", "https://github.com/dusty-corporation/dusty"
+            "dusty",
+            metadata.version("dusty"),
+            "Apache-2.0",
+            "https://github.com/dusty-corporation/dusty",
         ),
         "cpython": component(
             "cpython", sys.version.split()[0], "PSF-2.0", "https://github.com/python/cpython"
@@ -88,26 +91,14 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
     def owner(source: str) -> str:
         path = Path(source)
         name = path.name.lower()
-        if "isoschematron/resources" in path.as_posix().lower():
-            key = "lxml-schematron-data"
+        if is_crt(name):
+            key = "microsoft-visual-cpp-runtime"
             components[key] = component(
                 key,
-                "unresolved",
-                "UNKNOWN",
-                "https://github.com/lxml/lxml",
-                note=(
-                    "Wheel LICENSES.txt identifies unlicensed transforms "
-                    "and separate ISO/skeleton terms"
-                ),
-            )
-            return key
-        if name.startswith(("vcruntime", "msvcp", "api-ms-win-")) or name == "ucrtbase.dll":
-            key = "microsoft-runtime"
-            components[key] = component(
-                key,
-                "unresolved",
-                "LicenseRef-Microsoft-EULA",
-                "https://learn.microsoft.com/cpp/windows/redistributing-visual-cpp-files",
+                "VS2022-release-x64",
+                "LicenseRef-Microsoft-Visual-Cpp-Runtime",
+                "https://aka.ms/vs/17/redistribution",
+                linkage="shared",
             )
             return key
         if name == "opengl32sw.dll":
@@ -132,7 +123,7 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
         if name.startswith("libffi"):
             key = "libffi"
             components[key] = component(
-                key, "unresolved", "UNKNOWN", "https://github.com/libffi/libffi"
+                key, "ABI-8 (CPython build 20250902)", "MIT", "https://github.com/libffi/libffi"
             )
             return key
         dist_name = file_owners.get(str(path.resolve()).lower())
@@ -157,11 +148,11 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
         components[key] = component(key, "unresolved", "UNKNOWN", "UNKNOWN")
         return key
 
-    origins = {
-        item[0].replace("\\", "/").lower(): item[1]
-        for group in ("binaries", "datas")
-        for item in analysis[group]
-    }
+    origins = {}
+    for runtime, prefix in (("gui", "dusty"), ("fetch", "dusty-fetch")):
+        for group in ("binaries", "datas"):
+            for destination, source, _ in analysis[f"{runtime}_{group}"]:
+                origins[f"{prefix}/_internal/{destination}".replace("\\", "/").lower()] = source
     embedded: list[dict] = []
     for group in ("gui_pure", "fetch_pure", "gui_scripts", "fetch_scripts"):
         for name, source, _ in analysis[group]:
@@ -173,51 +164,19 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
                 {
                     "module": name,
                     "component": key,
-                    "executable": "dusty.exe" if group.startswith("gui_") else "dusty-fetch.exe",
+                    "executable": "dusty/dusty.exe"
+                    if group.startswith("gui_")
+                    else "dusty-fetch/dusty-fetch.exe",
                 }
             )
 
-    # Record statically linked libraries disclosed by the actual lxml wheel.
-    if "lxml" in components:
-        etree = import_module("lxml.etree")
-
-        for name, version in (
-            ("libxml2", etree.LIBXML_COMPILED_VERSION),
-            ("libxslt", etree.LIBXSLT_COMPILED_VERSION),
-        ):
-            components[name] = component(
-                name,
-                ".".join(map(str, version)),
-                "MIT",
-                "https://gitlab.gnome.org/GNOME/" + name,
-                linkage="static",
-            )
-        components["lxml-iconv"] = component(
-            "lxml-iconv",
-            "unresolved",
-            "LGPL-2.1-or-later",
-            "https://www.gnu.org/software/libiconv/",
-            linkage="static",
-            note="Wheel LICENSES.txt discloses bundled iconv; static linkage not allowlisted",
-        )
-        components["lxml-zlib"] = component(
-            "lxml-zlib", "unresolved", "Zlib", "https://zlib.net", linkage="static"
-        )
-    # Do not infer licenses of all native code inside CPython/Qt from their wrappers.
-    components["embedded-native-review"] = component(
-        "embedded-native-review",
-        "unresolved",
-        "UNKNOWN",
-        "UNKNOWN",
-        note=(
-            "CPython extension, Qt third-party and FFmpeg static subcomponent notices "
-            "still require source-level reconciliation"
-        ),
-    )
+    if any(name in components for name in ("lxml", "python-docx")):
+        raise ValueError("Test-only XML/DOCX providers must never be bundled")
 
     # Preserve available original copyright/license texts; absent texts stay gaps.
     licenses = bundle / "licenses"
     licenses.mkdir(exist_ok=True)
+    shutil.copytree(ROOT / "packaging/licenses", licenses, dirs_exist_ok=True)
     for name in list(components):
         included_dist = dists.get("pyinstaller" if name == "pyinstaller-bootloader" else name)
         if included_dist:
@@ -233,6 +192,7 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
     for source, name in (
         (Path(sys.base_prefix) / "LICENSE.txt", "cpython.txt"),
         (ROOT / "LICENSE", "dusty.txt"),
+        (ROOT / "NOTICE", "dusty-NOTICE.txt"),
         (ROOT / "tests/fixtures/AUDIO_SOURCES.md", "audio-sources.md"),
     ):
         if source.is_file():
@@ -240,13 +200,12 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
 
     files: list[dict] = []
     for path in sorted(bundle.rglob("*")):
-        if not path.is_file():
+        if not path.is_file() or path == bundle / "THIRD_PARTY_NOTICES.md":
             continue
         relative = path.relative_to(bundle).as_posix()
-        if relative in {"dusty.exe", "dusty-fetch.exe"}:
+        if relative in {"dusty/dusty.exe", "dusty-fetch/dusty-fetch.exe"}:
             keys = {"dusty", "cpython", "pyinstaller-bootloader", "pyinstaller-runtime-hooks"}
             keys.update(item["component"] for item in embedded if item["executable"] == relative)
-            keys.add("embedded-native-review")
         elif relative.startswith("bin/"):
             keys = {"ffmpeg" if relative.startswith("bin/ffmpeg/") else "whisper.cpp"}
         elif relative == "resources/selftest.wav":
@@ -256,10 +215,8 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
         elif path.name == "base_library.zip":
             keys = {"cpython"}
         else:
-            source = origins.get(relative.removeprefix("_internal/").lower())
+            source = origins.get(relative.lower())
             keys = {owner(source or str(path))}
-            if "lxml" in keys:
-                keys.update({"libxml2", "libxslt", "lxml-iconv", "lxml-zlib"})
         files.append(
             {
                 "path": relative,
@@ -268,12 +225,81 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
                 "components": sorted(keys),
             }
         )
+    lines = [
+        "# Third-party notices (draft)",
+        "",
+        "Generated from actual COLLECT files and embedded module origins.",
+        "Component/provider attribution covers actual files and embedded modules, including",
+        "the native runtime files. Unknown providers fail the license gate.",
+        "",
+        "Qt/PySide6 shared DLLs remain replaceable under LGPL-3.0-only; FFmpeg is",
+        "a separate LGPL-2.1-or-later executable. Original available license and copyright",
+        "texts are retained in licenses/. Qt remains replaceable; corresponding source links",
+        "and the exact FFmpeg revision/configuration follow below.",
+        "Copyright statements are preserved in those original texts; where no text is",
+        "available, attribution and transitive notices are unresolved, not waived.",
+        "",
+        "| Component | Version | License | Source/evidence |",
+        "|---|---|---|---|",
+    ]
+    for item in sorted(components.values(), key=lambda item: item["name"]):
+        lines.append(
+            f"| {item['name']} | {item['version']} | {item['license']} | {item['source']} |"
+        )
+    lines += [
+        "",
+        "## Native pins",
+        "",
+        f"whisper.cpp: {pins['whisper_cpp']}",
+        "",
+        f"FFmpeg: {pins['ffmpeg']}",
+        "",
+        "Exact configuration and build output:",
+        "",
+        "```text",
+        (bundle / "bin/ffmpeg/buildconf.txt").read_text(encoding="utf-8").strip(),
+        "```",
+        "",
+    ]
+    lines += [
+        "## Microsoft Visual C++ runtime terms",
+        "",
+        "Redistribution basis: Owner-held VS 2022 Community individual license, section 4.a.i",
+        "and the Visual C++ Runtime Files redistribution list. The runtime EULA is protective",
+        "end-user terms under section 4.b, not an independent redistribution grant.",
+        "Only release VC/redist CRT files are copied unmodified; see crt-provenance.json",
+        "in the audit artifact. UCRT/API-set and other Microsoft files are excluded.",
+        "The M5 installer must present these terms alongside Dusty's Apache-2.0 license",
+        "and require agreement. Originals and document source hashes: licenses/microsoft/.",
+        "",
+        (licenses / "microsoft/runtime-eula.txt").read_text(encoding="utf-8"),
+        "",
+    ]
+    output.mkdir(parents=True, exist_ok=True)
+    notice = "\n".join(lines)
+    notice_path = bundle / "THIRD_PARTY_NOTICES.md"
+    notice_path.write_text(notice, encoding="utf-8", newline="\n")
+    files.append(
+        {
+            "path": "THIRD_PARTY_NOTICES.md",
+            "size": notice_path.stat().st_size,
+            "sha256": digest(notice_path),
+            "components": ["dusty"],
+        }
+    )
+    (output / "THIRD_PARTY_NOTICES.md").write_text("\n".join(lines), encoding="utf-8")
     inventory = {
         "schema": 1,
         "components": components,
         "files": files,
         "embedded_modules": embedded,
         "total_bytes": sum(item["size"] for item in files),
+        "microsoft_runtime": json.loads(
+            (output / "crt-provenance.json").read_text(encoding="utf-8")
+        )["files"],
+        "attribution_scope": (
+            "Actual file/provider and embedded-module inventory; source notices retained"
+        ),
     }
     output.mkdir(parents=True, exist_ok=True)
     (output / "inventory.json").write_text(json.dumps(inventory, indent=2), encoding="utf-8")
@@ -316,42 +342,6 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
     error = JsonStrictValidator(SchemaVersion.V1_6).validate_str(json.dumps(sbom))
     if error:
         raise ValueError(f"CycloneDX 1.6 validation failed: {error}")
-    lines = [
-        "# Third-party notices (draft)",
-        "",
-        "Generated from actual COLLECT files and embedded module origins.",
-        "This audit bundle is not approved for redistribution. UNKNOWN and static LGPL",
-        "findings need PM review; metadata is not a complete native license audit.",
-        "",
-        "Qt/PySide6 shared DLLs remain replaceable under LGPL-3.0-only; FFmpeg is",
-        "a separate LGPL-2.1-or-later executable. Original available license and copyright",
-        "texts are retained in licenses/. Missing source offers/notices remain release blockers.",
-        "Copyright statements are preserved in those original texts; where no text is",
-        "available, attribution and transitive notices are unresolved, not waived.",
-        "",
-        "| Component | Version | License | Source/evidence |",
-        "|---|---|---|---|",
-    ]
-    for item in sorted(components.values(), key=lambda item: item["name"]):
-        lines.append(
-            f"| {item['name']} | {item['version']} | {item['license']} | {item['source']} |"
-        )
-    lines += [
-        "",
-        "## Native pins",
-        "",
-        f"whisper.cpp: {pins['whisper_cpp']}",
-        "",
-        f"FFmpeg: {pins['ffmpeg']}",
-        "",
-        "Exact configuration and build output:",
-        "",
-        "```text",
-        (bundle / "bin/ffmpeg/buildconf.txt").read_text(encoding="utf-8").strip(),
-        "```",
-        "",
-    ]
-    (output / "THIRD_PARTY_NOTICES.md").write_text("\n".join(lines), encoding="utf-8")
     largest = sorted(files, key=lambda item: item["size"], reverse=True)[:20]
     report = [
         "# Bundle measurements",

@@ -61,11 +61,18 @@ def check(folder: Path, pins: dict) -> tuple[list[str], list[dict]]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("folder", type=Path)
+    parser.add_argument("--native", type=Path)
     parser.add_argument(
         "--output", type=Path, default=Path("build/packaging/audit/offline-pe.json")
     )
     args = parser.parse_args()
     findings, checked = check(args.folder, json.loads(PINS.read_text(encoding="utf-8")))
+    if args.native:
+        native_findings, native_checked = check(args.native, {})
+        findings.extend(native_findings)
+        for item in native_checked:
+            item["path"] = "bin/" + item["path"]
+        checked.extend(native_checked)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         json.dumps({"checked": checked, "findings": findings}, indent=2),

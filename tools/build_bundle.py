@@ -11,6 +11,9 @@ import tomllib
 import zipfile
 from pathlib import Path
 
+from tools.stage_microsoft_runtime import find_redist
+from tools.stage_microsoft_runtime import stage as stage_crt
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -81,7 +84,9 @@ def main() -> None:
     if not (ROOT / "resources/icons/dusty.ico").is_file():
         make_icon()
     destination = (ROOT / "dist/Dusty").resolve()
-    if destination.parent != (ROOT / "dist").resolve() or not destination.is_relative_to(ROOT.resolve()):
+    if destination.parent != (ROOT / "dist").resolve() or not destination.is_relative_to(
+        ROOT.resolve()
+    ):
         raise ValueError("Bundle output must stay inside the repository dist folder")
     if destination.exists():
         shutil.rmtree(destination)
@@ -102,6 +107,9 @@ def main() -> None:
         check=True,
     )
     stage(ROOT / "dist/Dusty")
+    stage_crt(
+        ROOT / "dist/Dusty", find_redist(), ROOT / "build/packaging/audit/crt-provenance.json"
+    )
 
 
 if __name__ == "__main__":
