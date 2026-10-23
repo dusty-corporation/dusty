@@ -19,11 +19,15 @@ jobs:
         shell: pwsh
         env:
           RELEASE_TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           python tools/release_version.py $env:RELEASE_TAG
           if ($LASTEXITCODE -ne 0) { throw 'Unapproved release tag' }
           $number = [int]($env:RELEASE_TAG -replace '^v0.5.0-m5.', '')
-          if ($number -gt 1) { "previous_tag=v0.5.0-m5.$($number - 1)" >> $env:GITHUB_OUTPUT }
+          $drafts = gh release list --repo '${{ github.repository }}' --limit 100 --json tagName,isDraft | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot discover prior draft versions' }
+          $prior = @($drafts | Where-Object { $_.isDraft -and $_.tagName -match '^v0\.5\.0-m5\.([1-9][0-9]*)$' } | ForEach-Object { [int]($_.tagName -replace '^v0.5.0-m5.', '') } | Where-Object { $_ -lt $number } | Sort-Object -Descending)
+          if ($prior.Count) { "previous_tag=v0.5.0-m5.$($prior[0])" >> $env:GITHUB_OUTPUT }
   gates:
     needs: validate
     uses: ./.github/workflows/ci.yml

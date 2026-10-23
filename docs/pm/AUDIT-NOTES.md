@@ -30,3 +30,10 @@ promote an item to an issue if it affects correctness, privacy or licensing.
   Audit future changes for drift; production remains the guarded Python entry.
 - M5: review-only Inno page navigation uses the production controls with synthetic
   progress/outcomes and never installs; keep it separate from acceptance evidence.
+
+- M5: the native page controller encodes asynchronous stages as integers. Review
+  transition coverage, stale result handling and repeated retry/cancel scenarios
+  independently; the UI review executable is not a failure-injection harness.
+- M5: temporary extraction precedes the bounded driver probe. Measure full page
+  entry time on a slow clean machine; driver deadlines alone do not measure disk
+  extraction. Do not extrapolate the standalone probe timing into install timing.

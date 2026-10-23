@@ -745,3 +745,19 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Added a true two-version upgrade path: next tag downloads the previous gated
   draft, checks increasing numeric versions, and preserves verified model hashes
   and write times while blocking downloader egress during upgrade.
+
+### M5 green native review and first tag result
+
+- CI 40036996425 (75656dd) is fully green, including native compilation,
+  installed lifecycle, PE/license, packaged GUI and WFP. Native page artifact
+  downloaded for review. CI 40037091940 also green.
+- Tag v0.5.0-m5.1 / release run 40037642063 failed the JSON export semantic
+  golden solely because its expected app_version was hardcoded 0.0.1. Draft
+  upload was skipped. Expected metadata now follows the package version; all
+  other golden fields remain asserted. Focused exports/release tests: 17 passed.
+- Next release discovers the latest earlier existing draft, so a failed test tag
+  does not require deletion, retagging or an unavailable preceding installer.
+- Page review is active; desktop scale is 175%. A process-only DPI-unaware
+  compatibility launch reports effective 96 DPI without changing host settings,
+  but Windows bitmap-scales its capture. This limitation must be disclosed;
+  native 100%/150% display acceptance remains an Owner VM check.

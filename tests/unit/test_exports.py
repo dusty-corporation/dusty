@@ -116,7 +116,11 @@ def test_json_and_docx_semantic_goldens() -> None:
     created = datetime(2026, 10, 22, tzinfo=UTC)
     transcript = golden_transcript()
     payload = render_json(transcript, Path("sample.wav"), created_utc=created)
-    assert json.loads(payload) == json.loads((root / "sample.json").read_text(encoding="utf-8"))
+    from dusty import __version__
+
+    expected_json = json.loads((root / "sample.json").read_text(encoding="utf-8"))
+    expected_json["app_version"] = __version__
+    assert json.loads(payload) == expected_json
     expected = json.loads((root / "sample-docx.json").read_text(encoding="utf-8"))
     document = Document(
         io.BytesIO(render_docx(transcript, Path("sample.wav"), created_utc=created))

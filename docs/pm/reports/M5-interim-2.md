@@ -1,88 +1,47 @@
-# M5 Interim 2 - Required-platform PE import stop
+# M5 interim 2 - Native installer page review
 
-## 1. Summary
+## Owner actions for the morning
 
-The PM's explicit stop condition is met: the pinned **python312.dll and
-Qt6Core.dll both import WS2_32.dll**. Removing lxml and splitting the folders
-cannot remove imports inside these required binaries. I stopped after the
-read-only preflight and recorded the approved decisions as ADRs 0019/0020.
-No allowlist, source code, dependencies, layout or binaries were changed.
+1. PM: review the native light/100% page bundle linked below. Wording and layout
+   are frozen after this delivery pending your response, except correctness fixes.
+2. Owner: run docs/pm/M5-checklist.md on the fresh standard-user Windows 11 VM.
+   No installer has been run against the Owner's real app profile.
 
-## 2. Acceptance criteria
+## Summary and evidence
 
-| Criterion | Status | Evidence |
-|---|---|---|
-| Identify required-platform import conflicts before rebuilding | met | 114 candidate PEs checked; five matches, original installed hashes identical. |
-| List every checked PE | met | docs/dev/packaging-pe-preflight.md includes all 114 names and five exact import tables/hashes. |
-| Standard-library DOCX, test-only python-docx | approved, pending | ADR 0019; no implementation before the explicit stop is resolved. |
-| Separate onedir folders and strict offline-folder CI gate | blocked | ISSUE-015: Python and QtCore themselves violate the requested import rule. |
-| Narrow Visual C++ exception, no UCRT, complete notices | approved, pending | ADR 0020; no license-checker changes or new clearance claim. |
-| Remove Mesa/unused plugins, include libffi MIT notice | pending | No rebuild after the stop finding. |
-| Rerun WFP/license gate and close S0 after fix | not met | ISSUE-014 remains open; no fix or new test results are claimed. |
+Step B implements the shared catalog/consent, three reachable license views,
+physical model-free GPU/RAM pre-selection, Auto testing of every selected model,
+one extra smallest-model CPU check, Retry/CPU retry/Finish without, and an
+uninstall checkbox with the real installed-model size. Owner ThinkPad Iris Xe
+probe PASS on 2026-10-23: `{"real_gpu_found":true,"model_file_opened":false}`.
 
-## 3. Evidence
+Local full source: 257 passed/1 expected skip, 94.6% measured core-package
+coverage (193.37 s). Ruff/format, mypy and all three policy checks pass.
+CI 40036996425 compiled the font/layout repair; final result and screenshot
+asset are being collected in the continuing overnight session.
 
-Normal and delayed imports were checked case-insensitively against
-ws2_32.dll, wsock32.dll, wininet.dll, winhttp.dll and dnsapi.dll.
-All matches below are to **WS2_32.dll**:
+## Pages requested for review
 
-| PE | Imported functions |
-|---|---|
-| python312.dll | getsockopt, send, WSAGetLastError |
-| PySide6/Qt6Core.dll | WSACleanup, WSAStartup, WSAAsyncSelect |
-| _multiprocessing.pyd | recv, send, closesocket, WSAGetLastError |
-| _overlapped.pyd | closesocket, WSASend, ntohl, WSAIoctl, WSASendTo, WSAConnect, socket, ntohs, WSAStringToAddressW, WSARecv, WSARecvFrom, inet_ntop, htons, bind, WSAGetLastError |
-| select.pyd | select, __WSAFDIsSet, WSAGetLastError |
+Welcome; combined license agreement; separate third-party and Microsoft views;
+Choose model; low-RAM warning; install folder; shortcuts; ready; file installation;
+inline consent; download; per-model test progress; download failure; graphics-test
+failure with CPU retry; successful checks; Finish without acknowledgment;
+normal finish; finish after failed model setup; uninstall model-size checkbox.
 
-This was a preflight of the existing local experimental bundle, Python 3.12.11
-and Qt 6.9.2, at code 04e9b5a. lxml, dusty-fetch.exe, _socket/_ssl, OpenSSL and
-software OpenGL were excluded from this candidate scan. The complete checked
-list also records existing Windows runtime/helper files that the approved new
-layout would exclude; this is not evidence of a newly built compliant folder.
-All five matching PEs are byte-identical to their original installed sources.
-No runtime network event or disclosure was observed.
+The review executable uses real Inno controls with installation disabled.
+Progress/error/low-memory and uninstall-size examples are synthetic review states,
+not evidence of a real download failure or clean-machine acceptance. The archive
+must contain only PNGs and README; profile/metadata files stay outside it.
 
-## 4. Test results
+## Questions for the PM
 
-No builds, test suites or WFP runs were launched for the new decisions. The only
-new execution was the read-only PE preflight and documentation generation.
-Historical test, size and WFP evidence remains in M5-interim-1.md and does not
-establish compliance with the PM's new offline-folder import rule.
+- Please approve or annotate the page wording/layout. No further cosmetic changes
+  will be made before that reply. The larger native model list uses explicit
+  wrapped shared descriptions rather than Inno's single-line secondary column.
+- Fresh VM testing must measure full model-page entry time, including temporary
+  payload extraction. Driver calls themselves have a five-second child deadline
+  and seven-second Setup deadline; the standalone probe does not measure disk
+  extraction. No unmeasured total-time claim is made.
 
-## 5. Deviations
-
-Implementation paused before the approved DOCX/layout changes because the PM
-explicitly said to stop on a legitimate platform binary with a prohibited import.
-No exception or upstream binary substitution was made.
-
-## 6. Issues
-
-| Issue | Severity | Status |
-|---|---|---|
-| ISSUE-014, lxml native networking | S0 | Open; removal approved, not yet implemented. |
-| ISSUE-015, Python/QtCore native imports | S1 | Blocked on the explicit required-platform decision. |
-| ISSUE-013, native license clearance | S1 | Narrow Visual C++ exception approved; remaining changes pending. |
-
-## 7. Decision needed
-
-Please specify the policy for these required-platform imports. As requested,
-I have not treated them as an exception or assumed they are harmless IPC.
-A rebuild/substitution or a narrowly justified policy requires PM approval.
-
-## 8. Actions needed from the Owner
-
-Relay the required-platform decision. No new runtime test is requested.
-The existing eight-check M3 re-test is the active Owner walkthrough; the old
-20-step desktop request is stale and is not being repeated. The ThinkPad's
-18 passes/two failures and the implemented fixes remain the recorded history.
-
-## 9. Risks
-
-The requested import-free offline folder cannot currently pass with these
-unchanged required platform DLLs. ISSUE-014 cannot honestly be closed until its
-approved fix and the revised packaging checks have passed.
-
-## 10. Effort notes
-
-The initial dependency preflight found the blocker before implementation or
-another bundle build. Only repository documentation was written.
+The old packaging-spike interim 2 is retained as
+M5-packaging-spike-interim-2.md. This report is the current M5 page review.

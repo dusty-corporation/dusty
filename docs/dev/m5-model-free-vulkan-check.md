@@ -59,3 +59,14 @@ Pinned source references:
 - https://github.com/ggml-org/whisper.cpp/blob/d1be6fde11ac6e0407606b4e42fe72d34add8037/ggml/include/ggml-backend.h
 
 No production probe code was added during Phase 1.
+
+## Implemented probe evidence (M5 Step B)
+
+The production guarded probe and its standalone diagnostic are now implemented.
+Owner ThinkPad Iris Xe result on 2026-10-23:
+`{"real_gpu_found":true,"model_file_opened":false}`. Desktop diagnostic passed
+with PowerShell 7 and Windows PowerShell 5.1; production entry also returned true.
+This supersedes the Phase 1 pending-device note, not its historical findings.
+The bounded child initializes a physical integrated/discrete GPU and performs a
+4 KiB buffer operation. Software devices are rejected. The post-download model
+inference tests remain mandatory; enumeration alone is never inference evidence.
