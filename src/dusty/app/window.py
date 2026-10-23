@@ -601,7 +601,7 @@ class MainWindow(QMainWindow):
         worker.finished.connect(lambda: QTimer.singleShot(0, self._background_finished))
 
     def download_recommended(self) -> None:
-        target = self._recommendation if self._recommendation not in self.installed else VOICE_ID
+        target = self._recommendation if not self.installed else VOICE_ID
         self.open_model_manager(focus_id=target)
 
     def open_model_manager(self, *, focus_id: str | None = None) -> None:

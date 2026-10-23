@@ -434,3 +434,14 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   Upload verified; release remains draft and older asset is retained.
 - Next: final code CI, forward merges to M5/M6, full source verification on each,
   packaged build/PE/license/GUI/WFP acceptance, report refresh. No PR opened.
+
+
+### M4 forward-merge source verification
+
+- M5 4c2da89 carries the M4 fixes; full local suite 201 passed/1 CI-only skip,
+  188.96 seconds; 94.5% strict coverage. Ruff/format/types/policy all pass.
+- Final review found the missing-voice action still targeted a missing
+  recommendation when Tiny was installed. Fixed on M4 and added an actual
+  button-click regression; it passes. Carry this small correction forward too.
+- M5 merge required only preserving both additive ledger sections. No source
+  conflict or license/runtime pin change. Packaging CI 39990617610 is running.
