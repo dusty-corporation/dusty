@@ -261,3 +261,9 @@ No further implementation or tests were started after the Owner requested this c
   FileVersion is intentionally 0.0.0.0. The actual engine is reported by
   ISDllGetVersion in the compile banner. Replaced the incorrect launcher version
   assumption with exact engine-banner 6.7.3 verification, retaining bootstrap SHA.
+
+- Actual engine banner verified as Inno Setup 6.7.3 in 39913542021. Compilation
+  then rejected generated line 211: Invalid section tag. An indented Pascal
+  array literal began with '[' at line start, which Inno's section parser treats
+  as a section. Moved the bracket onto the preceding expression; no behavior or
+  acceptance gate changed. M4 report sync rebase changed only docs/ledger.

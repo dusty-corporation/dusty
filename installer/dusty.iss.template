@@ -178,8 +178,8 @@ begin
         if First = '' then First := ModelIds[I];
       end;
     if First = '' then begin Result := False; Exit; end;
-    if SuppressibleMsgBox(FmtMessage(CustomMessage('DownloadConsent'),
-      [IntToStr((Bytes + 999999) div 1000000)]), mbConfirmation, MB_OKCANCEL, IDCANCEL) <> IDOK then
+    if SuppressibleMsgBox(FmtMessage(CustomMessage('DownloadConsent'), [
+      IntToStr((Bytes + 999999) div 1000000)]), mbConfirmation, MB_OKCANCEL, IDCANCEL) <> IDOK then
       begin Result := False; Exit; end;
     ProgressPage.Show;
     ProgressPage.Animate;
