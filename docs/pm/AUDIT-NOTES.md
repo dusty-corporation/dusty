@@ -22,3 +22,5 @@ promote an item to an issue if it affects correctness, privacy or licensing.
 6. **Installer ABI boundary:** Inno 6's PE32 Job Object record is explicitly
    sized and architecture-gated. Review marshalling and cancellation/termination
    on a standard-user VM before treating the draft as installer acceptance.
+
+7. **Installer runtime attribution:** ADR 0023 verification uses pinned upstream source/build selection and exact received runtime hashes, not a recovered linker map or independent reproducible Inno build. Audit the selected units, notice/source archive and the boundary between installer-only exceptions and the processing-app gate.
