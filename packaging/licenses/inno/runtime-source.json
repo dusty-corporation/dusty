@@ -1,5 +1,5 @@
 {
-  "commit": "c7af86b4b2fd03371185df2b09a1dca8d472ab70",
+  "commit": "4adf37ed7f3fd2bd11c6836ba056e3de170fbabf",
   "runtime_files": [
     "Setup.e32",
     "SetupLdr.e32"
@@ -88,5 +88,6 @@
       "path": "Components/NewUxTheme.TmSchema.pas",
       "sha256": "84d1de8482467a694c137b8aba28235f8a984b0e511a65f95141b9b2689b6909"
     }
-  ]
+  ],
+  "annotated_tag_object": "c7af86b4b2fd03371185df2b09a1dca8d472ab70"
 }
