@@ -391,7 +391,7 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 | M5-P2 | M5 prework | Scoped wrapper and static runtime license approval | done | ADR 0023 amendment; pinned actual units, complete notices and original JEDI source; installer license gate green 39985711346 | ISSUE-017/018 resolved |
 | M5-P3 | M5 prework | Inventory and installed acceptance gates | done for CI | 216 payload files/161989319 bytes; 221 installed files byte-checked; 64 PE gate; installed calibrated WFP 0; full lifecycle passes | VM manual acceptance remains |
 | M5-P4 | M5 prework | Upload ordering regression | done | Synthetic failing gate produces skipped upload; production requires source/offline/regression + successful license/installed gates; green 39985711346 | ISSUE-019 resolved process S1 |
-| M6-D1 | M6 prework | Carry current M5 into docs branch | done | All M5 implementation and interim-7 report carried forward; only documentation differs | - |
+| M6-D1 | M6 prework | Carry current M5 into docs branch | done | M6 e1c7758 carries the complete M5 implementation and interim-7 report, docs-only delta | - |
 
 - Final code CI 39985711346 at fa5fbcb: all four jobs green, source 196 passed/2 expected skips plus real-network integration 1 passed. Local serial 197 passed/1 skip, 94.5% strict coverage; lint/types/policies pass.
 - Unsigned installer only as CI artifact 12516525534, 34618916 bytes, SHA-256 4ea17b60157593ff989c06e9d6d8e745b8e25ba61f0bb77478706ee58e1a2720. No release upload. Full notice/SBOM/runtime/installed acceptance audit artifact 12516480610.
