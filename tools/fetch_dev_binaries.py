@@ -70,13 +70,16 @@ def extract_flat_zip(archive_path: Path, destination: Path) -> None:
             temporary.replace(destination / name)
 
 
-def selected_models(manifest: dict[str, Any], release_tag: str) -> list[dict[str, Any]]:
+def selected_models(
+    manifest: dict[str, Any], release_tag: str, *, recommended: bool = False
+) -> list[dict[str, Any]]:
     """Select the exact PM-approved dev set from a pinned release manifest."""
     if manifest.get("release_tag") != release_tag:
         raise ValueError("Model release tag mismatch")
     models = {entry["id"]: entry for entry in manifest["models"]}
     vad = {entry["id"]: entry for entry in manifest["vad"]}
-    entries = [models[model_id] for model_id in DEV_MODEL_IDS] + [vad[VAD_ID]]
+    ids = DEV_MODEL_IDS + (("large-v3-turbo-q8_0", "small-f16") if recommended else ())
+    entries = [models[model_id] for model_id in ids] + [vad[VAD_ID]]
     prefix = f"https://github.com/{REPO}/releases/download/{release_tag}/"
     for entry in entries:
         if entry["url"] != prefix + entry["file_name"]:
@@ -86,7 +89,7 @@ def selected_models(manifest: dict[str, Any], release_tag: str) -> list[dict[str
     return entries
 
 
-def fetch(root: Path = ROOT) -> None:
+def fetch(root: Path = ROOT, *, recommended: bool = False) -> None:
     pins = tomllib.loads((root / "native/versions.toml").read_text(encoding="utf-8"))
     engine = pins["engine_release"]
     models = pins["models_release"]
@@ -102,7 +105,7 @@ def fetch(root: Path = ROOT) -> None:
     manifest_url = f"https://github.com/{REPO}/releases/download/{models['tag']}/models.json"
     download_verified(manifest_url, manifest_path, models["manifest_sha256"])
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    for entry in selected_models(manifest, models["tag"]):
+    for entry in selected_models(manifest, models["tag"], recommended=recommended):
         destination = root / "build/models" / entry["file_name"]
         download_verified(entry["url"], destination, entry["sha256"])
         if destination.stat().st_size != entry["size_bytes"]:
@@ -113,8 +116,13 @@ def fetch(root: Path = ROOT) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT)
+    parser.add_argument(
+        "--recommended-models",
+        action="store_true",
+        help="Also fetch Turbo q8_0 and Small for GUI walkthroughs",
+    )
     arguments = parser.parse_args()
-    fetch(arguments.root.resolve())
+    fetch(arguments.root.resolve(), recommended=arguments.recommended_models)
 
 
 if __name__ == "__main__":

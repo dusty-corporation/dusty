@@ -19,6 +19,7 @@ class ScanResult:
     jobs: tuple[Job, ...]
     unsupported: int
     duplicates: int
+    duplicate_paths: tuple[Path, ...] = ()
 
 
 def scan_inputs(
@@ -27,6 +28,7 @@ def scan_inputs(
     """Scan in stable order; preserve directories relative to each selected root."""
     seen = {job.source.resolve() for job in existing}
     jobs = []
+    duplicate_paths = []
     unsupported = duplicates = 0
     for source in inputs:
         root = source.resolve()
@@ -46,8 +48,9 @@ def scan_inputs(
             resolved = candidate.resolve()
             if resolved in seen:
                 duplicates += 1
+                duplicate_paths.append(resolved)
                 continue
             seen.add(resolved)
             relative_dir = candidate.parent.relative_to(root) if root.is_dir() else None
             jobs.append(Job(resolved, relative_dir=relative_dir))
-    return ScanResult(tuple(jobs), unsupported, duplicates)
+    return ScanResult(tuple(jobs), unsupported, duplicates, tuple(duplicate_paths))

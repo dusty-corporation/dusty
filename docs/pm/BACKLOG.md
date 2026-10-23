@@ -10,6 +10,11 @@ Record optional improvements, optimizations, and work outside V1 here instead of
 - Exact vocabulary token counting: consider replacing the documented approximate prompt warning if an approved tokenizer becomes available.
 - Additional model variants: reconsider models cut by ADR 0016 only with fresh accuracy and performance evidence and PM approval.
 - CI asset-cache refresh: include the selected-model set in the immutable cache key so future dev-model additions can be cached; download hash verification already runs every time.
+- Extended UI load profiling: measure very large queues and long transcript parsing during M6 hardening; M3's automated 200 ms gate uses a real public-fixture batch.
+
+- Refresh pinned GitHub Actions during M6 maintenance: CI warns that the pinned Node 20 actions are forced onto Node 24; verify supported replacements without changing current M3 scope.
+
+- Explicit enterprise proxy support: defer pending a PM-approved host/credential policy; the isolated downloader currently connects directly.
 
 ## After V1 (SPEC section 3.2)
 

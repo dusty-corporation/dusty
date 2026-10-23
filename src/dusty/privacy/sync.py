@@ -4,6 +4,8 @@ import json
 import os
 from pathlib import Path
 
+from dusty.platform.sync_locations import google_drive_roots
+
 
 def sync_roots(environment: dict[str, str] | None = None) -> tuple[Path, ...]:
     """Discover local OneDrive, Dropbox and Google Drive roots without network access."""
@@ -31,6 +33,7 @@ def sync_roots(environment: dict[str, str] | None = None) -> tuple[Path, ...]:
             candidate = Path(profile) / name
             if candidate.exists():
                 roots.append(candidate)
+    roots.extend(google_drive_roots(env))
     return tuple(root.resolve() for root in roots)
 
 

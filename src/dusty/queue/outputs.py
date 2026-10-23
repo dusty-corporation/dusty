@@ -20,7 +20,7 @@ class OutputExistsError(Exception):
 def output_targets(job: Job, options: BatchOptions) -> list[Path]:
     """Plan all batch formats with one shared Keep both suffix."""
     folder = job.source.parent if options.same_folder else options.output_dir
-    if options.keep_structure and job.relative_dir:
+    if options.keep_structure and job.relative_dir and not options.same_folder:
         folder /= job.relative_dir
     suffix = ".en" if options.task == "translate" else ""
 

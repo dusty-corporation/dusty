@@ -2,13 +2,10 @@
 
 
 def create_window():
-    """Create the M0 shell window."""
-    from PySide6.QtWidgets import QMainWindow
+    """Create the desktop window; native preparation starts after it is shown."""
+    from dusty.app.window import MainWindow
 
-    window = QMainWindow()
-    window.setWindowTitle("Dusty")
-    window.resize(800, 600)
-    return window
+    return MainWindow()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -52,11 +49,16 @@ def main(argv: list[str] | None = None) -> int:
             formats=("txt",),
         )
 
+    from PySide6.QtCore import QTimer
     from PySide6.QtWidgets import QApplication
 
+    from dusty.app.theme import apply_theme
+
     app = QApplication(sys.argv[:1])
+    apply_theme(app)
     window = create_window()
     window.show()
+    QTimer.singleShot(0, window.initialize)
     return app.exec()
 
 

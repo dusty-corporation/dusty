@@ -49,6 +49,8 @@ def probe_audio(ffprobe: Path, source: Path, *, cancel: Cancellation | None = No
         if not has_audio:
             return AudioProbe(0.0, False)
         duration_text = streams[0].get("duration") or data.get("format", {}).get("duration")
+        if duration_text in (None, "N/A"):
+            return AudioProbe(0.0, True)
         duration = float(duration_text)
         if duration <= 0:
             raise ValueError("Invalid duration")

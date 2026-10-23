@@ -21,6 +21,7 @@ New-Item -ItemType Directory -Path $work | Out-Null
 $snapshot = Join-Path $work 'audit-policy.csv'
 $rules = [Collections.Generic.List[string]]::new()
 $oldLocal = $env:LOCALAPPDATA
+$oldQpa = $env:QT_QPA_PLATFORM
 $savedAudit = $false
 
 function Invoke-TestPython([string[]]$Arguments) {
@@ -92,13 +93,16 @@ try {
     $batch = Invoke-TestPython -Arguments @('-m', 'dusty', '--headless-batch', 'tests/fixtures/audio/formats/jfk.wav', '--out', (Join-Path $work 'outputs'), '--backend', 'auto', '--model', 'tiny')
     $expectedBatch = "added=1 unsupported=0 duplicates=0`ndone OK"
     if (($batch -replace "`r`n", "`n") -cne $expectedBatch) { throw 'Offline batch did not report success' }
+    $env:QT_QPA_PLATFORM = 'offscreen'
+    $gui = Invoke-TestPython -Arguments @('tests/offline/gui_batch.py', (Join-Path $work 'gui-outputs'))
+    if ($gui -cne 'gui batch passed') { throw 'Offline GUI batch did not report success' }
     Start-Sleep -Seconds 3
     $events = Read-ConnectionEvents $began
     $violations = @(Get-DustyConnectionEvents -Events $events -Programs $programs -AfterRecordId $marker -ExcludeProcessId $controlPid)
-    $summary = @{calibration_blocked_event=$true; selftest='passed'; batch='passed'; connection_events=$violations.Count}
+    $summary = @{calibration_blocked_event=$true; selftest='passed'; batch='passed'; gui='passed'; connection_events=$violations.Count}
     $summary | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $work 'summary.json') -Encoding utf8
     if ($violations.Count) { throw "S0: processing_connection_events=$($violations.Count)" }
-    'WFP calibration passed; selftest passed; batch passed; connection_events=0'
+    'WFP calibration passed; selftest passed; batch passed; gui passed; connection_events=0'
 } finally {
     foreach ($name in $rules) { Remove-NetFirewallRule -Name $name }
     if ($savedAudit) {
@@ -106,4 +110,5 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Audit policy restoration failed' }
     }
     $env:LOCALAPPDATA = $oldLocal
+    $env:QT_QPA_PLATFORM = $oldQpa
 }

@@ -77,6 +77,8 @@ class Job:
     outputs: list[Path] = field(default_factory=list)
     backend_used: Literal["cpu", "vulkan"] | None = None
     gpu_fallback: bool = False
+    duration_sec: float = 0.0
+    elapsed_sec: float = 0.0
 
 
 @dataclass(frozen=True)

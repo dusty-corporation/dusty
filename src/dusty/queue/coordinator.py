@@ -3,18 +3,19 @@
 import logging
 import shutil
 import threading
+import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Literal
 
 from dusty.core import BatchOptions, FailureCode, Job, JobStatus
-from dusty.core.types import Cancellation
+from dusty.core.types import Cancellation, CollisionPolicy
 from dusty.models import ModelCorrupt, ModelMissing, ModelRegistry, can_translate
 from dusty.platform.power import prevent_sleep
 from dusty.runtime_paths import RuntimePaths
 
-from .outputs import OutputExistsError, write_outputs
+from .outputs import OutputExistsError, output_targets, write_outputs
 from .storage import save_batch
 
 _LOG = logging.getLogger("dusty")
@@ -29,17 +30,18 @@ class _CancellationGroup:
 
 
 def cleanup_orphaned_work(work_root: Path) -> None:
-    """Remove only UUID-shaped abandoned per-job work directories."""
+    """Remove abandoned job directories and the two named public self-test work areas."""
     from uuid import UUID
 
     if not work_root.is_dir():
         return
     for candidate in work_root.iterdir():
         if candidate.is_dir():
-            try:
-                UUID(candidate.name)
-            except ValueError:
-                continue
+            if candidate.name not in {"probe", "selftest"}:
+                try:
+                    UUID(candidate.name)
+                except ValueError:
+                    continue
             shutil.rmtree(candidate)
 
 
@@ -62,6 +64,7 @@ class Coordinator:
         cancel_current: threading.Event | None = None,
         on_change: Callable[[Job], None] | None = None,
         vulkan_ok: bool | None = None,
+        on_collision: Callable[[Job], CollisionPolicy] | None = None,
     ) -> list[Job]:
         """Save every transition; preserve finished jobs on restart."""
         if options.task == "translate" and not can_translate(
@@ -72,6 +75,19 @@ class Coordinator:
             raise ValueError("Threads must be positive")
         self.work_root.mkdir(parents=True, exist_ok=True)
         save_batch(self.state_path, options, jobs)
+        preexisting = {
+            target.resolve()
+            for entry in jobs
+            for target in output_targets(entry, replace(options, collision="overwrite"))
+            if target.exists()
+        }
+        produced: set[Path] = set()
+        claimed = {
+            target.resolve()
+            for entry in jobs
+            if entry.status in {JobStatus.DONE, JobStatus.SKIPPED}
+            for target in output_targets(entry, replace(options, collision="overwrite"))
+        }
         for job in jobs:
             if job.status in {JobStatus.DONE, JobStatus.SKIPPED}:
                 continue
@@ -80,14 +96,41 @@ class Coordinator:
                 save_batch(self.state_path, options, jobs)
                 continue
 
-            def changed(current: Job = job) -> None:
+            job_started = time.monotonic()
+
+            def changed(current: Job = job, started: float = job_started) -> None:
+                current.elapsed_sec = time.monotonic() - started
                 self._changed(current, options, jobs, on_change)
 
             signals = _CancellationGroup(
                 tuple(event for event in (cancel, cancel_current) if event)
             )
+            current_options = options
+            nominal = output_targets(job, replace(options, collision="overwrite"))
+            existing = [target for target in nominal if target.exists()]
+            prior = [
+                target
+                for target in existing
+                if target.resolve() in preexisting and target.resolve() not in produced
+            ]
+            repeated_name = any(target.resolve() in claimed for target in nominal)
+            claimed.update(target.resolve() for target in nominal)
+            if repeated_name or (existing and not prior):
+                current_options = replace(options, collision="keep_both")
+            elif prior and options.collision == "ask" and on_collision:
+                decision = on_collision(replace(job, outputs=prior))
+                current_options = replace(options, collision=decision)
+            if cancel and cancel.is_set():
+                job.status = JobStatus.CANCELLED
+                changed()
+                continue
             try:
-                self._run_one(job, options, signals, vulkan_ok, changed)
+                job.failure = None
+                job.progress = 0.0
+                job.gpu_fallback = False
+                self._run_one(job, current_options, signals, vulkan_ok, changed)
+                if job.status == JobStatus.DONE:
+                    produced.update(path.resolve() for path in job.outputs)
             finally:
                 if cancel_current:
                     cancel_current.clear()
@@ -147,6 +190,7 @@ class Coordinator:
             if not probe.has_audio:
                 job.failure = FailureCode.NO_AUDIO
                 return
+            job.duration_sec = probe.duration_sec
             estimated_wav = int(probe.duration_sec * 16000 * 2 + 4096)
             if shutil.disk_usage(work).free < estimated_wav * 2:
                 job.failure = FailureCode.DISK_FULL
@@ -157,6 +201,9 @@ class Coordinator:
             decode_sec = transcode_audio(
                 self.paths.bin_dir / "ffmpeg/ffmpeg.exe", job.source, wav, cancel=cancel
             )
+            if probe.duration_sec == 0:
+                probe = probe_audio(self.paths.bin_dir / "ffmpeg/ffprobe.exe", wav, cancel=cancel)
+                job.duration_sec = probe.duration_sec
             job.status = JobStatus.TRANSCRIBING
             changed()
             backend: Literal["cpu", "vulkan"] = (
