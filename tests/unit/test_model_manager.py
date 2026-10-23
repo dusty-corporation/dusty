@@ -480,6 +480,7 @@ def test_missing_voice_button_targets_voice_when_another_model_is_installed(
 @pytest.mark.parametrize("theme", ["light", "dark"])
 def test_catalog_selected_row_labels_use_legible_highlight_ink(models, qtbot, qapp, theme):
     from PySide6.QtGui import QPalette
+
     from dusty.app.theme import apply_theme, contrast_ratio
 
     apply_theme(qapp, theme)
