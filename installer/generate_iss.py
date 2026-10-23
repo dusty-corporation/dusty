@@ -3,12 +3,16 @@
 import argparse
 import hashlib
 import json
+import sys
 from pathlib import Path
 
-from dusty import __version__
-from dusty.app import messages as M
-from dusty.models import load_manifest
-from tools.installer_notices import runtime_notices
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from dusty import __version__  # noqa: E402
+from dusty.app import messages as M  # noqa: E402
+from dusty.models import load_manifest  # noqa: E402
+from tools.installer_notices import runtime_notices  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 
