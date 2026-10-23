@@ -80,6 +80,7 @@ def cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
                 path.rmdir()
             except OSError:
                 pass
-        return True
+        remaining = list(root.iterdir()) if root.exists() else []
+        return not any(remove_models or p != root / "models" for p in remaining)
     except (OSError, ValueError, TypeError):
         return False

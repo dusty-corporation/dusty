@@ -28,7 +28,8 @@ def test_cleanup_known_files_and_preserve_outputs(tmp_path, remove_models):
     (root / "models").mkdir()
     model = root / "models/ggml-tiny.bin"
     model.write_bytes(b"model")
-    assert cleanup(paths, remove_models=remove_models)
+    # Unknown files cause a kept-data notice.
+    assert not cleanup(paths, remove_models=remove_models)
     assert (outputs / "raw.json").read_text() == "user transcript"
     assert (root / "work/job/transcript.txt").exists()
     assert (root / "work/job/audio.wav").exists()  # Unknown work folder is not app-owned.

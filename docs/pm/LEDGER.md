@@ -245,3 +245,14 @@ No further implementation or tests were started after the Owner requested this c
 - Inno 6.7.3 official bootstrap SHA pinned; CI compilation/artifact only. Source
   license retained, SmartScreen/checksum guidance added. Seven focused tests pass;
   real compilation, full regression and fresh-machine behavior still need evidence.
+
+### Installer draft verification follow-up
+
+- Full local regression after draft additions: 186 passed, 1 CI-only skip in
+  184.24 s; strict coverage 94.5%. Seven focused license/cleanup tests pass again.
+- CI 39912687607 packaging job passed all app bundle, PE, GUI, license and WFP
+  steps but stopped before compilation at Unexpected Inno compiler version.
+  The text FileVersion check did not expose its numeric identity; changed to
+  exact numeric 6.7.3 fields with both forms printed, retaining the bootstrap hash pin.
+- Cleanup now reports preserved unknown content instead of silently implying
+  complete removal. Added independent audit notes for ownership and the Inno ABI.

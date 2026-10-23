@@ -18,8 +18,11 @@ $process = Start-Process -FilePath $bootstrap -ArgumentList @(
 ) -Wait -PassThru -WindowStyle Hidden
 if ($process.ExitCode -ne 0) { throw 'Pinned Inno compiler setup failed' }
 $iscc = Join-Path $compilerDir 'ISCC.exe'
-if ((Get-Item -LiteralPath $iscc).VersionInfo.FileVersion -notmatch '^6\.7\.3(?:\.|$)') {
-    throw 'Unexpected Inno compiler version'
+$version = (Get-Item -LiteralPath $iscc).VersionInfo
+$numericVersion = '{0}.{1}.{2}' -f $version.FileMajorPart, $version.FileMinorPart, $version.FileBuildPart
+Write-Host "Inno compiler file version: $($version.FileVersion); numeric: $numericVersion"
+if ($numericVersion -ne '6.7.3') {
+    throw 'Unexpected Inno compiler numeric version'
 }
 & (Join-Path $repo '.venv/Scripts/python.exe') (Join-Path $repo 'installer/generate_iss.py') --bundle $Bundle
 if ($LASTEXITCODE -ne 0) { throw 'Installer input generation failed' }
