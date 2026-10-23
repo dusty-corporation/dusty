@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -14,6 +15,7 @@ from dusty.app import messages as M  # noqa: E402
 from dusty.app.model_manager import format_size  # noqa: E402
 from dusty.models import load_manifest  # noqa: E402
 from tools.installer_notices import runtime_notices  # noqa: E402
+from tools.release_version import versions  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -92,8 +94,16 @@ def generate(output: Path, bundle: Path) -> Path:
             names=M.DOWNLOAD_NAMES_JOIN.join(names), size=format_size(total)
         )
         consent_cases.append(f"    {mask}: Result := {pascal(consent)};")
+    release_tag = os.environ.get("DUSTY_RELEASE_TAG", "")
+    if release_tag:
+        package, display_version, numeric_version = versions(release_tag)
+        if __version__ != package:
+            raise ValueError("Release package version does not match its tag")
+    else:
+        display_version, numeric_version = __version__, "0.0.1.0"
     values = {
-        "VERSION": __version__,
+        "VERSION": display_version,
+        "NUMERIC_VERSION": numeric_version,
         "BUNDLE": str(bundle.resolve()),
         "MODEL_COUNT": str(len(manifest.models)),
         "MODEL_SETUP": "\n".join(setup_models),

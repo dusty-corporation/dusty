@@ -1,0 +1,43 @@
+name: Draft M5 release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Reject unapproved tags
+        shell: pwsh
+        run: python tools/release_version.py '${{ github.ref_name }}'
+  gates:
+    needs: validate
+    uses: ./.github/workflows/ci.yml
+    with:
+      release_tag: ${{ github.ref_name }}
+  draft:
+    needs: [validate, gates]
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: m5-installer-draft-unsigned
+          path: build/release-input
+      - name: Stage approved assets and checksums
+        shell: pwsh
+        run: python -m tools.release_assets --source build/release-input --output build/release-assets --tag '${{ github.ref_name }}'
+      - name: Create draft only after every source and installed gate passes
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create '${{ github.ref_name }}' --verify-tag --draft --prerelease --title 'Dusty ${{ github.ref_name }} (unsigned M5 test)' --notes 'Unsigned test installer. Owner publication only. See SHA256SUMS.txt and THIRD_PARTY_NOTICES.md.' build/release-assets/*
+          if ($LASTEXITCODE -ne 0) { throw 'Draft release creation failed' }

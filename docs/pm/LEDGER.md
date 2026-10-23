@@ -708,3 +708,14 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   Retry on CPU is offered only for a failed Vulkan test, never a failed CPU test.
 - Focused installer support/generation: 24 passed; ruff and mypy pass (73 files).
   Screenshots and final CI still pending; release pipeline and VM checklist next.
+
+### M5 release pipeline checkpoint
+
+- Added fail-closed draft-only release workflow, reusing all CI source, PE,
+  license, installed lifecycle and calibrated WFP gates before asset upload.
+- Approved mapping: v0.5.0-m5.N -> Python 0.5.0.devN, displayed 0.5.0-m5.N,
+  numeric installer 0.5.0.N. Any other tag is rejected by the release job.
+- Release staging permits only installer, complete notices, installer CycloneDX
+  SBOM, retained JEDI source and SHA256SUMS covering those four assets.
+- Focused release/generator/upload-order tests: 11 passed. Tag runs and two-build
+  upgrade acceptance remain pending; no draft release has yet been claimed.
