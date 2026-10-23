@@ -36,3 +36,5 @@ Record optional improvements, optimizations, and work outside V1 here instead of
 
 - CUDA backend: proprietary runtime redistribution conflicts with NN-5; backlog inclusion does not authorize it.
 - Automatic updates or update checks: conflicts with NN-4; retain explicit manual updates.
+
+- Refresh pinned GitHub Actions for Node 24 after review; current pinned actions pass but CI warns that Node 20 actions are forced onto Node 24.

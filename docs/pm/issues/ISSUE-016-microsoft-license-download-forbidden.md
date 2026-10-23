@@ -53,3 +53,7 @@ protective EULA now fail the bundled license gate in regression tests.
 At the initial stop there was no regression for the external vendor access
 failure. Subsequent evidence/protective-term regressions now cover the retained
 documents; no test or allowlist was weakened to conceal a missing license.
+
+Final evidence: run 39884809028 packaging job 120190381823 passes the license
+gate with all three original document hashes, complete protective EULA and
+Owner-pinned runtime provenance. No alternate vendor download was required.

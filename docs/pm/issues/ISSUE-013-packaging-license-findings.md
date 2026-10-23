@@ -2,7 +2,7 @@
 
 - Severity: S1
 - Milestone: M5 packaging spike
-- Status: Open
+- Status: Resolved
 - Environment: Windows x64, Python 3.12.11, PyInstaller 6.16.0, Qt 6.9.2, engine-v2
 
 ## Steps to reproduce
@@ -52,3 +52,23 @@ before any distributable bundle or license-clearance claim.
 Bundle tests reject unknown licenses, static LGPL, unmapped files, inventory
 hash mismatch and file additions/removals. Existing bootloader exception remains
 exactly scoped to ADR 0014. No new allowlist exception is granted.
+
+## Resolution, 2026-10-22
+
+Earlier proposed fixes and pending statements above describe the initial stop.
+
+The PM-approved removals and narrow exceptions are implemented. Runtime
+python-docx/lxml, Mesa, UCRT and API-set DLL copies are absent; libffi MIT,
+Qt LGPL/GPL reference, FFmpeg LGPL and downloader-only OpenSSL Apache notices
+are retained. ADR 0020 uses the Owner's Community section 4 basis and the three
+unchanged PDFs, protective EULA and exact Owner CRT hashes. ADR 0021 separately
+pins only the two required platform primitive import sets. The former generic
+native-review placeholder was a scope warning, not an identified component;
+real unknown file providers still fail the gate and its negative tests.
+
+Run 39884809028, packaging-spike job 120190381823: bundle license gate passed;
+205 actual files, 12 provider components, schema-valid CycloneDX 1.6, all file
+hashes and provider mappings covered. Full source notices and CRT import/source
+receipts accompany the audit artifact. No new unapproved license remains at
+this component/provider inventory scope. This is a draft SBOM, not a claim to
+reverse-engineer every source unit statically linked inside upstream libraries.

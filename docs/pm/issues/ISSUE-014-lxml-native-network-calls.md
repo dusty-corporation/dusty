@@ -2,7 +2,7 @@
 
 - Severity: S0
 - Milestone: M5 packaging spike
-- Status: Open
+- Status: Resolved
 - Environment: Windows x64, lxml 6.1.3 wheel, libxml2 2.11.9,
   Python 3.12.11, PyInstaller 6.16.0
 
@@ -79,3 +79,24 @@ None yet: the S0 rule requires stopping implementation. A proposed regression
 must check the processing extension's native networking configuration/imports
 and exercise packaged Word export under the calibrated WFP audit. Scope it to
 processing extensions; the separate downloader legitimately uses TLS/socket code.
+
+## Resolution, 2026-10-22
+
+Earlier proposed fixes and pending statements above describe the initial stop.
+
+ADR 0019 replaces runtime python-docx/lxml with standard-library zipfile and
+escaped XML templates. Title/subtitle, paragraphs, optional timestamp prefixes,
+Calibri 11 and empty core properties are preserved. python-docx remains a test
+reader only. Unchanged DOCX goldens and Unicode/openability/metadata regression
+checks pass. Local full suite: 159 passed, one CI-only skip; export coverage
+140/142 (98.6%).
+
+The final separate offline folder contains no docx/lxml, socket/TLS modules,
+OpenSSL, QtNetwork/WebEngine, select, _overlapped or _multiprocessing.
+Run 39884809028 packaging job 120190381823 passes the layout gate, 64-PE import
+gate, packaged GUI smoke, and packaged self-test under calibrated WFP with zero
+connection events. Only the two exact PM-approved platform pins (ADR 0021)
+remain; all other processing PEs reject prohibited network imports. Export
+regressions cover the removed XML dependency; WFP exercises the packaged
+self-test, not every possible exporter path. No native lxml workaround or
+additional allowlist entry was introduced.
