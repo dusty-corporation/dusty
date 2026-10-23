@@ -1,9 +1,12 @@
-# M3 focused ThinkPad re-test
+# M3 Owner re-test: completed
 
-Only changed behavior is listed here. Previously passed checks remain recorded
-in M3-report.md. Close Dusty before fetching, so Windows releases the native
-DLLs. The optional model flag adds the real recommended Small and Turbo q8_0
-models from the pinned published release; it never changes that release.
+On 2026-10-22 the PM relayed the Owner's ThinkPad result: **all eight checks
+PASS functionally** (i7-1365U, Iris Xe, recommended models installed).
+The original test instructions below record what was tested; their speed
+estimates and error advice are superseded by the final PM polish in M3-report.md.
+No repeat of this eight-check walkthrough is requested.
+
+## Historical instructions for the completed re-test
 
 ```powershell
 cd C:\Users\kdash\whisper_app

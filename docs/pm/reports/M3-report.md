@@ -2,7 +2,12 @@
 
 ## 1. Summary
 
-The Owner reviewed M3 on the ThinkPad (i7-1365U, Iris Xe, Tiny, Vulkan): 18 checks passed and checks 1 and 8 failed. This revision fixes the supplied output-folder, model-choice, AMR, run-flow, wording and keyboard findings; the AMR failure was a duration-preflight assumption, not a missing native decoder. All 106 local tests pass, and the regenerated screenshot asset has 136 images. A short changed-behavior re-test is still pending, so human acceptance remains partial. No M4 work has started; PR #4 remains a draft.
+The Owner's ThinkPad re-test (i7-1365U, Iris Xe, recommended models installed)
+passed all eight checks functionally, as relayed by the PM on 2026-10-22. The
+final polish makes messages clearer, simplifies model copy and error dialogs,
+and suppresses Welcome whenever an output folder is set. Functional human
+acceptance is complete; the new screenshot asset is ready for the PM's visual review; final CI is running. Packaging remains on its separate
+accepted spike branch; M3 does not include an installer.
 
 ## 2. Acceptance criteria
 
@@ -13,8 +18,8 @@ The Owner reviewed M3 on the ThinkPad (i7-1365U, Iris Xe, Tiny, Vulkan): 18 chec
 | Model rules and simple defaults | met | Installed-model selection; backend-dependent recommendation; English-only lock; incompatible translation disabled; Medium action; slow warning; explicit replacement when a resume model is missing. |
 | UI event loop gap at most 200 ms during a real batch | met | Public JFK, Tiny CPU, two threads, TXT+DOCX; 10 ms precise Qt timer and GUI-thread delivery assertions. The final real-batch integration test passes the 200 ms maximum-gap assertion. This measures the tested batch, not every possible recording or workload. |
 | Centralized copy, exact privacy/accuracy wording, vocabulary hints | met | app/messages.py; copy/model-control tests; multi-line hints and soft warning based on the verified approximate 800-character prompt threshold. |
-| Themes, scaling, required dialogs and screenshots | met | 136 synthetic PNGs: 34 states in light/dark at 100%/150%; font glyph validation and key-image visual inspection. Native display review is pending below. |
-| Owner walkthrough | partial | ThinkPad: 18 passed, steps 1/8 failed and now corrected; targeted re-test pending. Eight changed-behavior re-test checks are in section 8. |
+| Themes, scaling, required dialogs and screenshots | met | 164 synthetic PNGs: 41 states in light/dark at 100%/150%; font glyph validation and key-image visual inspection. ThinkPad functional review passed, including 150% scaling; final polish is presented for screenshot review. |
+| Owner walkthrough | met | ThinkPad original 18 passes plus all eight targeted re-tests PASS functionally, PM/Owner confirmation 2026-10-22; original steps 6/17 also passed. |
 | Approved cleanup and real-appdata test protection | met | backend_probe-only cleanup completed and verified before M3; session audit guard plus repo-local appdata for tests and child processes. |
 
 ## 3. What was built
@@ -30,8 +35,8 @@ The Owner reviewed M3 on the ThinkPad (i7-1365U, Iris Xe, Tiny, Vulkan): 18 chec
 ### Screenshot review
 
 [Draft m3-screenshots release](https://github.com/dusty-corporation/dusty/releases/tag/untagged-c09275afcc8084a0f275).
-Use **m3-screenshots-thinkpad-fixes.zip**, 3,693,812 bytes, SHA-256:
-`340623ad93b4abe209b606482ba9249871a803895fa488f2665413052911a48f`.
+Use **m3-screenshots-final-polish.zip**, 3,962,955 bytes, SHA-256:
+`031f699e9f6abaf2bfb0eb1d6571fe8a30da0eabe11e45b04329a6f38c540f2c`.
 GitHub's uploaded digest matches. All earlier ZIPs are retained; the release is still a draft and may require authenticated access. The Owner can relay the reviewed ZIP to the PM.
 
 Reproduce with `uv run python tools/render_gui.py`. Screens include empty/waiting/modal options/vocabulary/advanced, invalid translation selection, preparing/transcribing/saving, collision, summary, resume, welcome, sync warning and every failure-code dialog. Names and progress are synthetic, not transcription or performance evidence. Installed Windows Segoe UI is loaded only if offscreen Qt has no fonts; no font is redistributed.
@@ -39,30 +44,30 @@ Reproduce with `uv run python tools/render_gui.py`. Screens include empty/waitin
 ### ThinkPad correction evidence
 
 - Output location is always visible, including Not chosen yet in warning color; File offers a destination chooser. Missing destination disables Start with a plain hint, with no automatic Documents/OneDrive default.
-- Purpose-first names retain technical identifiers. A local probe and manifest speed class select conservative M1 ThinkPad estimates, explicitly labelled as similar-laptop estimates; docs/dev/gui.md records all source RTFs and rounding. English-only Translate is visibly unavailable with an explanation; the previous multilingual language is restored, and the slow warning is inside Options.
+- Transcription model replaces Accuracy and speed. Balanced (all languages) and Balanced (English only) retain technical names in the secondary details. All time estimates/extrapolation are removed. Only a CPU-only slow manifest class shows the Balanced suggestion, inside Options and beside its main summary. English-only Translate remains visibly disabled and the previous language is restored.
 - Pinned native checks show AMR demuxing and amrnb/amrwb decoding enabled. FFprobe exits 0 with an audio stream and no duration; FFmpeg decodes the same file with exit 0. Unknown duration remains -- until decoding; the decoded WAV supplies duration to Whisper. Real coordinator and actual-window add/start regressions transcribe jfk.amr successfully.
 - The coordinator snapshots prior outputs and reserves names per run. Same-stem WAV/AMR files auto-number even after the first Keep both choice against an older transcript; a later run asks again about pre-existing transcripts. The collision dialog names the existing .txt file and holds the current row/status at Waiting for your choice.
 - Resume starts immediately; unfinished elapsed values reset. Finished-list guidance and Tools > Clear finished are present. A zero-success summary hides Open folder with transcripts and makes Done primary.
-- Add counts use correct plurals and omit zeros; duplicates name/highlight the existing row briefly without a popup. Corrupt-file advice is now appropriate to MP3. Add folder has one title. Tab leaves the list and arrow keys navigate rows.
+- Add counts use correct plurals and omit zeros; duplicates name/highlight the existing row briefly without a popup. Error dialogs now show only the file name and plain reason, without advice. Add folder has one title. Tab leaves the list and arrow keys navigate rows.
 - `uv run python tools/fetch_dev_binaries.py --recommended-models` completed and verified both recommended models with pinned hashes, preserving the published model release. An initial concurrent fetch hit WinError 5 on a DLL used by native tests; the approved elevated retry after tests completed succeeded. No ACL, ownership, location or permission workaround was used.
 
 ### PM review verification
 
 - Translation help and Medium action are hidden during Transcribe; regressions cover invalid Translate choices.
 - Opening modal Options leaves the main table geometry unchanged. Only Text and Word remain in the main format row; SRT/VTT/JSON still persist under More formats.
-- Overall progress is hidden while idle. One formatter keeps bottom/row phase labels consistent, including zero-progress preparation.
+- Overall progress is hidden while idle. One formatter keeps centered-message/row phase labels consistent, including zero-progress preparation.
 - Collision radios, filenames, Stop, nonzero summary counts, failure reasons and the primary Open folder with transcripts action are tested.
 - Move actions are in the context menu with actual Alt+Up delivery tested after focus; main edit buttons are Add files, Add folder, Remove and Clear list.
 - Border contrast against window/input/button backgrounds measures **4.324/4.612/4.100:1 in light mode** and **7.014/7.728/5.098:1 in dark mode**, exceeding 3:1. Actual painted-boundary tests cover check/radio, push/tool, combo/spin, text, table and scroll controls; key screens were visually reviewed in both themes. Native OS dialogs still need the Owner's desktop review.
 
 ## 4. Test results
 
-Final code revision: 1ff2327, following d58e629, 62dc03d and b4c9ae5. Local Windows checks:
+Final UI code revision: 4997333; final screenshot renderer follows in this documentation commit. Local Windows checks:
 
 - `uv run ruff check .`: passed.
 - `uv run ruff format --check .`: 88 files already formatted.
 - `uv run mypy`: passed, 54 source files.
-- `uv run python tools/measure_coverage.py`: **106 passed in 89.06 s** (runs the entire pytest suite with tracing).
+- `uv run python tools/measure_coverage.py`: **112 passed in 98.15 s** (runs the entire pytest suite with tracing).
 - All three policy checks passed: check_no_network.py, check_no_huggingface.py, check_licenses.py.
 
 | Required package | Hit / executable lines | Coverage |
@@ -74,14 +79,14 @@ Final code revision: 1ff2327, following d58e629, 62dc03d and b4c9ae5. Local Wind
 | privacy | 80/84 | 95.2% |
 | Combined | 893/948 | 94.2% |
 
-Every required package exceeds 85%. These figures do not claim GUI widget line coverage; 23 dedicated Qt/theme/presentation tests cover the M3 behaviors, including four actual native GUI integrations.
+Every required package exceeds 85%. These figures do not claim GUI widget line coverage; 29 dedicated Qt/theme/presentation tests cover the M3 behaviors, including four actual native GUI integrations.
 
-Final revision CI:
+Previous ThinkPad-fix CI (historical, before this polish):
 
 - [PR run 39854200159](https://github.com/dusty-corporation/dusty/actions/runs/39854200159): checks and offline passed; **105 passed, 1 skipped in 196.01 s**, coverage 94.2%.
 - [Push run 39854194307](https://github.com/dusty-corporation/dusty/actions/runs/39854194307): checks and offline passed; **105 passed, 1 skipped in 265.02 s**, same coverage.
 - Both WFP logs: `WFP calibration passed; selftest passed; batch passed; gui passed; connection_events=0`. Positive blocked-event calibration and cleanup passed.
-- The only skip is the existing usable-Vulkan-device comparison on hosted CI; all 106 tests pass on the desktop, including that comparison. No skip was added.
+- The only skip is the existing usable-Vulkan-device comparison on hosted CI; all 112 tests pass on the desktop, including that comparison. No skip was added.
 - [Draft PR #4](https://github.com/dusty-corporation/dusty/pull/4) remains open and unmerged. Subsequent report-only commits may queue their own CI runs.
 
 Previous revisions and their evidence remain in git history. No test was
@@ -117,7 +122,7 @@ Output: no lines; git grep exit code 1 (no matches). No history was rewritten.
 
 ## 5. Deviations from SPEC
 
-The PM explicitly replaced the original expanding Options panel with a modal dialog, moved extra formats into it, and revised the dialogs and copy. These approved changes supersede the earlier M3 brief for those controls; no dependency or native component changed. Model Manager/download controls are disabled until M4 as the brief permits. Pending Owner walkthrough means this report is not a claim that every M3 acceptance criterion has passed. The event-loop test covers a real small batch; extended workload profiling is deferred in BACKLOG.md.
+The PM explicitly replaced the original expanding Options panel with a modal dialog, moved extra formats into it, and revised the dialogs and copy. These approved changes supersede the earlier M3 brief for those controls; no dependency or native component changed. Model Manager/download controls are disabled until M4 as the brief permits. The Owner has now passed all eight targeted functional re-tests; the final screenshot polish follows that accepted behavior. The event-loop test covers a real small batch; extended workload profiling is deferred in BACKLOG.md.
 
 ## 6. Issues
 
@@ -132,62 +137,28 @@ No new S0/S1 issue. Sync detection remains advisory: arbitrary mirrored location
 
 ## 7. Decisions needed from PM/Owner
 
-1. Return pass/fail on the eight targeted re-tests below. Recommendation: keep PR #4 as draft until the corrected behavior is confirmed; no dependency, native pin or new scope decision is needed.
+None for implementation. The Owner handles the eventual merge after PM review
+and green CI; the engineer does not merge.
 
-## 8. Owner results and focused re-test
+## 8. Owner results
 
-Owner evidence received 2026-10-22, ThinkPad i7-1365U / Iris Xe, Tiny, Vulkan:
+The original ThinkPad walkthrough used i7-1365U / Iris Xe, Tiny and Vulkan:
+18 passed, with initial output-folder/English-only-Translate failures at steps
+1/8. The PM corrected the record for steps 6 and 17: both passed. Step 15
+verified Keep both, Replace and Skip; step 20 passed at 150% scaling and confirmed
+settings/output-folder persistence.
 
-| Original walkthrough steps | Owner result |
-|---|---|
-| 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 | Passed |
-| 1 | Failed: Welcome X left an empty screen without a visible output-folder choice; persistence itself already worked. |
-| 8 | Failed: English-only Translate looked selectable and did nothing. |
-| 6 | Passed: Move up/down and Remove worked. The Tab-trap finding was addressed by correction 15. |
-| 17 | Passed: Close/save/resume worked. The extra-Start finding was addressed by correction 9. |
-
-Step 15 explicitly verified Keep both, Replace and Skip. Step 20 was at 150%
-scaling and confirmed settings and the output folder persist across launches.
-The additional AMR failure and other requested corrections are covered by the
-new regressions and remain subject to the focused re-test, not retroactively
-counted as Owner passes.
-
-Close Dusty before fetching so Windows releases its native DLLs. Use a fresh
-repo-local test profile to check Welcome X without editing your real settings:
-
-```powershell
-cd C:\Users\kdash\whisper_app
-git checkout m3-gui
-git pull --ff-only
-uv run python tools/fetch_dev_binaries.py --recommended-models
-$savedDustyLocalAppData = $env:LOCALAPPDATA
-$env:LOCALAPPDATA = Join-Path $PWD ("build\m3-owner-retest-" + (Get-Date -Format yyyyMMdd-HHmmss))
-uv run python -m dusty
-```
-
-Relaunch with `uv run python -m dusty` in that same terminal/profile. Afterwards
-restore `$env:LOCALAPPDATA = $savedDustyLocalAppData`. The app chooses no output
-destination automatically; select a fresh folder deliberately in the UI.
-
-| Check | Changed behavior and expected result |
-|---|---|
-| 1 | Close Welcome with X. The empty screen still shows Save transcripts to, Not chosen yet in warning color, Choose folder, and the choose-output hint. File > Choose where to save transcripts also works. No destination is automatically chosen. Select a fresh folder for these public test outputs. |
-| 2 | Open Options. Purpose labels lead, technical names are secondary, and the speed estimate/caution is visible. Choose Medium with Processor only: the slower-than-recording warning must be visible inside Options. |
-| 3 | Pick Persian, then Balanced, English only. Language locks to English; Translate is visibly unavailable with a reason. Pick Balanced again: Persian returns. Restore Auto-detect, Transcribe, Fastest (Tiny), and Automatic for the English fixture checks. |
-| 4 | Add jfk.wav and jfk.amr from tests/fixtures/audio/formats. AMR may initially show --. Both must transcribe successfully; same-run outputs get matching numbered suffixes without a collision prompt for the second recording. |
-| 5 | Clear list and add those two recordings again. Only the first name collision should ask, naming the existing .txt file. While the dialog is open the current row/bottom line say Waiting for your choice. Choose Keep both without apply-to-all; the second same-name recording is numbered without another prompt. |
-| 6 | After completion, the disabled Start has the everything-is-done explanation. Tools > Clear finished removes completed/skipped rows. Add the same recording twice: singular/plural counts omit zeros, its name says already in the list, and the existing row highlights briefly without a popup. Tab leaves the list; arrow keys move between rows. |
-| 7 | Run only a corrupt MP3 from tests/fixtures/audio/bad. Advice says it may be damaged and suggests saving again as WAV if another player can open it. With zero successes, Open folder with transcripts is hidden and Done is primary. Add folder has its description only once. |
-| 8 | Add the public mostly-silence recording plus JFK; disable Skip silent parts to allow time. Start, close during processing with Stop and save, relaunch, then choose to pick up where you left off. It starts immediately without another Start click; unfinished elapsed times reset. Restore Skip silent parts afterwards. |
-
-Send pass/fail by check number and only the visible problem for failures; no
-recordings, transcripts, vocabulary hints or unredacted logs. Companion:
-docs/pm/M3-retest.md. The original script remains in M3-walkthrough.md for
-reference. The Owner handles merging and release publication.
+**2026-10-22 final re-test: all eight targeted checks PASS functionally**, on the
+ThinkPad with recommended models installed. This includes output choice,
+model/language rules, AMR decoding, same-run numbering, existing-output collision
+handling, finished-list and keyboard behavior, zero-success summary, and immediate
+recovery. The completed script is retained in M3-retest.md as a historical record.
+The remaining PM feedback is visual/copy polish implemented in this revision,
+not a request to repeat the functional walkthrough.
 
 ## 9. Risks for the next milestone
 
-- The ThinkPad already passed 150% scaling and persistence. Changed behavior needs the eight targeted re-tests; original steps 6/17 also passed, as corrected by the PM.
+- ThinkPad functional re-test, 150% scaling and persistence have passed; final visual changes remain for PM screenshot review.
 - M4 must preserve the separate downloader process and the runtime/static networking boundary while replacing the disabled model-management control.
 - The real Surface Vulkan smoke test remains required before M7 under the accepted M1 conditional GO; it does not block M3.
 - File/history deletion is not secure erasure. Sync-folder warnings cannot disable another program's uploads.
@@ -195,3 +166,21 @@ reference. The Owner handles merging and release publication.
 ## 10. Time/effort notes
 
 The main work was safe asynchronous worker/dialog coordination, preserving in-progress choices and recovery, and reproducible offscreen rendering. The PM review added modal layout and copy corrections; painted-border tests caught the need to preserve native arrows and explicit check/radio marks while improving contrast. Empty offscreen font enumeration initially produced unusable glyphs; the final reviewed artifact uses installed fonts and validates glyph support. CI now exercises both headless and Qt-driven processing inside the WFP audit window. No elapsed engineering-hour estimate is asserted.
+
+## Final PM polish after the functional re-test
+
+- Centered 16 px status/general-warning area directly under the recording list.
+  Output-required/finished-list and other Start blockers appear beside Start.
+- All dialogs use the native title bar only; no duplicate body heading. Error
+  content is exactly the file name and plain reason, without recovery advice.
+- Transcription model and distinct Balanced labels; no per-hour estimates or
+  similar-laptop caveats. CPU-only slow choices warn in both Options and the main window.
+- Welcome checks for an output folder, including older settings without
+  welcome_seen. Re-entry/once-per-window guards and synchronous dialog execution
+  ensure Welcome finishes before recovery. Already-chosen folders suppress it.
+- New regressions cover message position/font, all titleless dialog bodies,
+  reason-only errors, model labels/no estimates/CPU warning matrix, folder-based
+  Welcome suppression and re-entrant welcome-before-resume order.
+
+Final polish CI at 4997333 is running: push 39888871011 and PR 39888876056.
+Final results and branch carry-forward evidence will be recorded when complete.

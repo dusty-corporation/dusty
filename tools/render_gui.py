@@ -17,13 +17,16 @@ def render(output: Path, theme: str) -> None:
     from PySide6.QtGui import QFont, QRawFont
     from PySide6.QtWidgets import QApplication
 
+    from dusty.app import messages as M
     from dusty.app.dialogs import (
+        CloseDialog,
         CollisionDialog,
         ErrorDialog,
         FolderDialog,
         ResumeDialog,
         SummaryDialog,
         SyncDialog,
+        TextDialog,
         WelcomeDialog,
     )
     from dusty.app.theme import apply_theme
@@ -66,7 +69,16 @@ def render(output: Path, theme: str) -> None:
     ]
     window.model.set_jobs(jobs)
     window._refresh()
+    window.status.setText(M.scan_summary(2, 0, 0))
     capture(window, "02-queued")
+    window.status.setText(M.DUPLICATE_ONE.format(name=jobs[0].source.name))
+    capture(window, "02b-duplicate-message")
+    window.output_dir = None
+    window._refresh()
+    capture(window, "02c-choose-output")
+    window.output_dir = Path("C:/Transcripts")
+    window.status.setText(M.READY)
+    window._refresh()
     window.options_dialog.show()
     capture(window.options_dialog, "03-options")
     window._set_combo(window.task_choice, "translate")
@@ -90,6 +102,8 @@ def render(output: Path, theme: str) -> None:
     window.options_scroll.verticalScrollBar().setValue(0)
     window._set_combo(window.device_choice, "cpu")
     capture(window.options_dialog, "05c-slow-choice")
+    window.options_dialog.hide()
+    capture(window, "05d-main-slow-warning")
     window._set_combo(window.device_choice, "auto")
     window._set_combo(window.model_choice, "large-v3-turbo-q8_0")
     window.options_dialog.hide()
@@ -118,7 +132,23 @@ def render(output: Path, theme: str) -> None:
     window.model.jobs[1].status = JobStatus.FAILED
     window.model.jobs[1].failure = FailureCode.NO_AUDIO
     window._refresh()
+    window.status.setText(M.summary_counts({"done": 2}))
+    window.model.jobs[1].status = JobStatus.DONE
+    for job in window.model.jobs:
+        job.progress = 1
+    window._refresh()
+    capture(window, "06c-all-finished")
+    window.model.jobs[1].status = JobStatus.FAILED
+    window._refresh()
     dialogs = [
+        (CloseDialog(window), "13-close-save"),
+        (TextDialog(M.PRIVACY_TITLE, (M.PRIVACY, M.ACCURACY), window), "14-privacy"),
+        (
+            TextDialog(
+                M.ABOUT, (M.ABOUT_VERSION.format(version="0.0.1"), M.PRIVACY, M.ACCURACY), window
+            ),
+            "15-about",
+        ),
         (CollisionDialog("Lecture 01.txt", window), "07-collision"),
         (SummaryDialog(window.model.jobs, window), "08-summary"),
         (SummaryDialog([window.model.jobs[1]], window), "08b-no-successes"),
@@ -185,6 +215,7 @@ def main() -> None:
         "All screens are rendered with pinned PySide6 6.9.2 via Qt's offscreen platform.\n"
         "Each light/dark folder uses QT_SCALE_FACTOR 1 or 1.5 (100% or 150%).\n"
         "The matrix includes every main screen and all failure-code dialogs.\n"
+        "Client areas are captured; native window title bars are outside Qt widget grabs.\n"
         "Reproduce: uv run python tools/render_gui.py\n",
         encoding="utf-8",
     )
