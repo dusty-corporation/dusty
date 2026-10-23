@@ -54,10 +54,12 @@ def check_inventory(path: Path) -> list[str]:
 def check_retained_sources(directory: Path) -> list[str]:
     proof_path = ROOT / "packaging/licenses/inno/runtime-source.json"
     proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    pins = json.loads((ROOT / "packaging/licenses/inno/source.json").read_text(encoding="utf-8"))
     receipt = json.loads((directory / "runtime-inputs.json").read_text(encoding="utf-8"))
     findings = []
     if (
         receipt["source_commit"] != proof["commit"]
+        or receipt["compiler_bootstrap_sha256"] != pins["compiler_sha256"]
         or receipt["source_review_sha256"] != hashlib.sha256(proof_path.read_bytes()).hexdigest()
         or sorted(item["name"] for item in receipt["files"]) != sorted(proof["runtime_files"])
     ):
