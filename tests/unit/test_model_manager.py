@@ -301,12 +301,16 @@ def test_main_window_close_cancels_model_child_without_orphan(models, qtbot, mon
 
     def drive():
         dialog = view.model_manager
-        if dialog is None:
+        if dialog is None or view.closing:
             return
+        try:
+            partial_bytes = part.stat().st_size
+        except FileNotFoundError:
+            partial_bytes = 0  # The cancelled child may remove it between timer ticks.
         if not started and not dialog.busy and bool(dialog.workers):
             started.append(True)
             QTimer.singleShot(0, dialog.download_button.click)
-        elif part.exists() and part.stat().st_size > 0 and not view.closing:
+        elif partial_bytes > 0:
             view.close()
 
     timer = QTimer()
