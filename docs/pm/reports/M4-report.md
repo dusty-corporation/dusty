@@ -252,3 +252,52 @@ in BACKLOG.md rather than being implemented.
   [artifact 12520629143](https://github.com/dusty-corporation/dusty/actions/runs/39998318413/artifacts/12520629143).
   All four workflow jobs are green, including PE/license/GUI/WFP and installed
   acceptance. Changes also carried to M6, green run 39998323956. No PR opened.
+
+
+## Final Owner acceptance and PR preparation (2026-10-23)
+
+- Owner ThinkPad changed-behavior check of review bundle run **39998318413**:
+  **all seven steps PASS**, reported 2026-10-23.
+- Final implementation: `e75dd79`, following partial-lifetime commit `6752599`.
+  Best for wording wraps within two lines; Turbo has the requested newer/older
+  computer note. The dynamic recommended suffix is unchanged. In-use Voice
+  detection deletion now states exactly that Start is unavailable until another
+  download or turning off Skip silent parts in Options. Verify all is disabled
+  when no transcription model or Voice detection is installed.
+- Crash/forced-close decision: keep recent partials for size/SHA-256-verified
+  resume. At GUI startup remove regular .part files older than seven days;
+  the exact seven-day boundary is retained. Normal Cancel and normal close
+  still remove their active partial immediately. Developer documentation updated;
+  M6 user documentation is deferred as requested.
+- **Forced GUI termination regression PASS**, locally and in Windows CI:
+  TerminateProcess kills the actual GUI interpreter while the real downloader
+  is blocked on a gated local HTTPS response. The downloader process handle
+  signals within five seconds without releasing that response; neither GUI nor
+  downloader cleanup handler runs. The retained 131,072-byte partial stops
+  growing. A new GUI retains it, requests Range bytes=131072-, and verifies the
+  full size and SHA-256 before creating the final model. Closed stdout cannot
+  explain this result because the child is blocked reading HTTPS at termination.
+- [Source CI 40008197028](https://github.com/dusty-corporation/dusty/actions/runs/40008197028)
+  is green: **175 passed, 2 expected skips, 94.4% coverage**. Local suite:
+  176 passed, 1 expected skip. Ruff, formatting, mypy and all three policy checks
+  pass. No tests removed or disabled.
+
+| WFP download scenario | GUI connections | Fetch allowed | Fetch blocked | Evidence |
+| --- | ---: | ---: | ---: | --- |
+| Source, final implementation | 0 | 4 | 0 | CI 40008197028, m4-download-audit |
+| Packaged, accepted review baseline | 0 | 4 | 0 | CI 39998318413, m4-review-bundle |
+
+Both audits passed calibration and model verification. The packaged row is the
+accepted review baseline, not a new packaged build of this final source round.
+Per PM instruction, m5-packaging-spike and m6-docs are unchanged and not rebased.
+
+- After source CI passed, regenerated and visually inspected only states
+  **06, 08, 21 and 27**, each in **light-1 and dark-1**: eight PNGs.
+- New asset on the existing [draft m4-screenshots release](https://github.com/dusty-corporation/dusty/releases/tag/untagged-6184fb70591dd06d1c63):
+  **m4-screenshots-final-e75dd79.zip**, 290,143 bytes.
+  SHA-256: `f1b3abf27b55c12cdc80b7fed5460fd82c5a168d3113a1c377c9c5a88a35c072`.
+  Previous assets retained; release remains draft.
+- Draft PR is authorized with title M4_model_manager, head m4-downloader and
+  base main. It must remain draft and unmerged. No follow-on branch work here.
+- Repository long-dash check: `rg -n '[\x{2013}\x{2014}]' .`
+  Output: none; exit 1 (no matches). SPEC and the Owner brief remain unchanged.

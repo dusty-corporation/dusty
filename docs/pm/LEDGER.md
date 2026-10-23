@@ -397,3 +397,20 @@ No further implementation or tests were started after the Owner requested this c
 - Stale startup partial cleanup, recent-partial retention, empty Verify all,
   exact deletion text and two-line Best for layout regressions pass.
 - Implementation complete; source CI, targeted screenshots and draft PR pending.
+
+
+### M4 final source and screenshots complete
+
+- Implementation e75dd79 / 6752599 pushed. Source CI 40008197028 green:
+  175 passed, 2 expected skips, 94.4% coverage. Forced GUI termination and
+  retained-prefix resume regressions pass locally and on Windows CI.
+- WFP source GUI 0, fetch allowed 4, blocked 0; calibration passed.
+  Accepted packaged baseline remains run 39998318413 with the same counts.
+- Rendered only 06/08/21/27 in light-1/dark-1 after green CI; all eight inspected.
+  Uploaded m4-screenshots-final-e75dd79.zip, 290,143 bytes, to draft
+  m4-screenshots; digest verified as
+  f1b3abf27b55c12cdc80b7fed5460fd82c5a168d3113a1c377c9c5a88a35c072.
+- Final M4 report includes Owner seven-step PASS, decisions, forced-close
+  evidence, CI and both source/packaged WFP attribution. Developer docs updated.
+- Next and final action: draft PR M4_model_manager into main, then stop.
+  m5-packaging-spike and m6-docs remain untouched; no rebase or user-doc edits.
