@@ -85,3 +85,6 @@ def test_upgrade_audits_the_new_installed_version():
     for gate in ("check_installed_payload.py", "test_network_isolation.ps1", "check_pe_imports.py"):
         assert gate not in before
         assert after.index(gate) < after.index("Uninstall-App 'no'")
+    final = after.split("# A two-version upgrade", 1)[1]
+    assert final.index("Install-App") < final.index("Complete-InstallerAudit")
+    assert "current_installer_fresh_download_wfp='passed'" in final

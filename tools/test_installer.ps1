@@ -76,6 +76,7 @@ try {
     if ($probe.real_gpu_found -isnot [bool]) { throw 'Probe evidence missing boolean result' }
     Install-App
     Complete-InstallerAudit $audit $Installer $work
+    Copy-Item -LiteralPath (Join-Path $work 'download-wfp.json') -Destination (Join-Path $work 'download-wfp-initial.json')
 } finally { Stop-InstallerAudit $audit }
 Save-UserState
 $models = @(Get-ChildItem -LiteralPath (Join-Path $data 'models') -Filter '*.bin' | ForEach-Object { @{name=$_.Name;hash=(Get-FileHash -LiteralPath $_.FullName).Hash;time=$_.LastWriteTimeUtc.Ticks} })
@@ -108,4 +109,17 @@ Uninstall-App 'yes'
 Assert-Output
 if (Test-Path -LiteralPath $data) { throw 'Remove-models uninstall left owned user data' }
 if (Test-Path -LiteralPath (Join-Path $install 'dusty/dusty.exe')) { throw 'Remove-models uninstall left app' }
-@{silent_per_user_install='passed';installer_download_tiny_and_vad='passed';installed_wfp='passed';two_distinct_versions=$twoVersions;upgrade_models_preserved_with_downloader_blocked='passed';uninstall_keep_models='passed';uninstall_remove_models='passed';user_outputs_unchanged=$true} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $work 'summary.json') -Encoding utf8NoBOM
+# A two-version upgrade starts with the old setup. Also audit a fresh download
+# through the CURRENT setup, so its own EXE/temp runtime is the observed image.
+$audit = Start-InstallerAudit $work
+try {
+    $p = Start-Process -FilePath (Join-Path $repo 'dist/Dusty/dusty/dusty.exe') -ArgumentList @('--probe-vulkan','--out',('"'+$probeResult+'"')) -PassThru -WindowStyle Hidden
+    if (-not $p.WaitForExit(15000)) { $p.Kill($true); throw 'Final probe exceeded deadline' }
+    if ($p.ExitCode -notin @(0,1)) { throw 'Final probe returned unsupported result' }
+    Install-App
+    Complete-InstallerAudit $audit $Installer $work
+} finally { Stop-InstallerAudit $audit }
+Uninstall-App 'yes'
+Assert-Output
+if ((Test-Path -LiteralPath $data) -or (Test-Path -LiteralPath (Join-Path $install 'dusty/dusty.exe'))) { throw 'Final fresh-install cleanup left owned files' }
+@{silent_per_user_install='passed';installer_download_tiny_and_vad='passed';current_installer_fresh_download_wfp='passed';installed_wfp='passed';two_distinct_versions=$twoVersions;upgrade_models_preserved_with_downloader_blocked='passed';uninstall_keep_models='passed';uninstall_remove_models='passed';user_outputs_unchanged=$true} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $work 'summary.json') -Encoding utf8NoBOM
