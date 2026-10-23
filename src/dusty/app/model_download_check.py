@@ -12,7 +12,6 @@ from PySide6.QtWidgets import QApplication
 from dusty.privacy.network_guard import is_installed
 from dusty.runtime_paths import resolve_paths
 
-from . import messages as M
 from .model_manager import VOICE_ID, DownloadDialog
 from .theme import apply_theme
 from .window import MainWindow
@@ -52,7 +51,8 @@ def run_download_check(model_id: str, output: Path) -> int:
             not started
             and not timed_out
             and not dialog.busy
-            and dialog.message.text() == M.MODELS_READY
+            and bool(dialog.workers)
+            and dialog.workers[-1].failure is None
         ):
             started = True
             QTimer.singleShot(0, dialog.download_button.click)

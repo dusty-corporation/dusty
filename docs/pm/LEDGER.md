@@ -516,3 +516,33 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - No PR opened, main merge, release publication, settings change or new work.
   Stop after pushing this documentation through both later branches; PM review
   and later clean-VM/Surface checks are Owner actions.
+
+
+### M4 screenshot polish round, 2026-10-23 (doing)
+
+- PM accepted b884fae screenshots with seven final copy/feedback polish items.
+  Clean m4-downloader recovered at 3acf37e; no Owner work to preserve.
+- Implementing short recommendation names, and-joined consent with unbreakable
+  size units, named/recoverable deletion warnings, simpler download progress,
+  Verify all feedback only after an explicit request with installed models,
+  one existing Options button, and decimal GB for sizes >=1000 MB.
+- Voice deletion behavior stays unchanged: with Skip silent parts enabled,
+  Start is blocked until Voice detection is downloaded or the option is off.
+- Next: focused/full tests, quality/policy gates, push and green CI; matching
+  packaged review bundle via existing packaging branch; targeted light-1/dark-1
+  screenshots only after CI; append Polish round evidence to M4-report.md.
+
+
+### M4 polish source checkpoint
+
+- Full local suite: 170 passed, 1 CI-only skip in 174.65 seconds; 94.2% strict
+  coverage. Focused Model Manager suite: 31 passed before the additional size
+  rollover boundary case; the full suite includes that case. Ruff/format/mypy
+  and all three policy checks pass; no em/en dash matches.
+- Initial integrity scan is separate from explicit Verify all. The CI download
+  exercise waits for a successful completed worker, preserving the failure
+  guard without depending on the removed startup feedback text.
+- Targeted renderer prepared for 14 affected states, light-1 and dark-1 only.
+  It has not run yet: PM requested rendering after CI is green.
+- Next: green source/packaged CI, collect matching m4-review-bundle run/name,
+  render and inspect targeted captures, upload new draft asset, append report.

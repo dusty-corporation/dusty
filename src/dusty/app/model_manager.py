@@ -34,6 +34,15 @@ def model_name(model_id: str) -> str:
     return M.VOICE_MODEL if model_id == VOICE_ID else M.MODEL_TECHNICAL[model_id]
 
 
+def format_size(size_bytes: int) -> str:
+    """Decimal download units; never wrap a number away from its unit."""
+    large = round(size_bytes / 1_000_000, 1) >= 1000
+    return M.MODEL_SIZE.format(
+        value=size_bytes / (1_000_000_000 if large else 1_000_000),
+        unit=M.GIGABYTES if large else M.MEGABYTES,
+    )
+
+
 def model_files(registry: ModelRegistry) -> dict[str, tuple[str, int]]:
     result = {
         key: (item.file_name, item.size_bytes) for key, item in registry.manifest.models.items()
@@ -197,7 +206,8 @@ class DownloadDialog(TextDialog):
             M.DOWNLOAD_TITLE,
             (
                 M.DOWNLOAD_CONFIRM.format(
-                    names=", ".join(model_name(key) for key in ids), mb=total / 1_000_000
+                    names=M.DOWNLOAD_NAMES_JOIN.join(model_name(key) for key in ids),
+                    size=format_size(total),
                 ),
             ),
             parent,
@@ -270,7 +280,7 @@ class ModelManager(TextDialog):
             self.table.setItem(
                 row,
                 2,
-                QTableWidgetItem(M.MODEL_SIZE.format(mb=model_files(registry)[key][1] / 1_000_000)),
+                QTableWidgetItem(format_size(model_files(registry)[key][1])),
             )
             self.table.setItem(row, 3, QTableWidgetItem(M.MODEL_STATUSES["not_installed"]))
         self.body.insertWidget(0, self.table, 1)
@@ -297,7 +307,7 @@ class ModelManager(TextDialog):
         self.table.itemSelectionChanged.connect(self._refresh)
         self.table.selectRow(self.ids.index(focus_id) if focus_id in self.ids else 0)
         self._refresh()
-        QTimer.singleShot(0, self.verify_all)
+        QTimer.singleShot(0, lambda: self._start("scan"))
 
     @property
     def busy(self) -> bool:
@@ -355,7 +365,7 @@ class ModelManager(TextDialog):
         worker.progress.connect(self._progress)
         worker.result.connect(self._result)
         worker.finished.connect(self._finished)
-        self.message.setText(M.VERIFYING_MODELS if action == "verify" else M.EMPTY_CELL)
+        self.message.setText(M.VERIFYING_MODELS if action in {"verify", "scan"} else M.EMPTY_CELL)
         self._refresh()
         worker.start()
 
@@ -384,9 +394,9 @@ class ModelManager(TextDialog):
             return
         key = self.selected_id()
         text = (
-            M.DELETE_SELECTED
+            M.DELETE_SELECTED.format(name=model_name(key))
             if key == self.selected()
-            else M.DELETE_VOICE
+            else M.DELETE_VOICE.format(name=model_name(key))
             if key == VOICE_ID and self.voice_in_use()
             else M.DELETE_CONFIRM.format(name=model_name(key))
         )
@@ -404,11 +414,13 @@ class ModelManager(TextDialog):
         self.progress.setValue(percent)
         self.progress_text.setText(
             M.DOWNLOAD_PROGRESS.format(
-                percent=percent, done=event["bytes"] / 1_000_000, total=event["total"] / 1_000_000
+                done=format_size(event["bytes"]), total=format_size(event["total"])
             )
         )
         self.message.setText(
-            M.VERIFYING_DOWNLOAD if event["event"] == "verifying" else model_name(key)
+            M.VERIFYING_DOWNLOAD
+            if event["event"] == "verifying"
+            else M.DOWNLOADING_MODEL.format(name=model_name(key))
         )
         self._refresh()
 
@@ -426,6 +438,9 @@ class ModelManager(TextDialog):
             else M.MODEL_DELETED
             if result["action"] == "delete"
             else M.MODELS_READY
+            if result["action"] == "verify"
+            and any(state == "installed" for state in self.statuses.values())
+            else M.EMPTY_CELL
         )
         self.progress.hide()
         self.progress_text.clear()

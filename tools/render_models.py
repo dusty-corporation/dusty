@@ -8,9 +8,25 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+POLISH_STATES = {
+    "02-no-models-start-hint",
+    "22-no-models-vulkan-recommendation",
+    "06-all-not-installed",
+    "10-delete-confirmation",
+    "23-delete-normal-confirmation",
+    "21-voice-deletion-confirmation",
+    "11-download-consent-with-voice-detection",
+    "24-download-consent-gb",
+    "12-downloading-progress-and-cancel",
+    "13-verifying-download",
+    "20-no-selected-model-options-prompt",
+    "25-open-installed-models-quiet",
+    "26-explicit-verify-complete",
+    "27-explicit-verify-empty-quiet",
+}
 
 
-def render(output: Path, theme: str) -> None:
+def render(output: Path, theme: str, *, polish: bool = False) -> None:
     from dusty.privacy.network_guard import install_guard
 
     install_guard()
@@ -41,6 +57,8 @@ def render(output: Path, theme: str) -> None:
     window.output_dir = None
 
     def capture(widget, name: str) -> None:
+        if polish and name not in POLISH_STATES:
+            return
         widget.show()
         app.processEvents()
         if not widget.grab().save(str(output / (name + ".png"))):
@@ -52,6 +70,12 @@ def render(output: Path, theme: str) -> None:
     window.model.set_jobs([Job(Path("C:/Recordings/Lecture.wav"), duration_sec=900)])
     window._refresh()
     capture(window, "02-no-models-start-hint")
+    if polish:
+        window.vulkan_ok = True
+        window._refresh()
+        capture(window, "22-no-models-vulkan-recommendation")
+        window.vulkan_ok = False
+        window._refresh()
     statuses = {key: "not_installed" for key in window.registry.manifest.models}
     statuses["tiny"] = statuses["silero-vad"] = "installed"
     window._models_changed(statuses)
@@ -80,7 +104,15 @@ def render(output: Path, theme: str) -> None:
         capture(manager, name)
 
     manager_capture("06-all-not-installed")
+    if polish:
+        manager._result({"statuses": dict(manager.statuses), "error": None, "action": "verify"})
+        manager_capture("27-explicit-verify-empty-quiet")
     manager.statuses.update(statuses)
+    if polish:
+        manager_capture("25-open-installed-models-quiet")
+        manager._result({"statuses": dict(manager.statuses), "error": None, "action": "verify"})
+        manager_capture("26-explicit-verify-complete")
+        manager.message.clear()
     manager.statuses["medium"] = "damaged"
     manager.table.selectRow(manager.ids.index("medium"))
     manager_capture("07-damaged-download-again")
@@ -88,11 +120,24 @@ def render(output: Path, theme: str) -> None:
     manager_capture("08-selected-model-delete-enabled")
     manager.table.selectRow(manager.ids.index("tiny"))
     manager_capture("09-other-model-delete-enabled")
-    confirm = TextDialog(M.DELETE_TITLE, (M.DELETE_SELECTED,), manager)
+    confirm = TextDialog(
+        M.DELETE_TITLE, (M.DELETE_SELECTED.format(name=M.MODEL_TECHNICAL["small"]),), manager
+    )
     confirm.button(M.CANCEL, confirm.reject, default=True)
     confirm.button(M.DELETE_MODEL, confirm.accept)
     capture(confirm, "10-delete-confirmation")
     confirm.hide()
+    if polish:
+        normal = TextDialog(
+            M.DELETE_TITLE, (M.DELETE_CONFIRM.format(name=M.MODEL_TECHNICAL["tiny"]),), manager
+        )
+        normal.button(M.CANCEL, normal.reject, default=True)
+        normal.button(M.DELETE_MODEL, normal.accept)
+        capture(normal, "23-delete-normal-confirmation")
+        normal.hide()
+        medium = DownloadDialog(("medium",), window.registry, manager)
+        capture(medium, "24-download-consent-gb")
+        medium.hide()
     consent = DownloadDialog(("large-v3-turbo-q8_0", "silero-vad"), window.registry, manager)
     capture(consent, "11-download-consent-with-voice-detection")
     consent.hide()
@@ -134,7 +179,9 @@ def render(output: Path, theme: str) -> None:
     window.model_choice.setCurrentIndex(-1)
     window._refresh()
     capture(window, "20-no-selected-model-options-prompt")
-    voice_confirm = TextDialog(M.DELETE_TITLE, (M.DELETE_VOICE,), manager)
+    voice_confirm = TextDialog(
+        M.DELETE_TITLE, (M.DELETE_VOICE.format(name=M.VOICE_MODEL),), manager
+    )
     voice_confirm.button(M.CANCEL, voice_confirm.reject, default=True)
     voice_confirm.button(M.DELETE_MODEL, voice_confirm.accept)
     capture(voice_confirm, "21-voice-deletion-confirmation")
@@ -150,16 +197,17 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=ROOT / "build/m4-screenshots")
     parser.add_argument("--child", action="store_true")
+    parser.add_argument("--polish", action="store_true")
     parser.add_argument("--theme", choices=("light", "dark"), default="light")
     args = parser.parse_args()
     output = args.output.resolve()
     if not output.is_relative_to(ROOT):
         raise ValueError("Screenshot output must stay inside the repository")
     if args.child:
-        render(output, args.theme)
+        render(output, args.theme, polish=args.polish)
         return
     for theme in ("light", "dark"):
-        for scale in ("1", "1.5"):
+        for scale in ("1",) if args.polish else ("1", "1.5"):
             subprocess.run(
                 [
                     sys.executable,
@@ -169,7 +217,8 @@ def main() -> None:
                     str(output / f"{theme}-{scale}"),
                     "--theme",
                     theme,
-                ],
+                ]
+                + (["--polish"] if args.polish else []),
                 env=dict(
                     os.environ,
                     QT_QPA_PLATFORM="offscreen",
@@ -179,12 +228,21 @@ def main() -> None:
                 cwd=ROOT,
                 check=True,
             )
+    count = len(list(output.rglob("*.png")))
     (output / "README.md").write_text(
-        "# M4 UI review\n\n21 synthetic states in both themes at 100% and 150% (84 PNGs).\n"
-        "No user content or real downloads; 42 GB free-space value is synthetic.\n"
+        "# M4 UI review\n\n"
+        + (
+            f"Polish round: {len(POLISH_STATES)} changed states "
+            f"in light-1 and dark-1 ({count} PNGs).\n"
+            if args.polish
+            else "21 synthetic states in both themes at 100% and 150% (84 PNGs).\n"
+        )
+        + "No user content or real downloads; 42 GB free-space value is synthetic.\n"
         "The actual Model Manager and main-window widgets are rendered with PySide6 6.9.2.\n"
         "Client areas only: native title bars and hover tooltips are not in widget grabs.\n"
-        "Reproduce: uv run python tools/render_models.py\n",
+        + "Reproduce: uv run python tools/render_models.py"
+        + (" --polish" if args.polish else "")
+        + "\n",
         encoding="utf-8",
     )
 
