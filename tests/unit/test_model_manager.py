@@ -475,3 +475,27 @@ def test_missing_voice_button_targets_voice_when_another_model_is_installed(
     view.download_recommended_button.click()
     assert opened == [VOICE_ID]
     assert not view.warning.text().startswith(M.MODEL_NAMES["small"])
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_catalog_selected_row_labels_use_legible_highlight_ink(models, qtbot, qapp, theme):
+    from PySide6.QtGui import QPalette
+    from dusty.app.theme import apply_theme, contrast_ratio
+
+    apply_theme(qapp, theme)
+    dialog = models.create()
+    for row in range(dialog.table.rowCount()):
+        dialog.table.selectRow(row)
+        labels = dialog.table.cellWidget(row, 0).findChildren(QLabel)
+        for label in labels:
+            assert label.foregroundRole() == QPalette.ColorRole.HighlightedText
+            ink = label.palette().color(label.foregroundRole()).name()
+            background = dialog.table.palette().highlight().color().name()
+            assert contrast_ratio(ink, background) >= 4.5
+        for other in range(dialog.table.rowCount()):
+            if other != row:
+                assert all(
+                    label.foregroundRole() == QPalette.ColorRole.WindowText
+                    for label in dialog.table.cellWidget(other, 0).findChildren(QLabel)
+                )
+    apply_theme(qapp, "light")
