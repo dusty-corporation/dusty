@@ -267,3 +267,8 @@ No further implementation or tests were started after the Owner requested this c
   array literal began with '[' at line start, which Inno's section parser treats
   as a section. Moved the bracket onto the preceding expression; no behavior or
   acceptance gate changed. M4 report sync rebase changed only docs/ledger.
+
+- Hardened uninstall ownership further: unfamiliar metadata schemas are preserved,
+  and discovery-time filesystem failures return the same redacted failure result.
+  Eight focused installer tests pass. Added the stale README introduction to the
+  M6 documentation backlog instead of widening this milestone's product scope.

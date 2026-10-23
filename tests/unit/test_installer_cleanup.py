@@ -19,7 +19,9 @@ def test_cleanup_known_files_and_preserve_outputs(tmp_path, remove_models):
     outputs = tmp_path / "Transcripts"
     outputs.mkdir(parents=True)
     (outputs / "raw.json").write_text("user transcript")
-    (root / "settings.json").write_text(json.dumps({"output_dir": str(outputs)}))
+    (root / "settings.json").write_text(
+        json.dumps({"schema_version": 1, "output_dir": str(outputs)})
+    )
     (root / "work/job").mkdir(parents=True)
     (root / "work/job/audio.wav").write_bytes(b"temporary")
     (root / "work/job/transcript.txt").write_text("preserve unknown file")
@@ -42,7 +44,9 @@ def test_cleanup_protects_internal_output_and_retains_metadata(tmp_path):
     outputs = root / "work/probe"
     outputs.mkdir(parents=True)
     (outputs / "raw.json").write_text("user transcript")
-    (root / "settings.json").write_text(json.dumps({"output_dir": str(outputs)}))
+    (root / "settings.json").write_text(
+        json.dumps({"schema_version": 1, "output_dir": str(outputs)})
+    )
     paths = RuntimePaths(tmp_path, root / "models", ROOT / "resources", root)
     assert not cleanup(paths, remove_models=True)
     assert (outputs / "raw.json").read_text() == "user transcript"
@@ -64,6 +68,15 @@ def test_cleanup_corrupt_settings_fails_closed(tmp_path):
     root = tmp_path / "Dusty"
     root.mkdir()
     (root / "settings.json").write_text("{broken")
+    paths = RuntimePaths(tmp_path, root / "models", ROOT / "resources", root)
+    assert not cleanup(paths, remove_models=True)
+    assert (root / "settings.json").exists()
+
+
+def test_cleanup_unknown_metadata_schema_is_preserved(tmp_path):
+    root = tmp_path / "Dusty"
+    root.mkdir()
+    (root / "settings.json").write_text('{"unrecognized": true}')
     paths = RuntimePaths(tmp_path, root / "models", ROOT / "resources", root)
     assert not cleanup(paths, remove_models=True)
     assert (root / "settings.json").exists()

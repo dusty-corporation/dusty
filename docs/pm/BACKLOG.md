@@ -8,6 +8,8 @@ Record optional improvements, optimizations, and work outside V1 here instead of
 
 ## Optimizations and optional improvements
 
+- Refresh the README's historical M0 introduction during M6 documentation work; current capability and release instructions need a user-focused overview.
+
 - Remove the native VAD patch: when whisper.cpp PR 4068 or an equivalent timestamp fix reaches a stable release, verify it, upgrade the pin, rerun native/VAD regressions, and drop our patch (ADR 0018).
 - Vulkan pipeline caching: defer unless future measured workloads justify it; ThinkPad probe resolved ISSUE-004 with no significant recurring overhead.
 - Persistent engine per batch: no current need after ISSUE-004 resolution; any future change needs PM approval to change ADR 0004 and preserve cancellation and crash isolation.

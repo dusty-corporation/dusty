@@ -9,7 +9,7 @@ from dusty.models import load_manifest
 from dusty.runtime_paths import RuntimePaths
 
 
-def cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
+def _cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
     """Return False if uncertain data was preserved; emit no paths or content."""
     root = paths.user_dir
     if not root.exists():
@@ -38,7 +38,10 @@ def cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
             return False
         for path in metadata:
             if path.exists():
-                inspect(json.loads(path.read_text(encoding="utf-8")))
+                data = json.loads(path.read_text(encoding="utf-8"))
+                if not isinstance(data, dict) or data.get("schema_version") != 1:
+                    return False
+                inspect(data)
         candidates = list(metadata)
         candidates += [
             p for p in (root / "logs").glob("*") if re.fullmatch(r"dusty\.log(?:\.[1-5])?", p.name)
@@ -82,5 +85,13 @@ def cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
                 pass
         remaining = list(root.iterdir()) if root.exists() else []
         return not any(remove_models or p != root / "models" for p in remaining)
+    except (OSError, ValueError, TypeError):
+        return False
+
+
+def cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
+    """Contain filesystem failures even during initial metadata discovery."""
+    try:
+        return _cleanup(paths, remove_models=remove_models)
     except (OSError, ValueError, TypeError):
         return False
