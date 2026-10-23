@@ -500,3 +500,21 @@ def test_catalog_selected_row_labels_use_legible_highlight_ink(models, qtbot, qa
                     for label in dialog.table.cellWidget(other, 0).findChildren(QLabel)
                 )
     apply_theme(qapp, "light")
+
+
+def test_backend_recommendation_change_preserves_a_deliberate_model_choice(models, qtbot):
+    view = MainWindow(models.paths, interactive=False)
+    qtbot.addWidget(view)
+    view.apply_prepared(
+        Prepared(
+            ("small", "large-v3-turbo-q8_0"),
+            False,
+            {"model_id": "small", "output_dir": str(models.paths.user_dir)},
+            vad_installed=True,
+        )
+    )
+    view._model_chosen()
+    view._device_changed()
+    view._device_prepared(Prepared(view.installed, True, {}, vad_installed=True))
+    assert view._recommendation == "large-v3-turbo-q8_0"
+    assert view.model_choice.currentData() == "small"
