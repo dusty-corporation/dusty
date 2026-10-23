@@ -660,3 +660,24 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   waits for Job Object assignment; eight-second deadline; raw stderr discarded.
 - Desktop standalone result: real_gpu_found=true, model_file_opened=false.
   ThinkPad commands next; Step B proceeds without waiting for Owner hardware.
+
+
+### M5 Step B page implementation checkpoint
+
+- Shared Model Manager names, Best for, notes, size formatter and consent now
+  generate installer choices/consent. Full third-party notices are included in
+  license acceptance, with page buttons for Apache/NOTICE, notices and Microsoft.
+- Production model-free entry uses a suspended Job Object child and five-second
+  deadline, Vulkan physical type plus software exclusions, engine initialization
+  and buffer clear/sync. Installer defaults to Small and updates untouched
+  choices after a successful real-GPU/RAM check.
+- Added responsive timer-driven guarded child operations: verify/reuse/download,
+  each selected Auto test and smallest CPU test; plain retry/CPU retry/explicit
+  finish-without flows, preserving files and clearing only a failed selection.
+- Normal cancellation kills its nested child job before removing the active
+  partial; crash keeps recent partials. Installer preparation expires stale ones.
+- Focused support/generation/archive regressions: 24 passed; lint/types pass.
+  Full suite and native compilation/screenshots remain in progress, not claimed.
+- WFP harness now exercises the model-free probe under the same blocked images
+  and zero-event requirement. Review executable is a CI artifact only, gated
+  after license/installed acceptance, and cannot install or download.

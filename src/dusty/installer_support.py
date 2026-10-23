@@ -38,6 +38,17 @@ def clear_failed_selection(paths: RuntimePaths) -> None:
     save_settings(file, settings)
 
 
+def accept_tests(paths: RuntimePaths, model_id: str) -> None:
+    from dusty.queue.storage import load_settings, save_settings
+
+    file = paths.user_dir / "settings.json"
+    settings = load_settings(file)
+    settings["installer_test_failed"] = False
+    if not settings.get("model_id"):
+        settings["model_id"] = model_id
+    save_settings(file, settings)
+
+
 def model_size(paths: RuntimePaths) -> str:
     """Actual direct model/partial bytes, without following links or directories."""
     total = 0

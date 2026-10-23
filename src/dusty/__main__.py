@@ -27,6 +27,8 @@ def main(argv: list[str] | None = None) -> int:
         "probe-vulkan-child",
         "installer-test",
         "installer-clear",
+        "installer-pass",
+        "installer-prepare",
         "model-size",
     ):
         parser.add_argument("--" + flag, action="store_true", help=argparse.SUPPRESS)
@@ -58,14 +60,20 @@ def main(argv: list[str] | None = None) -> int:
         Path(args.out).write_text(json.dumps({"real_gpu_found": ok}), encoding="utf-8")
         return 0
 
-    if args.installer_clear or args.model_size:
+    if args.installer_clear or args.installer_pass or args.installer_prepare or args.model_size:
         from pathlib import Path
 
-        from dusty.installer_support import clear_failed_selection, model_size
+        from dusty.installer_support import accept_tests, clear_failed_selection, model_size
         from dusty.runtime_paths import resolve_paths
 
         if args.installer_clear:
             clear_failed_selection(resolve_paths())
+        elif args.installer_pass:
+            accept_tests(resolve_paths(), args.model)
+        elif args.installer_prepare:
+            from dusty.models import cleanup_stale_partials
+
+            cleanup_stale_partials(resolve_paths().models_dir)
         elif args.out:
             Path(args.out).write_text(model_size(resolve_paths()), encoding="utf-8")
         return 0

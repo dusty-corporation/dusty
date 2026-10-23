@@ -34,7 +34,7 @@ $oldLocal = $env:LOCALAPPDATA
 $oldQpa = $env:QT_QPA_PLATFORM
 $savedAudit = $false
 
-function Invoke-TestPython([string[]]$Arguments, [string]$Executable = $pythonPath) {
+function Invoke-TestPython([string[]]$Arguments, [string]$Executable = $pythonPath, [int[]]$AllowedExitCodes = @(0)) {
     $psi = [Diagnostics.ProcessStartInfo]::new()
     $psi.FileName = $Executable
     $psi.WorkingDirectory = $repo
@@ -56,7 +56,7 @@ function Invoke-TestPython([string[]]$Arguments, [string]$Executable = $pythonPa
     $null = $errTask.Result
     $code = $process.ExitCode
     $process.Dispose()
-    if ($code -ne 0) { throw "Offline process failed exit_code=$code" }
+    if ($code -notin $AllowedExitCodes) { throw "Offline process failed exit_code=$code" }
     return $stdout.Trim()
 }
 
@@ -71,6 +71,15 @@ function Read-ConnectionEvents([datetime]$Since) {
 
 try {
     if (-not $InstalledModels) { $env:LOCALAPPDATA = Join-Path $work 'user' }
+    $probeResult = Join-Path $work 'model-free-probe.json'
+    $probeArgs = @('--probe-vulkan', '--out', $probeResult)
+    if ($Bundle) {
+        $null = Invoke-TestPython -Executable (Join-Path $Bundle 'dusty/dusty.exe') -Arguments $probeArgs -AllowedExitCodes @(0,1)
+    } else {
+        $null = Invoke-TestPython -Arguments (@('-m','dusty') + $probeArgs) -AllowedExitCodes @(0,1)
+    }
+    $probe = Get-Content -LiteralPath $probeResult -Raw | ConvertFrom-Json
+    if ($probe.real_gpu_found -isnot [bool]) { throw 'Model-free probe result missing' }
     if ($Bundle -and -not $InstalledModels) {
         # Explicit network activity finishes before the audit window begins.
         $fetchArgs = @('download', '--id', 'tiny', '--dest', (Join-Path $env:LOCALAPPDATA 'Dusty/models'), '--manifest', (Join-Path $Bundle 'resources/models.json'))
@@ -123,7 +132,7 @@ try {
     Start-Sleep -Seconds 3
     $events = Read-ConnectionEvents $began
     $violations = @(Get-DustyConnectionEvents -Events $events -Programs $programs -AfterRecordId $marker -ExcludeProcessId $controlPid)
-    $summary = @{calibration_blocked_event=$true; selftest='passed'; packaged=[bool]$Bundle; installed_models=[bool]$InstalledModels; connection_events=$violations.Count}
+    $summary = @{calibration_blocked_event=$true; selftest='passed'; model_free_probe='passed'; real_gpu_found=$probe.real_gpu_found; packaged=[bool]$Bundle; installed_models=[bool]$InstalledModels; connection_events=$violations.Count}
     if (-not $Bundle) { $summary.batch = 'passed'; $summary.gui = 'passed' }
     $summary | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $work 'summary.json') -Encoding utf8
     if ($violations.Count) { throw "S0: processing_connection_events=$($violations.Count)" }

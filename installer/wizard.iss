@@ -139,10 +139,19 @@ begin
     Exit;
   end;
   if Stage = 5 then begin
+    if Code <> 0 then begin Failure(True); Exit; end;
     Busy := False; FinishedWithout := True;
     Phase.Caption := CustomMessage('FinishedWithout');
     WizardForm.NextButton.Enabled := True;
     Exit;
+  end;
+  if Stage = 6 then begin
+    if Code = 0 then FinishReady else Failure(True);
+    Exit;
+  end;
+  if Stage = -2 then begin
+    if Code <> 0 then begin Failure(False); Exit; end;
+    Stage := 0; BeginFetch('verify'); Exit;
   end;
   if Stage <= 2 then begin
     if (Stage = 0) and (Code <> 0) then begin Stage := 1; BeginFetch('download'); Exit; end;
@@ -159,7 +168,11 @@ begin
       else Outcome.Caption := CustomMessage('CpuOutcome');
     end;
     CpuRetry := False;
-    if Stage = 4 then FinishReady
+    if Stage = 4 then begin
+      Stage := 6;
+      if not StartChild(ExpandConstant('{app}\dusty\dusty.exe'),
+        '--installer-pass --model ' + Quoted(ModelIds[Selected[0]])) then Failure(True);
+    end
     else begin
       TestIndex := TestIndex + 1;
       Meter.Position := 40 + 50 * TestIndex div GetArrayLength(Selected);
@@ -181,10 +194,10 @@ begin
   SetArrayLength(Downloads, GetArrayLength(Selected) + 1);
   for I := 0 to GetArrayLength(Selected) - 1 do Downloads[I] := Selected[I];
   Downloads[GetArrayLength(Selected)] := -1;
-  Busy := True; DownloadIndex := 0; Stage := 0;
+  Busy := True; DownloadIndex := 0; Stage := -2;
   Action.Enabled := False; WizardForm.NextButton.Enabled := False;
   RetryButton.Visible := False; CpuButton.Visible := False; WithoutButton.Visible := False;
-  BeginFetch('verify');
+  if not StartChild(ExpandConstant('{app}\dusty\dusty.exe'), '--installer-prepare') then Failure(False);
 end;
 
 procedure RetryClick(Sender: TObject);
