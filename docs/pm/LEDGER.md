@@ -546,3 +546,22 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   It has not run yet: PM requested rendering after CI is green.
 - Next: green source/packaged CI, collect matching m4-review-bundle run/name,
   render and inspect targeted captures, upload new draft asset, append report.
+
+
+### M4 polish round complete
+
+- Product 7c7d5cf, renderer/checkpoint 789e56b; source CI 39998311028 green:
+  169 passed/2 expected skips, 94.2%. Existing tests kept and 13 cases added.
+- Packaged M5 merge 8c48200 / 39998318413 and M6 e212a8d / 39998323956 are
+  fully green, including PE/license/GUI/WFP, installer and upload-order gates.
+- Review bundle m4-review-bundle: run 39998318413, artifact 12520629143.
+- After source CI green, rendered only 14 changed states x light-1/dark-1.
+  Inspected all changed states, uploaded new draft asset
+  m4-screenshots-polish-789e56b.zip (28 PNGs, 759,997 bytes), verified digest
+  e3b3b14e25ff1c2af290468790ad1aab33ac31498ebb068310e8794dbb38476c.
+  All prior assets retained; release remains draft.
+- M4-report.md has the requested short Polish round section with commit, CI,
+  bundle name/run and screenshot evidence. It explicitly describes the actual
+  blocked-Start behavior after deleting in-use Voice detection.
+- Final follow-up changes report/changelog/ledger only. No PR, main merge,
+  publication or settings change. Push documentation carry-forward and stop.
