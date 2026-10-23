@@ -32,6 +32,8 @@ audit = root / 'build/packaging'
 audit.mkdir(parents=True, exist_ok=True)
 (audit / 'analysis.json').write_text(json.dumps({
     'pure': [*gui.pure, *fetch.pure],
+    'gui_pure': gui.pure,
+    'fetch_pure': fetch.pure,
     'binaries': [*gui.binaries, *fetch.binaries],
     'datas': [*gui.datas, *fetch.datas],
     'gui_scripts': gui.scripts,

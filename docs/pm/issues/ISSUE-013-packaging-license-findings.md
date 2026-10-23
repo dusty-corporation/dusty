@@ -18,7 +18,9 @@ Every redistributed component meets SPEC 10.2, with complete native notices.
 Local audit staging includes Microsoft runtime DLLs governed by non-allowlisted
 terms. lxml wheel notices disclose LGPL iconv, with static linkage requiring
 review under the current policy. Mesa/software OpenGL, libffi and other embedded
-native attribution are unresolved. The bundle license gate correctly fails.
+native attribution are unresolved. Collected lxml Schematron resources have
+separate ISO/skeleton terms and transforms described as unlicensed in the wheel
+notice. The bundle license gate correctly fails.
 The bundle is not published or uploaded; CI uploads audit metadata only.
 
 ## Evidence

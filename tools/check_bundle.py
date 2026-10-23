@@ -54,6 +54,13 @@ def main() -> int:
         findings.append("Offline guard is not the first user/runtime script")
     if any("runtime_guard" == item[0] for item in analysis["fetch_scripts"]):
         findings.append("Downloader unexpectedly installs the offline guard")
+    if any(
+        item[0].startswith(("dusty.", "PySide6")) or item[0] == "dusty"
+        for item in analysis["fetch_pure"]
+    ):
+        findings.append("Downloader unexpectedly embeds the offline GUI package")
+    if any(item[0].startswith("dusty_fetch") for item in analysis["gui_pure"]):
+        findings.append("Offline GUI unexpectedly embeds the downloader package")
     if findings:
         print("\n".join(findings))
         return 1

@@ -53,6 +53,7 @@ uv sync --locked
 uv run python tools/fetch_dev_binaries.py
 uv run python tools/build_bundle.py
 uv run python tools/check_bundle.py dist/Dusty
+uv run python tools/smoke_packaged_gui.py dist/Dusty
 uv run python -m tools.inventory_bundle dist/Dusty
 uv run python tools/check_licenses.py --bundle dist/Dusty --inventory build/packaging/audit/inventory.json
 ```
@@ -94,6 +95,8 @@ this unapproved experimental bundle as an artifact or release. No installer is b
   are not on SPEC 10.2's open-source allowlist.
 - lxml wheel LICENSES.txt discloses bundled iconv under LGPL 2.1. This requires
   linkage/source review; static LGPL is not permitted by the current rule.
+- The collected lxml isoschematron resources include transforms described as
+  unlicensed by that same wheel notice, plus separate ISO/skeleton terms.
 - Qt's opengl32sw.dll, libffi and native subcomponents need exact versions,
   source-level license/copyright reconciliation and complete notices.
 - PyInstaller bootloader exception is approved by ADR 0014; its original COPYING

@@ -113,6 +113,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'PyInstaller build failed' }
       - name: Enforce Qt exclusions and executable layout
         run: uv run python tools/check_bundle.py dist/Dusty
+      - name: Smoke-test packaged Qt window
+        run: uv run python tools/smoke_packaged_gui.py dist/Dusty
       - name: Inventory bundle and generate draft notices and SBOM
         run: uv run python -m tools.inventory_bundle dist/Dusty
       - name: Validate WFP event parser

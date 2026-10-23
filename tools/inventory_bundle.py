@@ -88,6 +88,19 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
     def owner(source: str) -> str:
         path = Path(source)
         name = path.name.lower()
+        if "isoschematron/resources" in path.as_posix().lower():
+            key = "lxml-schematron-data"
+            components[key] = component(
+                key,
+                "unresolved",
+                "UNKNOWN",
+                "https://github.com/lxml/lxml",
+                note=(
+                    "Wheel LICENSES.txt identifies unlicensed transforms "
+                    "and separate ISO/skeleton terms"
+                ),
+            )
+            return key
         if name.startswith(("vcruntime", "msvcp", "api-ms-win-")) or name == "ucrtbase.dll":
             key = "microsoft-runtime"
             components[key] = component(
@@ -150,13 +163,19 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
         for item in analysis[group]
     }
     embedded: list[dict] = []
-    for group in ("pure", "gui_scripts", "fetch_scripts"):
+    for group in ("gui_pure", "fetch_pure", "gui_scripts", "fetch_scripts"):
         for name, source, _ in analysis[group]:
             if name.startswith(("pyi_rth_", "_pyi_rth_utils")):
                 key = "pyinstaller-runtime-hooks"
             else:
                 key = owner(source)
-            embedded.append({"module": name, "component": key})
+            embedded.append(
+                {
+                    "module": name,
+                    "component": key,
+                    "executable": "dusty.exe" if group.startswith("gui_") else "dusty-fetch.exe",
+                }
+            )
 
     # Record statically linked libraries disclosed by the actual lxml wheel.
     if "lxml" in components:
@@ -226,7 +245,7 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
         relative = path.relative_to(bundle).as_posix()
         if relative in {"dusty.exe", "dusty-fetch.exe"}:
             keys = {"dusty", "cpython", "pyinstaller-bootloader", "pyinstaller-runtime-hooks"}
-            keys.update(item["component"] for item in embedded)
+            keys.update(item["component"] for item in embedded if item["executable"] == relative)
             keys.add("embedded-native-review")
         elif relative.startswith("bin/"):
             keys = {"ffmpeg" if relative.startswith("bin/ffmpeg/") else "whisper.cpp"}

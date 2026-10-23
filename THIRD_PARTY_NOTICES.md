@@ -22,6 +22,7 @@ available, attribution and transitive notices are unresolved, not waived.
 | libxslt | 1.1.45 | MIT | https://gitlab.gnome.org/GNOME/libxslt |
 | lxml | 6.1.3 | BSD-3-Clause | https://lxml.de/ |
 | lxml-iconv | unresolved | LGPL-2.1-or-later | https://www.gnu.org/software/libiconv/ |
+| lxml-schematron-data | unresolved | UNKNOWN | https://github.com/lxml/lxml |
 | lxml-zlib | unresolved | Zlib | https://zlib.net |
 | microsoft-runtime | unresolved | LicenseRef-Microsoft-EULA | https://learn.microsoft.com/cpp/windows/redistributing-visual-cpp-files |
 | openssl | 3.0.16 | Apache-2.0 | https://github.com/openssl/openssl |
