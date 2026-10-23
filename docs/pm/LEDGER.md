@@ -619,3 +619,28 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Unsigned installer only as CI artifact 12516525534, 34618916 bytes, SHA-256 4ea17b60157593ff989c06e9d6d8e745b8e25ba61f0bb77478706ee58e1a2720. No release upload. Full notice/SBOM/runtime/installed acceptance audit artifact 12516480610.
 - Source, packaged and installed processing WFP events 0. Source/packaged Manager GUI 0, fetch allowed 4/blocked 0. Silent install with Tiny/VAD, verified upgrade while downloader blocked, both uninstall choices and unchanged output sentinel pass. Owner clean-VM checklist remains.
 - M5-interim-7.md supersedes historical interim-6 stop instructions. No outstanding containment or license decision for ISSUE-018/019. Final report-only branch heads will be checked in CI before handoff; no new product work begins.
+
+
+## M5 Phase 1, 2026-10-23: complete, awaiting PM
+
+| ID | Milestone | Task | Status | Evidence | Issues |
+| --- | --- | --- | --- | --- | --- |
+| M5-01A | M5 | Preserve brief and create clean branch from merged M4 | done | main 87a1304; m5-installer f84dbd2; M4-brief.md archived from HEAD; Owner M5 bytes preserved | - |
+| M5-01B | M5 | Port M5-only spike work | done | 00ec6a4 licensing/history, c3438f1 packaging/installer/gates; normal push; final M4 unchanged, M6 endurance files excluded | - |
+| M5-01C | M5 | Revalidate port source | done | 224 passed/1 expected skip, 94.6%; lint/format 127 files, mypy 70, all source policies pass; CI 40011781091 checks/offline/upload regression green | - |
+| M5-01D | M5 | Model-free Vulkan investigation | done | Pinned engine-v2 API: 1 device/init/4 KiB buffer clear+sync, no model, exit 0 in 0.468 s; docs/dev/m5-model-free-vulkan-check.md | - |
+| M5-01E | M5 | Gap analysis and decision inventory | done | M5-interim-1.md covers all six SPEC tasks/three acceptance items, brief gaps, six recommended decisions, Phase 2 estimate | - |
+| M5-02 | M5 | Finish installer and release acceptance | blocked | Explicit Phase 1 stop; await PM reply to interim-1 before any Phase 2 implementation/test tags | PM decisions |
+
+- Original spike interim-1 retained as M5-packaging-spike-interim-1.md; other
+  spike reports remain historical, with no old passing run claimed for this head.
+- Initial local port run: 221 passed/3 failed/1 skip. License-byte tests detected
+  CRLF copies created during patch application; restored exact committed LF
+  notice bytes, with no policy, pin or test change. Serial full rerun passed.
+  License PDFs match their recorded original hashes.
+- Port CI 40011781091 packaging/installed job remains in progress at handoff;
+  no fresh installer size, bundle/license/WFP acceptance or release claim yet.
+- Owner brief SHA-256:
+  ca53f763fe97ad32a591b18b05acb7b73b96b84121bc31de6b3a5e801b3dc2b0.
+- m5-packaging-spike remains 95dd90b; m6-docs remains c855b52. No PR, tags,
+  releases, reference-branch changes or Owner-profile installation. Phase 1 stops.
