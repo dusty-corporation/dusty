@@ -349,3 +349,34 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 
 - Added user guides for install/hash/SmartScreen, first run, folders, plain model choices, vocabulary hints, troubleshooting and FAQ with exact SPEC 9.6 HIPAA wording. Refreshed README and CONTRIBUTING; privacy documents actual M4 downloads and local storage/deletion limits. Local links and no-long-dash checks passed. No app code changes on m6-docs.
 - M5 source gates at 285c80d: local 190 passed/1 CI-only skip in 227.92 s, strict coverage 94.5%; lint/format/types/three source policy checks pass. CI 39923879707 checks/offline pass; installer lifecycle has a real failure to inspect, static license gate fails as intended. Continue independent documentation/endurance work.
+### Installer CI follow-up
+
+- CI 39923879707: checks and source offline pass; compiled installer installs, downloads Tiny/VAD, passes installed calibrated WFP (0 events) and 64-PE gate. Lifecycle then fails because harness assumed unins000.exe. Pinned Setup.Install generates uninsNNN names; harness now reads the exact per-user registered UninstallString, validates its folder and reports the phase. Next CI run must establish both uninstall results.
+- Installer-wide gate reports five static license entries plus unresolved Delphi provenance; no installer artifact uploaded. M6 guides pushed separately at a206740. Local full suite: 190 passed/1 skip, 94.5% strict coverage.
+
+- Added installed-file inventory: every payload file must match the audited bundle, with only the exact Inno notice and generated uninsNNN runtime records allowed. Changed/extra-file negative test passes; inventory is retained with acceptance evidence.
+- Desktop Small CPU endurance completed: 7920.1875 s input, 1060.9096 s wall, RTF 0.13395, sampled tree working set 2612928512 bytes, work bytes 253446078, exit 0, done on CPU, zero remaining work files. Turbo Vulkan is active. Final benchmark summary awaits both runs.
+
+### S0 containment and final overnight handoff
+
+- ISSUE-019 OPEN S0: ac06dad enabled the exact wrapper exception before the full static inventory. Run 39922816919 uploaded m5-installer-draft-unsigned, artifact 12488875272, compressed 34115983 bytes. Installer 34591385 bytes, SHA-256 f70f1ede9923d605f3ec1b3d072a1f4ed7c9e3d4da3c7fb2111fb05af64ec14d. Owner must remove this artifact; the agent cannot delete it. All implementation stopped on discovery.
+- Later run 39924971496 at 126aedb completed all installer lifecycle checks: explicit silent per-user install, bundled Tiny/VAD download, installed WFP self-test with 0 events, 64-PE gate, blocked-downloader upgrade with unchanged model hashes/mtimes, both uninstall choices, unchanged external output sentinel. Only the intended installer-wide license gate fails; binary upload skipped. CI checks: 189 passed/2 expected skips; separate network integration 1 passed.
+- Source and packaged WFP processing 0; Model Manager GUI 0, fetch allowed 4/blocked 0 in both layouts. App license and GUI gates pass. Payload 213 files/161951722 bytes. Final installed-file identity gate has a passing negative unit test but its final CI run was cancelled for the S0 stop.
+- Requested cancellation of active CI 39925428852 and 39925218957. 39924971496 was already completed. Stopped the remaining local final-coverage process tree; its unfinished run is not evidence. No release/PR/merge/settings change, no artifact deletion.
+- Both endurance runs had completed before discovery: Small CPU 1060.9096 s/RTF 0.133950; Turbo Vulkan 268.3786 s/RTF 0.033885 for 7920.1875 s public-domain repeated audio. Both Done/exit 0, requested backend, zero work files AND directories. Summary in docs/pm/benchmarks/m6/desktop-long-recording.md; raw files remain ignored.
+- M6 docs pushed separately at a206740: user guides, privacy, CONTRIBUTING, README. Exact HIPAA paragraph, local links and dash checks pass. No M6 app code. That branch still needs later M5 follow-ups carried forward after authorization to resume.
+- M5-interim-6.md records Owner morning actions, incident root cause, all completed evidence and incomplete gates. Next: Owner removes artifact and PM reviews static licenses/S0, then authorizes resumption and final CI/VM acceptance. No further implementation while S0 is open. Incident documentation uses [skip ci] only to preserve the stop; no skipped run is claimed green.
+
+### PM-authorized installer license resolution and resumed acceptance
+
+- Owner deleted artifact 12488875272; read-only API returns HTTP 404. PM reclassified ISSUE-019 to process S1, resolved with upload gating and a negative CI regression. No further containment required; work resumed as instructed.
+- ISSUE-018 resolved by ADR 0023 amendment: exact installer-only unmodified runtime exceptions. Pinned source/build review selects Setup.e32 + SetupLdr.e32, verifies Pascal Script references and only NewUxTheme/NewUxTheme.TmSchema JEDI units. The original two source files and full MPL are retained for the installer, with exact source hashes and all component notices. App allowlist unchanged.
+- Added explicit upload condition and source/offline/negative-regression dependencies; live CI test deliberately fails a synthetic license gate and asserts upload is skipped. Nine focused tests pass. Full source/installed/licensing/CI revalidation next; no final pass claim yet.
+
+- Resumed source gates: ruff/format (124 files), mypy (69 sources), three source policies pass. Actual generator script command exposed a tools import-path regression; fixed its direct-script path setup and added a subprocess entry-point regression. The targeted pytest attempt collided with the active full run using the same .pytest-tmp and produced 3 setup errors (WinError 32); the initial pass-count note was incorrect and is corrected here. The real --help command now succeeds. A serial full rerun is required.
+
+- Added retained-source tamper coverage and compiler-bootstrap receipt verification. The failed concurrency attempt is not acceptance evidence; final full source/CI checks will run with one pytest process per workspace.
+
+### M6 carry-forward after PM resolution
+
+- Merged all M5 changes through eda3b72 into m6-docs, preserving both ledger histories. Only documentation differs from M5. Serial local final source suite passes 197 tests/1 CI-only skip in 179.59 s, strict coverage 94.5%. Lint/format/types and three policies pass. Local rebuilt bundle: 216 files/161987504 bytes, 64-PE gate, app licenses and packaged GUI smoke pass. Final installer CI still pending; no pass claimed yet.

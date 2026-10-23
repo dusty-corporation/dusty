@@ -37,6 +37,15 @@ ALIASES = {
 }
 LGPL_DYNAMIC = {"pyside6", "pyside6-addons", "pyside6-essentials", "shiboken6"}
 PYINSTALLER_BOOTLOADER = "GPL-2.0-or-later WITH PyInstaller-bootloader-exception"
+INSTALLER_ONLY = {
+    "inno-setup-installer": "InnoSetup",
+    "pascal-script": "LicenseRef-RemObjects-PascalScript",
+    "lzma-sdk": "LicenseRef-Public-Domain-Code",
+    "lzma-loader": "LicenseRef-Public-Domain-Code",
+    "hash-utilities": "LicenseRef-Public-Domain-Code",
+    "jedi-uxtheme": "MPL-1.1",
+    "delphi-rtl-vcl": "LicenseRef-Embarcadero-Compiled-Runtime",
+}
 
 
 def normalized(name: str) -> str:
@@ -51,7 +60,7 @@ def allowed_license(
     if normalized(name) == "pyinstaller-bootloader" and license_text == PYINSTALLER_BOOTLOADER:
         return True
     # ADR 0023 is scoped to the installer wrapper, never an app dependency.
-    if installer_wrapper and name == "inno-setup-installer" and license_text == "InnoSetup":
+    if installer_wrapper and INSTALLER_ONLY.get(name) == license_text:
         return True
     # A dual-license package may be used under one permitted alternative.
     options = license_text.split(" OR ")

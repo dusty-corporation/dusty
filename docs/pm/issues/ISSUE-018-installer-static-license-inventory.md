@@ -2,7 +2,7 @@
 
 - Severity: S1
 - Milestone: M5 installer prework
-- Status: Open, Owner/PM morning review
+- Status: Resolved by PM amendment to ADR 0023, 2026-10-23
 - Environment: pinned Inno Setup 6.7.3 source and compiler
 
 ## Expected
@@ -47,3 +47,15 @@ Keep unsigned installer binary artifacts blocked until this review is resolved.
 
 Installer inventory comparison, pinned notice hashes and exact contextual license
 checks fail closed. Static inventory limitations are explicit in the audit output.
+
+## Resolution
+
+PM approved the installer-only unmodified runtime exception in ADR 0023.
+Pinned source/build verification lists the actual units in
+docs/dev/installer-runtime-inventory.md. Only the two referenced JEDI theme units
+are listed; their exact original source and full MPL are included with setup.
+Pascal Script acknowledgement, LZMA public-domain grant and retained historical
+header, hash-wrapper notices and the Delphi compiled-runtime notice are included
+in installer-specific third-party notices. No extra runtime or compiler is added.
+Exact component/license pairs require explicit installer context; the processing
+app allowlist is unchanged. Full CI revalidation is recorded in the next report.

@@ -12,6 +12,8 @@ from pathlib import Path
 from cyclonedx.schema import SchemaVersion
 from cyclonedx.validation.json import JsonStrictValidator
 
+from tools.installer_notices import runtime_notices
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -38,16 +40,15 @@ def generate(bundle: Path, app_audit: Path, output: Path) -> None:
         "installer": {"name": image.name, "sha256": sha, "bytes": image.stat().st_size},
         "app_inventory": inventory,
         "wrapper_components": components,
+        "runtime_inputs": json.loads((output / "runtime-inputs.json").read_text(encoding="utf-8")),
         "limits": (
             "Static attribution from pinned source, not a binary symbol proof. "
             "Compiler/IDE/compressor tools are build-only. "
-            "Delphi RTL/VCL provenance needs independent review."
+            "Unmodified upstream runtime exceptions are approved by PM in ADR 0023."
         ),
     }
     (output / "inventory.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     sbom = json.loads((app_audit / "sbom.cdx.json").read_text(encoding="utf-8"))
-    notices = (bundle / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
-    notices += "\n\n# Installer runtime\n\nMade using RemObjects Pascal Script: https://www.remobjects.com/ps.aspx\n"
     for item in components:
         sbom["components"].append(
             {
@@ -59,14 +60,14 @@ def generate(bundle: Path, app_audit: Path, output: Path) -> None:
                 "externalReferences": [{"type": "vcs", "url": item["source"]}],
             }
         )
-        notice = (ROOT / "packaging/licenses/inno" / item["notice"]).read_text(encoding="utf-8")
-        notices += f"\n## {item['name']} {item['version']}\n\n{item['source']}\n\n{notice}\n"
     encoded = json.dumps(sbom, indent=2)
     errors = JsonStrictValidator(SchemaVersion.V1_6).validate_str(encoded)
     if errors:
         raise ValueError(f"Installer SBOM schema errors: {errors}")
     (output / "sbom.cdx.json").write_text(encoded + "\n", encoding="utf-8")
-    (output / "THIRD_PARTY_NOTICES.md").write_text(notices, encoding="utf-8")
+    (output / "THIRD_PARTY_NOTICES.md").write_text(
+        runtime_notices(bundle), encoding="utf-8", newline="\n"
+    )
 
 
 def main() -> None:

@@ -1,8 +1,9 @@
 # M5 installer and release checklist
 
 This remains an acceptance checklist. An unsigned installer draft compiles in CI;
-ISSUE-017 is resolved by ADR 0023. ISSUE-018 blocks binary upload pending review
-of separately licensed static subcomponents and Delphi provenance.
+ISSUE-017/018 are resolved by ADR 0023 and its installer-runtime amendment.
+ISSUE-019 is resolved after Owner artifact removal and the explicit upload-gate
+regression. Final complete CI must pass before unsigned installer artifact upload.
 Audit metadata is available; this is not a published or accepted installer.
 
 - [ ] Verify every Microsoft PE is a required vcruntime140*.dll/msvcp140*.dll

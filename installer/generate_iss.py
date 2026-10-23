@@ -3,11 +3,16 @@
 import argparse
 import hashlib
 import json
+import sys
 from pathlib import Path
 
-from dusty import __version__
-from dusty.app import messages as M
-from dusty.models import load_manifest
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from dusty import __version__  # noqa: E402
+from dusty.app import messages as M  # noqa: E402
+from dusty.models import load_manifest  # noqa: E402
+from tools.installer_notices import runtime_notices  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -33,6 +38,9 @@ def generate(output: Path, bundle: Path) -> Path:
         + (ROOT / "packaging/licenses/inno/license.txt").read_text(encoding="utf-8")
     )
     (output / "LICENSE.txt").write_text(license_text, encoding="utf-8", newline="\n")
+    (output / "THIRD_PARTY_NOTICES.md").write_text(
+        runtime_notices(bundle), encoding="utf-8", newline="\n"
+    )
     setup_models = []
     for index, (key, model) in enumerate(manifest.models.items()):
         label = f"{M.MODEL_NAMES[key]}: {model.size_bytes / 1_000_000:.1f} MB"
@@ -50,6 +58,8 @@ def generate(output: Path, bundle: Path) -> Path:
         "VAD_BYTES": str(raw["vad"][0]["size_bytes"]),
         "MESSAGES": "\n".join(f"{key}={value}" for key, value in M.INSTALLER.items()),
         "INNO_LICENSE": str(ROOT / "packaging/licenses/inno/license.txt"),
+        "INSTALLER_NOTICES": str((output / "THIRD_PARTY_NOTICES.md").resolve()),
+        "JEDI_SOURCE": str((output / "installer-jedi-source.zip").resolve()),
     }
     for key, value in values.items():
         template = template.replace("@@" + key + "@@", value)

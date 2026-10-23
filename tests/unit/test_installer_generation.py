@@ -3,6 +3,8 @@
 import hashlib
 import json
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -12,11 +14,21 @@ from installer.generate_iss import generate
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def test_installer_generator_script_entry_point():
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "installer/generate_iss.py"), "--help"],
+        capture_output=True,
+        timeout=20,
+    )
+    assert result.returncode == 0, result.stderr.decode()
+
+
 def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     bundle = tmp_path / "bundle"
     (bundle / "resources").mkdir(parents=True)
     manifest = ROOT / "resources/models.json"
     shutil.copyfile(manifest, bundle / "resources/models.json")
+    (bundle / "THIRD_PARTY_NOTICES.md").write_text("Audited app notices\n")
     output = tmp_path / "generated"
     script = generate(output, bundle)
     license_text = (output / "LICENSE.txt").read_text(encoding="utf-8")
