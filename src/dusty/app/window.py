@@ -38,7 +38,7 @@ from PySide6.QtWidgets import (
 from dusty import __version__
 from dusty.core import BatchOptions, FailureCode, Job, JobStatus
 from dusty.core.types import Backend, CollisionPolicy, OutputFormat, Task
-from dusty.models import ModelRegistry, can_translate, load_manifest, recommend_model, slow_warning
+from dusty.models import ModelRegistry, can_translate, load_manifest, recommend_model
 from dusty.platform.cpu_topology import default_threads
 from dusty.privacy.logging import configure_logger
 from dusty.privacy.sync import is_synced
@@ -83,6 +83,8 @@ class MainWindow(QMainWindow):
         self._previous_language = "auto"
         self._english_forced = False
         self._waiting_choice = False
+        self._startup_dialogs_active = False
+        self._startup_dialogs_shown = False
         self._applying = False
         self._recommendation = "small"
         self._follow_recommendation = False
@@ -211,6 +213,16 @@ class MainWindow(QMainWindow):
         self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self._list_context_menu)
         layout.addWidget(self.table, 1)
+        self.message_area = QWidget()
+        message_layout = QVBoxLayout(self.message_area)
+        message_layout.setContentsMargins(0, 0, 0, 0)
+        self.status = self._label(M.PREPARING_HELP)
+        self.warning = self._label(M.EMPTY_CELL, warning=True)
+        for notice_label in (self.status, self.warning):
+            notice_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            notice_label.setStyleSheet("font-size: 16px")
+            message_layout.addWidget(notice_label)
+        layout.addWidget(self.message_area)
         self.output_row = QWidget()
         output_layout = QHBoxLayout(self.output_row)
         output_layout.setContentsMargins(0, 0, 0, 0)
@@ -239,12 +251,14 @@ class MainWindow(QMainWindow):
         self.choices_summary = self._label(M.PREPARING)
         options_bar.addWidget(self.choices_summary, 1)
         layout.addLayout(options_bar)
+        self.slow_model_notice = self._label(M.EMPTY_CELL, warning=True)
+        layout.addWidget(self.slow_model_notice)
         self.options_scroll = QScrollArea()
         self.options_scroll.setWidgetResizable(True)
         self.options_dialog = TextDialog(M.OPTIONS_TITLE, (), self)
         self.options_dialog.setModal(True)
         self.options_dialog.resize(660, 650)
-        self.options_dialog.body.insertWidget(1, self.options_scroll, 1)
+        self.options_dialog.body.insertWidget(0, self.options_scroll, 1)
         self.options_dialog.button(M.DISMISS, self.options_dialog.accept, default=True)
         options = QWidget()
         form = QFormLayout(options)
@@ -252,10 +266,8 @@ class MainWindow(QMainWindow):
         self.model_choice.setAccessibleName(M.MODEL)
         form.addRow(M.MODEL, self.model_choice)
         self.model_details = self._label(M.EMPTY_CELL)
-        self.model_speed = self._label(M.EMPTY_CELL)
         self.model_warning = self._label(M.EMPTY_CELL, warning=True)
         form.addRow(self.model_details)
-        form.addRow(self.model_speed)
         form.addRow(self.model_warning)
         manage = self._button(M.MANAGE_MODELS, lambda: None)
         manage.setEnabled(False)
@@ -327,18 +339,17 @@ class MainWindow(QMainWindow):
         self.advanced_toggle.toggled.connect(self._toggle_advanced)
         self.options_scroll.setWidget(options)
 
-        self.warning = self._label(M.EMPTY_CELL, warning=True)
-        layout.addWidget(self.warning)
         self.resume_model_button = self._button(M.EMPTY_CELL, self._confirm_resume_model)
         layout.addWidget(self.resume_model_button)
-        self.status = self._label(M.PREPARING_HELP)
-
         bottom = QHBoxLayout()
         self.overall = QProgressBar()
         self.overall.setRange(0, 1000)
         self.overall.setTextVisible(False)
-        bottom.addWidget(self.status, 1)
         bottom.addWidget(self.overall, 1)
+        self.start_hint = self._label(M.EMPTY_CELL, warning=True)
+        self.start_hint.setStyleSheet("font-size: 16px")
+        self.start_hint.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        bottom.addWidget(self.start_hint, 1)
         self.cancel_current_button = self._button(M.CANCEL_CURRENT, self.cancel_current)
         self.cancel_all_button = self._button(M.CANCEL_ALL, self.cancel_all)
         bottom.addWidget(self.cancel_current_button)
@@ -438,20 +449,34 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(0, lambda: self._startup_dialogs(prepared))
 
     def _startup_dialogs(self, prepared: Prepared) -> None:
-        if not self.settings.get("welcome_seen"):
-            if WelcomeDialog(self).exec() == QDialog.DialogCode.Accepted:
-                self.choose_output()
-                if self.output_dir:
-                    self.settings["welcome_seen"] = True
-                    self._save_settings()
-        if prepared.recovered:
-            options, jobs = prepared.recovered
-            remaining = sum(job.status not in {JobStatus.DONE, JobStatus.SKIPPED} for job in jobs)
-            if remaining and ResumeDialog(remaining, self).exec() == QDialog.DialogCode.Accepted:
-                self.restore_batch(options, jobs)
-                QTimer.singleShot(0, self.start_batch)
-            else:
-                clear_history(self.paths.user_dir / "state/queue.json")
+        if self._startup_dialogs_active or self._startup_dialogs_shown or self.closing:
+            return
+        self._startup_dialogs_active = True
+        self._startup_dialogs_shown = True
+        try:
+            # A saved folder is the welcome gate, including older settings files.
+            # exec() keeps recovery behind welcome even with nested Qt events.
+            if not self.output_dir:
+                if WelcomeDialog(self).exec() == QDialog.DialogCode.Accepted:
+                    self.choose_output()
+                    if self.output_dir:
+                        self.settings["welcome_seen"] = True
+                        self._save_settings()
+            if prepared.recovered:
+                options, jobs = prepared.recovered
+                remaining = sum(
+                    job.status not in {JobStatus.DONE, JobStatus.SKIPPED} for job in jobs
+                )
+                if (
+                    remaining
+                    and ResumeDialog(remaining, self).exec() == QDialog.DialogCode.Accepted
+                ):
+                    self.restore_batch(options, jobs)
+                    QTimer.singleShot(0, self.start_batch)
+                else:
+                    clear_history(self.paths.user_dir / "state/queue.json")
+        finally:
+            self._startup_dialogs_active = False
 
     def restore_batch(self, options: BatchOptions, jobs: list[Job]) -> None:
         from dataclasses import asdict
@@ -637,31 +662,11 @@ class MainWindow(QMainWindow):
         self.model_details.setText(M.MODEL_DETAILS.get(model_id, M.EMPTY_CELL))
         self.prompt_warning.setVisible(len(self.prompt.toPlainText()) / 4 > 200)
         cpu_only = not self.vulkan_ok or self.device_choice.currentData() == "cpu"
-        speed_class = (model.speed_cpu if cpu_only else model.speed_vulkan) if model else "slow"
-        self.model_warning.setText(M.SLOW if model and speed_class == "slow" else M.EMPTY_CELL)
-        self.model_warning.setVisible(bool(model and speed_class == "slow"))
-        # Conservative rounded ThinkPad M1 RTFs, not a measured per-machine benchmark.
-        minutes = (
-            {"tiny": 10, "small": 30, "small.en": 30}.get(model_id, 60)
-            if cpu_only
-            else {
-                "tiny": 10,
-                "small": 15,
-                "small.en": 15,
-                "medium": 25,
-                "large-v3-turbo-q8_0": 25,
-            }.get(model_id, 60)
-        )
-        self.model_speed.setText(
-            (M.SPEED_SLOW if speed_class == "slow" else M.SPEED_ESTIMATE.format(minutes=minutes))
-            + "\n"
-            + M.SPEED_CAUTION
-        )
-        warning = M.SLOW if model and slow_warning(model, "cpu" if cpu_only else "vulkan") else None
-        if not model:
-            warning = M.NO_MODELS if self.ready else M.EMPTY_CELL
-        elif not any(box.isChecked() for box in self.formats.values()):
-            warning = M.NO_FORMATS
+        slow = bool(model and cpu_only and model.speed_cpu == "slow")
+        for notice in (self.model_warning, self.slow_model_notice):
+            notice.setText(M.SLOW if slow else M.EMPTY_CELL)
+            notice.setVisible(slow)
+        warning = M.EMPTY_CELL
         recommended = recommend_model(
             vulkan_ok=not cpu_only, task=cast(Task, self.task_choice.currentData())
         )
@@ -675,21 +680,30 @@ class MainWindow(QMainWindow):
         if model and recommended not in self.installed:
             unavailable = M.MISSING_RECOMMENDATION.format(name=M.MODEL_NAMES[recommended])
             warning = unavailable + ("\n" + warning if warning else "")
-        if self._missing_resume_model:
-            warning = M.MISSING_BATCH_MODEL.format(
-                model=M.MODEL_NAMES.get(self._missing_resume_model, self._missing_resume_model)
-            )
         self.resume_model_button.setVisible(bool(self._missing_resume_model))
         self.resume_model_button.setText(
             M.USE_INSTALLED.format(model=M.MODEL_NAMES.get(model_id, M.PREPARING))
         )
         self.resume_model_button.setEnabled(bool(model and not invalid and not self.running))
+        hint = M.EMPTY_CELL
         if not self.output_dir and not self.same_folder.isChecked():
-            warning = M.CHOOSE_OUTPUT_FIRST
+            hint = M.CHOOSE_OUTPUT_FIRST
         elif self.model.jobs and all(
             job.status in {JobStatus.DONE, JobStatus.SKIPPED} for job in self.model.jobs
         ):
-            warning = M.EVERYTHING_DONE
+            hint = M.EVERYTHING_DONE
+        elif self._missing_resume_model:
+            hint = M.MISSING_BATCH_MODEL.format(
+                model=M.MODEL_NAMES.get(self._missing_resume_model, self._missing_resume_model)
+            )
+        elif not model and self.ready:
+            hint = M.NO_MODELS
+        elif invalid:
+            hint = M.TRANSLATE_DISABLED
+        elif not any(box.isChecked() for box in self.formats.values()):
+            hint = M.NO_FORMATS
+        self.start_hint.setText(hint)
+        self.start_hint.setVisible(bool(hint) and not self.running)
         self.warning.setText(warning or M.EMPTY_CELL)
         self.warning.setVisible(bool(warning))
         self.choices_summary.setText(
@@ -774,7 +788,7 @@ class MainWindow(QMainWindow):
         )
         self.cancel_current_button.setVisible(self.running)
         self.cancel_all_button.setVisible(self.running)
-        self.start_button.setVisible(has_jobs and not self.running)
+        self.start_button.setVisible(not self.running)
         self.overall.setVisible(self.running)
         self._rules()
 

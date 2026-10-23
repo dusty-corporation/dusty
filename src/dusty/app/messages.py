@@ -59,24 +59,21 @@ FORMATS = {
     "vtt": "Captions (VTT)",
     "json": "JSON",
 }
-MODEL = "Accuracy and speed"
+MODEL = "Transcription model"
 MODEL_NAMES = {
     "large-v3-turbo-q8_0": "Best quality (Large v3 Turbo)",
-    "small": "Balanced (Small)",
-    "small.en": "Balanced, English only (Small English)",
+    "small": "Balanced (all languages)",
+    "small.en": "Balanced (English only)",
     "tiny": "Fastest (Tiny)",
     "medium": "Best for translating to English (Medium)",
 }
 MODEL_DETAILS = {
     "large-v3-turbo-q8_0": "Recommended with a graphics card",
-    "small": "Good on any computer",
-    "small.en": "Good for English recordings on any computer",
+    "small": "Small. Good on any computer",
+    "small.en": "Small English. Good for English recordings on any computer",
     "tiny": "Lower accuracy",
     "medium": "Slower",
 }
-SPEED_ESTIMATE = "On this computer: allow about {minutes} minutes per hour of audio."
-SPEED_SLOW = "Slower than the recording itself on this computer."
-SPEED_CAUTION = "Estimate from a similar laptop; recording and hardware can change the time."
 
 RECOMMENDED = "{name} (Recommended)"
 MISSING_RECOMMENDATION = "{name} is recommended but is not installed. Choose an installed model."
@@ -112,10 +109,7 @@ THREADS = "Processor threads"
 THREADS_HELP = "More threads use more processor capacity. The default suits most computers."
 VAD = "Skip silent parts"
 VAD_HELP = "Voice detection reduces invented words during silence. Recommended on."
-SLOW = (
-    "Without a compatible graphics processor this model will likely take longer than "
-    "the recording itself."
-)
+SLOW = "This model will be slow on this computer. For faster results, choose Balanced."
 PREPARING = "Preparing..."
 PREPARING_HELP = (
     "Checking installed choices and preparing graphics. First-time setup may take about 13 seconds."
@@ -174,11 +168,9 @@ CLOSE_CONFIRM = "Stop and save"
 KEEP_WORKING = "Keep working"
 CLOSING = "Stopping safely..."
 ERROR_TITLE = "Dusty needs your attention"
-PREPARATION_ERROR = (
-    "Dusty could not prepare transcription. Check the installed files and try again."
-)
-SAVE_ERROR = "Dusty could not save your settings. Choose a writable folder and try again."
-SCAN_ERROR = "Dusty could not read this folder. Check access and try again."
+PREPARATION_ERROR = "Dusty could not prepare transcription."
+SAVE_ERROR = "Dusty could not save your settings."
+SCAN_ERROR = "Dusty could not read this folder."
 NO_FORMATS = "Choose at least one output format."
 OK = "OK"
 INCLUDE_SUBFOLDERS = "Include subfolders"

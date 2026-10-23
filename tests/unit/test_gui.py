@@ -10,12 +10,15 @@ from PySide6.QtWidgets import QApplication, QDialog, QFileDialog, QLabel, QPushB
 
 from dusty.app import messages as M
 from dusty.app.dialogs import (
+    CloseDialog,
     CollisionDialog,
     ErrorDialog,
     FolderDialog,
     ResumeDialog,
     SummaryDialog,
     SyncDialog,
+    TextDialog,
+    WelcomeDialog,
 )
 from dusty.app.window import MainWindow
 from dusty.app.workers import Prepared, PrepareWorker
@@ -118,7 +121,7 @@ def test_backend_defaults_language_translation_and_hint_rules(window, qtbot, tmp
     assert window.prompt_warning.isVisible()
     window._set_combo(window.model_choice, "medium")
     window._set_combo(window.device_choice, "cpu")
-    assert window.warning.text() == M.SLOW
+    assert window.slow_model_notice.text() == M.SLOW
 
 
 def test_add_files_button_and_local_drop(window, qtbot, tmp_path, monkeypatch) -> None:
@@ -259,7 +262,7 @@ def test_resume_never_silently_substitutes_an_uninstalled_model(window, qtbot, t
     window.restore_batch(BatchOptions("medium", tmp_path / "out"), [Job(tmp_path / "clip.wav")])
     assert not window.start_button.isEnabled()
     assert window.resume_model_button.isVisible()
-    assert "Medium" in window.warning.text()
+    assert "Medium" in window.start_hint.text()
     qtbot.mouseClick(window.resume_model_button, Qt.MouseButton.LeftButton)
     assert window.start_button.isEnabled()
     assert window.model_choice.currentData() == "tiny"
@@ -354,7 +357,7 @@ def test_empty_output_language_rules_and_clear_finished(window, qtbot, tmp_path)
     window._refresh()
     assert window.output_row.isVisible()
     assert window.output_label.text() == M.NO_OUTPUT
-    assert window.warning.text() == M.CHOOSE_OUTPUT_FIRST
+    assert window.start_hint.text() == M.CHOOSE_OUTPUT_FIRST
     assert not window.start_button.isEnabled()
     assert any(action.text() == M.CHOOSE_OUTPUT_MENU for action in window.edit_actions)
     window.options_dialog.show()
@@ -368,12 +371,11 @@ def test_empty_output_language_rules_and_clear_finished(window, qtbot, tmp_path)
     assert window.language_choice.currentData() == "fa"
     assert window.model_warning.isVisible()
     assert window.model_warning.text() == M.SLOW
-    assert window.model_speed.text().startswith(M.SPEED_SLOW)
     window.options_dialog.hide()
     window.output_dir = tmp_path / "out"
     window.model.set_jobs([Job(tmp_path / "one.wav", status=JobStatus.DONE)])
     window._refresh()
-    assert window.warning.text() == M.EVERYTHING_DONE
+    assert window.start_hint.text() == M.EVERYTHING_DONE
     window.clear_finished()
     assert window.model.rowCount() == 0 and window.output_row.isVisible()
 
@@ -435,3 +437,133 @@ def test_zero_success_summary_and_folder_title_are_unambiguous(window, qtbot) ->
     folder = FolderDialog(window)
     qtbot.addWidget(folder)
     assert not any(label.text() == M.FOLDER_TITLE for label in folder.findChildren(QLabel))
+
+
+def test_message_area_and_disabled_start_guidance(window, tmp_path) -> None:
+    from dusty.queue.scanning import ScanResult
+
+    job = Job(tmp_path / "one.wav")
+    window.model.set_jobs([job])
+    window._scanned(ScanResult((), 0, 1, (job.source,)))
+    QApplication.processEvents()
+    assert window.status.parentWidget() is window.message_area
+    assert window.warning.parentWidget() is window.message_area
+    assert window.status.alignment() & Qt.AlignmentFlag.AlignHCenter
+    assert window.status.font().pixelSize() >= 16
+    assert window.message_area.geometry().top() >= window.table.geometry().bottom()
+    assert window.message_area.geometry().bottom() < window.output_row.geometry().top()
+    assert window.status.text() == M.DUPLICATE_ONE.format(name="one.wav")
+    window.output_dir = None
+    window._refresh()
+    QApplication.processEvents()
+    assert window.start_button.isVisible() and not window.start_button.isEnabled()
+    assert window.start_hint.text() == M.CHOOSE_OUTPUT_FIRST
+    assert window.start_hint.geometry().right() < window.start_button.geometry().left()
+    assert window.start_hint.geometry().center().y() == window.start_button.geometry().center().y()
+    window.output_dir = tmp_path / "out"
+    job.status = JobStatus.DONE
+    window._refresh()
+    assert window.start_hint.text() == M.EVERYTHING_DONE
+    assert M.EVERYTHING_DONE not in window.warning.text()
+
+
+def test_all_dialogs_have_one_title_and_errors_only_name_reason(window, qtbot) -> None:
+    dialogs = [
+        WelcomeDialog(window),
+        FolderDialog(window),
+        CollisionDialog("one.txt", window),
+        ResumeDialog(1, window),
+        SyncDialog(window),
+        CloseDialog(window),
+        SummaryDialog([Job(Path("one.wav"), status=JobStatus.DONE)], window),
+        TextDialog(M.PRIVACY_TITLE, (M.PRIVACY, M.ACCURACY), window),
+        TextDialog(M.ABOUT, (M.ABOUT_VERSION.format(version="test"),), window),
+    ]
+    for dialog in dialogs + [window.options_dialog]:
+        qtbot.addWidget(dialog)
+        assert not any(
+            label.text() == dialog.windowTitle() for label in dialog.findChildren(QLabel)
+        )
+    for code in FailureCode:
+        dialog = ErrorDialog(code, filename="corrupt.mp3", parent=window)
+        qtbot.addWidget(dialog)
+        assert [label.text() for label in dialog.findChildren(QLabel)] == [
+            M.NAMED_FAILURE.format(name="corrupt.mp3", reason=M.FAILURE_MESSAGES[code].message)
+        ]
+    generic = ErrorDialog(text=M.SCAN_ERROR, parent=window)
+    qtbot.addWidget(generic)
+    assert [label.text() for label in generic.findChildren(QLabel)] == [M.SCAN_ERROR]
+
+
+def test_model_labels_no_estimates_and_cpu_only_slow_warning(window) -> None:
+    assert window.model_choice.accessibleName() == M.MODEL == "Transcription model"
+    assert M.MODEL_NAMES["small"] == "Balanced (all languages)"
+    assert M.MODEL_NAMES["small.en"] == "Balanced (English only)"
+    window.options_dialog.show()
+    for vulkan in (False, True):
+        window.vulkan_ok = vulkan
+        window._set_combo(window.device_choice, "auto")
+        for model_id in window.installed:
+            window._set_combo(window.model_choice, model_id)
+            window._rules()
+            expected = not vulkan and window.registry.manifest.models[model_id].speed_cpu == "slow"
+            assert window.model_warning.isVisible() == expected
+            assert window.slow_model_notice.isVisible() == expected
+            if expected:
+                assert window.model_warning.text() == window.slow_model_notice.text() == M.SLOW
+            assert not any(
+                "On this computer:" in label.text() or "similar laptop" in label.text()
+                for label in window.findChildren(QLabel)
+            )
+    window._set_combo(window.model_choice, "medium")
+    window._set_combo(window.device_choice, "cpu")
+    assert window.model_warning.isVisible() and window.slow_model_notice.isVisible()
+    window._set_combo(window.model_choice, "small")
+    assert "Small" in window.model_details.text()
+    assert not window.model_warning.isVisible()
+
+
+@pytest.mark.parametrize("folder_chosen", [False, True])
+def test_welcome_uses_output_folder_not_legacy_flag(window, monkeypatch, folder_chosen) -> None:
+    window.output_dir = window.paths.user_dir if folder_chosen else None
+    window.settings["welcome_seen"] = not folder_chosen
+    seen = []
+    monkeypatch.setattr(
+        WelcomeDialog, "exec", lambda _: seen.append("welcome") or QDialog.DialogCode.Rejected
+    )
+    prepared = Prepared(window.installed, False, window.settings)
+    window._startup_dialogs(prepared)
+    window._startup_dialogs(prepared)
+    assert seen == ([] if folder_chosen else ["welcome"])
+
+
+def test_welcome_finishes_before_resume_and_reentrant_startup_is_ignored(
+    window, monkeypatch, qtbot
+) -> None:
+    window.output_dir = None
+    options = BatchOptions("tiny", window.paths.user_dir / "out")
+    prepared = Prepared(
+        window.installed, False, window.settings, (options, [Job(Path("one.wav"), elapsed_sec=99)])
+    )
+    seen = []
+
+    def welcome(dialog):
+        seen.append("welcome opened")
+        window._startup_dialogs(prepared)
+        QApplication.processEvents()
+        assert seen == ["welcome opened"]
+        seen.append("welcome dismissed")
+        return QDialog.DialogCode.Rejected
+
+    def resume(dialog):
+        assert seen == ["welcome opened", "welcome dismissed"]
+        seen.append("resume")
+        return QDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(WelcomeDialog, "exec", welcome)
+    monkeypatch.setattr(ResumeDialog, "exec", resume)
+    monkeypatch.setattr(window, "start_batch", lambda: seen.append("started"))
+    window._startup_dialogs(prepared)
+    qtbot.waitUntil(lambda: "started" in seen)
+    assert seen == ["welcome opened", "welcome dismissed", "resume", "started"]
+    assert window.model.jobs[0].elapsed_sec == 0
