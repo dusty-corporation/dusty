@@ -278,3 +278,16 @@ No further implementation or tests were started after the Owner requested this c
   updated the constructor and removed obsolete writable size properties.
 - Compiler bootstrap now also compares its installed license text with the
   pinned source terms, in addition to the binary hash and exact engine version.
+
+### ISSUE-017: installer-only license policy gap
+
+- SPDX identifies the pinned wrapper license as InnoSetup, distinct from the
+  allowlisted BSD/Zlib names. ADR 0008 selects the tool but does not record a
+  license exception. Filed S1 ISSUE-017 and proposed ADR 0023; no allowlist change.
+- Cancelled our own 39914802080 before its installer compile/upload steps; no
+  workflow was deleted. App bundle remains separately audited and allowed.
+- Added an installer-wrapper gate using allowed_license plus a negative test.
+  It intentionally fails pending PM clearance, and installer binary upload is
+  downstream. Audit metadata remains available even on failure. Nine focused
+  installer tests pass. Continue compilation and M4 documentation independently;
+  this is a morning policy decision, not an observed S0 license violation.
