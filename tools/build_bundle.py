@@ -1,11 +1,14 @@
 """Build the packaging spike from pinned dev assets; never copy model weights."""
 
+import hashlib
 import json
 import os
 import shutil
 import struct
 import subprocess
 import sys
+import tomllib
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,12 +26,12 @@ def make_icon() -> None:
     icon = application_icon()
     images = []
     for size in (16, 32, 64):
-        data = QByteArray()
-        buffer = QBuffer(data)
+        png = QByteArray()
+        buffer = QBuffer(png)
         buffer.open(QIODevice.OpenModeFlag.WriteOnly)
         if not icon.pixmap(size, size).save(buffer, "PNG"):
             raise RuntimeError("Icon export failed")
-        images.append((size, data.data()))
+        images.append((size, bytes(png.data())))
     offset = 6 + 16 * len(images)
     header = struct.pack("<HHH", 0, 1, len(images))
     for size, data in images:
@@ -41,18 +44,32 @@ def make_icon() -> None:
 
 
 def stage(bundle: Path) -> None:
+    pins = tomllib.loads((ROOT / "native/versions.toml").read_text(encoding="utf-8"))
+    archive_pins = {
+        "cpu": ("whisper-cpu.zip", "whisper_cpu_zip_sha256"),
+        "vulkan": ("whisper-vulkan.zip", "whisper_vulkan_zip_sha256"),
+        "ffmpeg": ("minimal-ffmpeg.zip", "minimal_ffmpeg_zip_sha256"),
+    }
     for folder in ("cpu", "vulkan", "ffmpeg"):
+        archive_name, pin_key = archive_pins[folder]
+        archive_path = ROOT / "build/downloads" / archive_name
+        with archive_path.open("rb") as stream:
+            if hashlib.file_digest(stream, "sha256").hexdigest() != pins["engine_release"][pin_key]:
+                raise ValueError("Native archive differs from engine-v2 pin")
         target = bundle / "bin" / folder
         target.mkdir(parents=True, exist_ok=True)
-        for source in sorted((ROOT / "build/bin" / folder).iterdir()):
-            if source.suffix.lower() == ".dll" or source.name in {
-                "whisper-cli.exe",
-                "ffmpeg.exe",
-                "ffprobe.exe",
-                "LICENSE.txt",
-                "buildconf.txt",
-            }:
-                shutil.copy2(source, target / source.name)
+        with zipfile.ZipFile(archive_path) as archive:
+            for source in sorted((ROOT / "build/bin" / folder).iterdir()):
+                if source.suffix.lower() == ".dll" or source.name in {
+                    "whisper-cli.exe",
+                    "ffmpeg.exe",
+                    "ffprobe.exe",
+                    "LICENSE.txt",
+                    "buildconf.txt",
+                }:
+                    if source.read_bytes() != archive.read(source.name):
+                        raise ValueError("Native staging file differs from verified archive")
+                    shutil.copy2(source, target / source.name)
     shutil.copytree(ROOT / "resources", bundle / "resources", dirs_exist_ok=True)
     manifest = json.loads((bundle / "resources/models.json").read_text(encoding="utf-8"))
     forbidden = {item["file_name"] for group in ("models", "vad") for item in manifest[group]}
