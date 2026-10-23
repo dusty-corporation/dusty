@@ -223,3 +223,13 @@ No further implementation or tests were started after the Owner requested this c
 - Optional installer prework is starting only on m5-packaging-spike. Inno Setup
   stays at approved major 6, pinned stable 6.7.3; no local machine installation,
   publishing, PR or Owner settings changes. Fresh-machine acceptance remains Owner work.
+
+### Installer prework: safe data cleanup
+
+- Added a hidden offline uninstall entry point on M5 only. Removes recognized
+  settings/history/log/work files and optionally catalog model files; preserves
+  unknown content, output folders and recordings. Refuses linked/junction data
+  and corrupt protection metadata. An overlapping saved output prevents cleanup
+  before any metadata is deleted, so subsequent attempts remain safe.
+- Five cleanup tests passed (including both keep/remove model choices); two
+  generator license/trust-anchor tests passed. No cleanup ran against real app data.
