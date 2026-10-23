@@ -6,7 +6,7 @@ The Owner's ThinkPad re-test (i7-1365U, Iris Xe, recommended models installed)
 passed all eight checks functionally, as relayed by the PM on 2026-10-22. The
 final polish makes messages clearer, simplifies model copy and error dialogs,
 and suppresses Welcome whenever an output folder is set. Functional human
-acceptance is complete; the new screenshot asset is ready for the PM's visual review; final CI is running. Packaging remains on its separate
+acceptance is complete; the new screenshot asset is ready for the PM's visual review and M3 CI is green. Packaging remains on its separate
 accepted spike branch; M3 does not include an installer.
 
 ## 2. Acceptance criteria
@@ -62,7 +62,7 @@ Reproduce with `uv run python tools/render_gui.py`. Screens include empty/waitin
 
 ## 4. Test results
 
-Final UI code revision: 4997333; final screenshot renderer follows in this documentation commit. Local Windows checks:
+Final UI code revision: 4997333; final screenshot renderer and Owner-result documentation: a01c6fb. Local Windows checks:
 
 - `uv run ruff check .`: passed.
 - `uv run ruff format --check .`: 88 files already formatted.
@@ -81,13 +81,17 @@ Final UI code revision: 4997333; final screenshot renderer follows in this docum
 
 Every required package exceeds 85%. These figures do not claim GUI widget line coverage; 29 dedicated Qt/theme/presentation tests cover the M3 behaviors, including four actual native GUI integrations.
 
-Previous ThinkPad-fix CI (historical, before this polish):
+Final polish CI:
 
-- [PR run 39854200159](https://github.com/dusty-corporation/dusty/actions/runs/39854200159): checks and offline passed; **105 passed, 1 skipped in 196.01 s**, coverage 94.2%.
-- [Push run 39854194307](https://github.com/dusty-corporation/dusty/actions/runs/39854194307): checks and offline passed; **105 passed, 1 skipped in 265.02 s**, same coverage.
-- Both WFP logs: `WFP calibration passed; selftest passed; batch passed; gui passed; connection_events=0`. Positive blocked-event calibration and cleanup passed.
-- The only skip is the existing usable-Vulkan-device comparison on hosted CI; all 112 tests pass on the desktop, including that comparison. No skip was added.
-- [Draft PR #4](https://github.com/dusty-corporation/dusty/pull/4) remains open and unmerged. Subsequent report-only commits may queue their own CI runs.
+- [PR run 39889192873](https://github.com/dusty-corporation/dusty/actions/runs/39889192873)
+  at a01c6fb: checks and offline passed; 111 passed, one hosted-Vulkan skip in 193.22 s; coverage 94.2%.
+- [Earlier code PR run 39888876056](https://github.com/dusty-corporation/dusty/actions/runs/39888876056)
+  at 4997333: checks and offline passed; 111 passed, one unavailable-Vulkan skip
+  in 192.97 s, 94.2% coverage.
+- WFP calibration passed; selftest, headless batch and GUI passed with
+  connection_events=0. The desktop full suite has no skips; CI's single Vulkan
+  comparison skip is unchanged. No test was disabled or weakened.
+- [Draft PR #4](https://github.com/dusty-corporation/dusty/pull/4) was accepted by the PM and merged by the Owner as e66788b.
 
 Previous revisions and their evidence remain in git history. No test was
 skipped, disabled or weakened to make these corrections pass.
@@ -137,8 +141,7 @@ No new S0/S1 issue. Sync detection remains advisory: arbitrary mirrored location
 
 ## 7. Decisions needed from PM/Owner
 
-None for implementation. The Owner handles the eventual merge after PM review
-and green CI; the engineer does not merge.
+None. The PM accepted M3 and the Owner merged PR #4; the engineer did not merge.
 
 ## 8. Owner results
 
@@ -182,5 +185,3 @@ The main work was safe asynchronous worker/dialog coordination, preserving in-pr
   reason-only errors, model labels/no estimates/CPU warning matrix, folder-based
   Welcome suppression and re-entrant welcome-before-resume order.
 
-Final polish CI at 4997333 is running: push 39888871011 and PR 39888876056.
-Final results and branch carry-forward evidence will be recorded when complete.
