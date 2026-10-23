@@ -1,8 +1,15 @@
 # Pinned installer runtime inventory
 
-Inno Setup 6.7.3, commit c7af86b4b2fd03371185df2b09a1dca8d472ab70.
+Inno Setup 6.7.3, commit 4adf37ed7f3fd2bd11c6836ba056e3de170fbabf.
 This is an inventory of the upstream compiled setup runtime, not of every tool
 in the Inno compiler installation. ADR 0023 records PM approval and scope.
+
+Tag is-6_7_3 is annotated: its tag-object ID is
+c7af86b4b2fd03371185df2b09a1dca8d472ab70, while its peeled commit is the
+4adf37ed7f3fd2bd11c6836ba056e3de170fbabf above. GitHub raw-file URLs require
+the commit, not the tag-object ID. Earlier records calling c7af86b a commit
+were incorrect. Both identities are retained in the provenance JSON; every
+reviewed source hash matches the peeled commit. No version or binary changed.
 
 ## Selected runtime and build evidence
 

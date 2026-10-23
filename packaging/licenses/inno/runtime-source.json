@@ -1,5 +1,5 @@
 {
-  "commit": "c7af86b4b2fd03371185df2b09a1dca8d472ab70",
+  "commit": "4adf37ed7f3fd2bd11c6836ba056e3de170fbabf",
   "runtime_files": [
     "Setup.e32",
     "SetupLdr.e32"
@@ -65,6 +65,18 @@
     {
       "path": "Components/FolderTreeView.pas",
       "sha256": "223b0b4dac1ac21f689e8670c5bb4337e6b79e84c99b46d3c825b9372d9c7773"
+    },
+    {
+      "path": "Components/MD5.pas",
+      "sha256": "69946bb420e24ab17898d07f12de2a36e3dc353d3c098a48d773b7c967532e63"
+    },
+    {
+      "path": "Components/SHA1.pas",
+      "sha256": "ea8a5961d0e8a5c88e6185d14aec0c6cee6afbeae5950d6a87bd468b129ebf20"
+    },
+    {
+      "path": "Components/SHA256.pas",
+      "sha256": "5dccbe5cb66750d6870d2551ccea79519bb0f42ff40fa1ff58620825b2eed152"
     }
   ],
   "jedi_sources": [
@@ -76,5 +88,6 @@
       "path": "Components/NewUxTheme.TmSchema.pas",
       "sha256": "84d1de8482467a694c137b8aba28235f8a984b0e511a65f95141b9b2689b6909"
     }
-  ]
+  ],
+  "annotated_tag_object": "c7af86b4b2fd03371185df2b09a1dca8d472ab70"
 }

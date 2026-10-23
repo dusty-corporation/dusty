@@ -1,11 +1,12 @@
 {
   "version": "6.7.3",
   "tag": "is-6_7_3",
-  "commit": "c7af86b4b2fd03371185df2b09a1dca8d472ab70",
+  "commit": "4adf37ed7f3fd2bd11c6836ba056e3de170fbabf",
   "url": "https://github.com/jrsoftware/issrc/blob/is-6_7_3/license.txt",
   "retrieved": "2026-10-23",
   "upstream_sha256": "2e5346868c2a18434489824e11d65c3031620f792fefc415d05f19cd441abf5c",
   "repository_sha256": "3df23505b7ec00dc007a1e1e9ba32ee3895e7ce90043bcd1ac1b9b47155921a7",
   "compiler_url": "https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe",
-  "compiler_sha256": "9c73c3bae7ed48d44112a0f48e66742c00090bdb5bef71d9d3c056c66e97b732"
+  "compiler_sha256": "9c73c3bae7ed48d44112a0f48e66742c00090bdb5bef71d9d3c056c66e97b732",
+  "annotated_tag_object": "c7af86b4b2fd03371185df2b09a1dca8d472ab70"
 }

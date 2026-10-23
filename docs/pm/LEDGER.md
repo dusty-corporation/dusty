@@ -380,3 +380,7 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 ### M6 carry-forward after PM resolution
 
 - Merged all M5 changes through eda3b72 into m6-docs, preserving both ledger histories. Only documentation differs from M5. Serial local final source suite passes 197 tests/1 CI-only skip in 179.59 s, strict coverage 94.5%. Lint/format/types and three policies pass. Local rebuilt bundle: 216 files/161987504 bytes, 64-PE gate, app licenses and packaged GUI smoke pass. Final installer CI still pending; no pass claimed yet.
+- Serial final source suite: 197 passed/1 CI-only skip in 179.59 s, strict coverage 94.5%. Earlier overlapping-pytest attempt had one GUI resume failure after temp deletion plus 3 setup errors; no test was weakened. Local split bundle, app license, GUI smoke and 64-PE gate pass.
+- CI 39984075122 found a source-fetch HTTP 404: the earlier pin c7af86b is an annotated tag object, not its commit. Verified GitHub git/ref -> git/tag -> commit 4adf37ed7f3fd2bd11c6836ba056e3de170fbabf, corrected provenance/current docs, retained both IDs. All reviewed source/JEDI hashes verify from that exact commit; actual original-source ZIP generation and 7 focused regressions pass. Binary/version unchanged. Final CI rerun follows.
+
+- M6 now carries M5 fa5fbcb, including all hash-wrapper notices and the correct peeled Inno commit. Both ledger histories retained; current branch difference from M5 remains docs only. Complete branch-head CI is pending.

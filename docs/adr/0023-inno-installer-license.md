@@ -52,7 +52,7 @@ Dusty's processing app or downloader. The app allowlist is unchanged.
 | JEDI theme units | Exactly NewUxTheme and NewUxTheme.TmSchema, under MPL-1.1; original notices, full MPL, pinned upstream links and exact unmodified source archive distributed with the installer |
 | Delphi RTL/VCL | Embarcadero compiled-application redistribution terms, as exercised by the Inno authors; compiled into their runtime, not standalone compiler/SDK/runtime packages |
 
-Verification: pinned commit c7af86b4b2fd03371185df2b09a1dca8d472ab70,
+Verification: pinned commit 4adf37ed7f3fd2bd11c6836ba056e3de170fbabf,
 Setup.dpr/Setup.dproj, SetupLdr.dpr, Setup.ScriptRunner/Setup.ScriptClasses and
 the compression units. The upstream README identifies Delphi 12.3 Athens with
 the May Patch. Default light style and no external style select Setup.e32;
