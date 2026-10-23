@@ -719,3 +719,12 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   SBOM, retained JEDI source and SHA256SUMS covering those four assets.
 - Focused release/generator/upload-order tests: 11 passed. Tag runs and two-build
   upgrade acceptance remain pending; no draft release has yet been claimed.
+
+### M5 Owner VM instructions checkpoint
+
+- README now explains unsigned SmartScreen review and full Get-FileHash comparison.
+- M5-checklist.md provides the supplied Windows 11 Home/VirtualBox 7.2.22 route,
+  AMD SVM Owner prerequisite, EFI/Secure Boot/TPM 2.0, 8 GB/4 CPU/80 GB settings,
+  standard user, draft transfer, and all SPEC 11.6 cases with expected results.
+- VirtualBox is explicitly CPU-only acceptance, not substitute evidence for a
+  physical Vulkan GPU. Owner must run and return the numbered results.
