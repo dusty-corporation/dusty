@@ -25,8 +25,15 @@ POLISH_STATES = {
     "27-explicit-verify-empty-quiet",
 }
 
+FINAL_STATES = {
+    "06-all-not-installed",
+    "08-selected-model-delete-enabled",
+    "21-voice-deletion-confirmation",
+    "27-explicit-verify-empty-quiet",
+}
 
-def render(output: Path, theme: str, *, polish: bool = False) -> None:
+
+def render(output: Path, theme: str, *, polish: bool = False, final: bool = False) -> None:
     from dusty.privacy.network_guard import install_guard
 
     install_guard()
@@ -57,7 +64,9 @@ def render(output: Path, theme: str, *, polish: bool = False) -> None:
     window.output_dir = None
 
     def capture(widget, name: str) -> None:
-        if polish and name not in POLISH_STATES:
+        if final and name not in FINAL_STATES:
+            return
+        if polish and not final and name not in POLISH_STATES:
             return
         widget.show()
         app.processEvents()
@@ -105,7 +114,8 @@ def render(output: Path, theme: str, *, polish: bool = False) -> None:
 
     manager_capture("06-all-not-installed")
     if polish:
-        manager._result({"statuses": dict(manager.statuses), "error": None, "action": "verify"})
+        manager.verify_button.click()
+        app.processEvents()
         manager_capture("27-explicit-verify-empty-quiet")
     manager.statuses.update(statuses)
     if polish:
@@ -198,16 +208,17 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=ROOT / "build/m4-screenshots")
     parser.add_argument("--child", action="store_true")
     parser.add_argument("--polish", action="store_true")
+    parser.add_argument("--final", action="store_true")
     parser.add_argument("--theme", choices=("light", "dark"), default="light")
     args = parser.parse_args()
     output = args.output.resolve()
     if not output.is_relative_to(ROOT):
         raise ValueError("Screenshot output must stay inside the repository")
     if args.child:
-        render(output, args.theme, polish=args.polish)
+        render(output, args.theme, polish=args.polish or args.final, final=args.final)
         return
     for theme in ("light", "dark"):
-        for scale in ("1",) if args.polish else ("1", "1.5"):
+        for scale in ("1",) if args.polish or args.final else ("1", "1.5"):
             subprocess.run(
                 [
                     sys.executable,
@@ -218,7 +229,7 @@ def main() -> None:
                     "--theme",
                     theme,
                 ]
-                + (["--polish"] if args.polish else []),
+                + (["--final"] if args.final else ["--polish"] if args.polish else []),
                 env=dict(
                     os.environ,
                     QT_QPA_PLATFORM="offscreen",
@@ -232,16 +243,16 @@ def main() -> None:
     (output / "README.md").write_text(
         "# M4 UI review\n\n"
         + (
-            f"Polish round: {len(POLISH_STATES)} changed states "
+            f"Review round: {len(FINAL_STATES) if args.final else len(POLISH_STATES)} states "
             f"in light-1 and dark-1 ({count} PNGs).\n"
-            if args.polish
+            if args.polish or args.final
             else "21 synthetic states in both themes at 100% and 150% (84 PNGs).\n"
         )
         + "No user content or real downloads; 42 GB free-space value is synthetic.\n"
         "The actual Model Manager and main-window widgets are rendered with PySide6 6.9.2.\n"
         "Client areas only: native title bars and hover tooltips are not in widget grabs.\n"
         + "Reproduce: uv run python tools/render_models.py"
-        + (" --polish" if args.polish else "")
+        + (" --final" if args.final else " --polish" if args.polish else "")
         + "\n",
         encoding="utf-8",
     )

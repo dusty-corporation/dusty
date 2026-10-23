@@ -364,3 +364,36 @@ No further implementation or tests were started after the Owner requested this c
   blocked-Start behavior after deleting in-use Voice detection.
 - Final follow-up changes report/changelog/ledger only. No PR, main merge,
   publication or settings change. Push documentation carry-forward and stop.
+
+
+### M4 final Owner check and decisions, 2026-10-23 (doing)
+
+- Owner ThinkPad changed-behavior review of m4-review-bundle run 39998318413:
+  all seven steps PASS on 2026-10-23.
+- PM decision 1: plain Best for descriptions for Turbo/Small/Medium/Small English,
+  wrapped to at most two lines; Turbo note becomes Fast on newer computers.
+  Slow on older ones. Dynamic recommended suffix remains unchanged; Tiny unchanged.
+- PM decision 2: in-use Voice detection deletion warning ends after the Options
+  alternative, without repeating the download-again sentence.
+- PM decision 3: Verify all is unavailable when neither a transcription model
+  nor Voice detection is installed.
+- PM decision 4: recent crash/forced-close partials may resume, still requiring
+  complete size and SHA-256. GUI startup removes .part files older than seven
+  days. Normal Cancel/close keep immediate partial cleanup.
+- In progress: startup-age/resume tests and a forced GUI TerminateProcess test
+  proving the Job Object kills the downloader while its HTTPS read is paused.
+- Next: full checks and green CI, only screenshots 06/08/21/27 in light-1/dark-1,
+  new draft screenshot asset, updated report and draft PR M4_model_manager.
+  M5/M6 stay untouched; no rebase or carry-forward in this round.
+
+### M4 final implementation verified locally
+
+- Full suite: 176 passed, 1 expected skip; strict-package coverage 94.4%.
+- Ruff lint/format, mypy (59 source files), and all three policy gates pass.
+- Forced GUI TerminateProcess regression passes: the Job Object kills the real
+  fetch interpreter while its HTTPS response is paused, neither cleanup handler
+  runs, and the partial stops growing. A new GUI resumes the retained prefix
+  with HTTP Range and verifies the complete size and SHA-256.
+- Stale startup partial cleanup, recent-partial retention, empty Verify all,
+  exact deletion text and two-line Best for layout regressions pass.
+- Implementation complete; source CI, targeted screenshots and draft PR pending.

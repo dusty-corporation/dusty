@@ -601,7 +601,13 @@ def test_progress_names_active_download_and_does_not_repeat_percent(models, qtbo
             False,
             "Delete Small? It is the model chosen in Options. You can download it again later.",
         ),
-        (VOICE_ID, None, True, M.DELETE_VOICE.format(name=M.VOICE_MODEL)),
+        (
+            VOICE_ID,
+            None,
+            True,
+            "Delete Voice detection? Skip silent parts is on, so Start will be unavailable "
+            "until you download it again or turn off Skip silent parts in Options.",
+        ),
     ],
 )
 def test_delete_confirmation_names_file_and_explains_recovery(
@@ -624,7 +630,10 @@ def test_delete_confirmation_names_file_and_explains_recovery(
     monkeypatch.setattr(TextDialog, "exec", reject)
     dialog.delete_button.click()
     assert texts == [expected]
-    assert "You can download it again later." in expected
+    if key != VOICE_ID:
+        assert "You can download it again later." in expected
+    else:
+        assert "Start will be unavailable until" in expected
     assert (models.paths.models_dir / file_name).exists()
 
 
@@ -634,3 +643,172 @@ def test_empty_model_recommendation_uses_only_short_model_name(models, qtbot, vu
     qtbot.addWidget(view)
     view.apply_prepared(Prepared((), vulkan, {}, vad_installed=False))
     assert view.warning.text() == f"The recommended model, {name}, is not installed yet."
+
+
+def test_verify_all_enabled_for_voice_only_but_not_an_empty_catalog(models, qtbot, monkeypatch):
+    dialog = models.create()
+    assert not dialog.verify_button.isEnabled()
+    before = len(dialog.workers)
+    dialog.verify_button.click()
+    assert len(dialog.workers) == before
+    voice = models.paths.models_dir / models.registry.manifest.vad_file_name
+    voice.write_bytes(DATA)
+    installed = models.create(voice=True)
+    assert installed.statuses[VOICE_ID] == "installed"
+    assert not any(
+        state == "installed" for key, state in installed.statuses.items() if key != VOICE_ID
+    )
+    assert installed.verify_button.isEnabled()
+    installed.verify_button.click()
+    wait_done(installed, qtbot)
+    assert installed.message.text() == M.MODELS_READY
+    monkeypatch.setattr(TextDialog, "exec", lambda _: QDialog.DialogCode.Accepted)
+    installed.table.selectRow(installed.ids.index(VOICE_ID))
+    installed.delete_button.click()
+    wait_done(installed, qtbot)
+    assert not installed.verify_button.isEnabled()
+
+
+def test_best_for_wraps_within_two_lines_and_turbo_note_matches_pm(models, qtbot):
+    from PySide6.QtCore import Qt
+    from PySide6.QtGui import QTextLayout, QTextOption
+
+    dialog = models.create()
+    expected = {
+        "large-v3-turbo-q8_0": "Everything, if your computer is fast enough",
+        "small": "Older or slower computers",
+        "medium": "Translating to English",
+        "small.en": "English only, on older or slower computers",
+    }
+    assert dialog.table.wordWrap()
+    assert dialog.table.textElideMode() == Qt.TextElideMode.ElideNone
+    for key, text in expected.items():
+        assert dialog.table.item(dialog.ids.index(key), 1).text() == text
+        layout = QTextLayout(text, dialog.table.font())
+        option = QTextOption()
+        option.setWrapMode(QTextOption.WrapMode.WordWrap)
+        layout.setTextOption(option)
+        layout.beginLayout()
+        while True:
+            line = layout.createLine()
+            if not line.isValid():
+                break
+            line.setLineWidth(dialog.table.columnWidth(1) - 16)
+        layout.endLayout()
+        assert layout.lineCount() <= 2
+    labels = dialog.table.cellWidget(dialog.ids.index("large-v3-turbo-q8_0"), 0).findChildren(
+        QLabel
+    )
+    assert labels[2].text() == "Fast on newer computers. Slow on older ones."
+
+
+def test_gui_startup_removes_stale_partial_and_keeps_recent_prefix(models, qtbot):
+    import time
+
+    stale = models.paths.models_dir / "abandoned-model.bin.part"
+    stale.write_bytes(b"old prefix")
+    old = time.time() - 8 * 24 * 60 * 60
+    os.utime(stale, (old, old))
+    recent = models.file.with_suffix(".bin.part")
+    recent.write_bytes(DATA[:65536])
+    view = MainWindow(models.paths, interactive=False)
+    qtbot.addWidget(view)
+    view.initialize()
+    qtbot.waitUntil(lambda: view.ready and not view.preparer.isRunning(), timeout=10000)
+    assert not stale.exists() and recent.read_bytes() == DATA[:65536]
+    dialog = models.create(registry=view.registry)
+    dialog.download_button.click()
+    wait_done(dialog, qtbot)
+    assert models.tls.requests == ["bytes=65536-"]
+    assert not recent.exists() and models.file.read_bytes() == DATA
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows TerminateProcess and Job Objects")
+def test_forced_gui_death_kills_fetch_job_and_recent_partial_resumes(models, qtbot):
+    import ctypes
+    from ctypes import wintypes
+
+    models.tls.mode = "hold"
+    evidence = models.paths.user_dir / "crash-evidence"
+    evidence.mkdir(parents=True)
+    process = subprocess.Popen(
+        [
+            sys.executable,
+            str(CERTS / "gui_download_crash.py"),
+            str(models.tls.port),
+            str(CERTS / "localhost.pem"),
+            str(models.paths.resources_dir),
+            str(models.paths.models_dir),
+            str(models.paths.user_dir),
+            str(evidence),
+        ],
+        env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel.OpenProcess.restype = wintypes.HANDLE
+    kernel.TerminateProcess.argtypes = [wintypes.HANDLE, wintypes.UINT]
+    kernel.TerminateProcess.restype = wintypes.BOOL
+    kernel.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+    kernel.WaitForSingleObject.restype = wintypes.DWORD
+    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+    gui_handle = child_handle = None
+    part = models.file.with_suffix(".bin.part")
+    try:
+        qtbot.waitUntil(lambda: (evidence / "gui-ready").exists(), timeout=15000)
+        assert models.tls.waiting.wait(5) and not models.tls.release.is_set()
+        gui_pid = int((evidence / "gui-pid").read_text(encoding="ascii"))
+        child_pid = json.loads((evidence / "fetch-ready.json").read_text())["pid"]
+        assert gui_pid != child_pid
+        gui_handle = kernel.OpenProcess(0x00100001, False, gui_pid)
+        child_handle = kernel.OpenProcess(0x00100001, False, child_pid)
+        assert gui_handle and child_handle
+        assert kernel.WaitForSingleObject(gui_handle, 0) == 258
+        assert kernel.WaitForSingleObject(child_handle, 0) == 258
+        assert kernel.TerminateProcess(gui_handle, 77)
+        assert kernel.WaitForSingleObject(gui_handle, 5000) == 0
+        # Response is still gated, so closed stdout cannot explain child death.
+        assert not models.tls.release.is_set()
+        assert kernel.WaitForSingleObject(child_handle, 5000) == 0
+        process.wait(timeout=10)
+        assert not (evidence / "gui-cleanup-ran").exists()
+        assert not (evidence / "fetch-cleanup-ran").exists()
+        offset = part.stat().st_size
+        assert offset == 2 * 65536 and not models.file.exists()
+        models.tls.release.set()
+        assert models.tls.finished.wait(5)
+        assert part.stat().st_size == offset
+    finally:
+        # Only clean up these test-owned processes if a regression made them survive.
+        if gui_handle is None and (evidence / "gui-pid").exists():
+            gui_handle = kernel.OpenProcess(
+                0x00100001, False, int((evidence / "gui-pid").read_text(encoding="ascii"))
+            )
+        if child_handle is None and (evidence / "fetch-ready.json").exists():
+            child_handle = kernel.OpenProcess(
+                0x00100001, False, json.loads((evidence / "fetch-ready.json").read_text())["pid"]
+            )
+        for handle in (gui_handle, child_handle):
+            if handle:
+                if kernel.WaitForSingleObject(handle, 0) == 258:
+                    kernel.TerminateProcess(handle, 99)
+                    kernel.WaitForSingleObject(handle, 5000)
+                kernel.CloseHandle(handle)
+        models.tls.release.set()
+        if process.poll() is None:
+            process.kill()
+        process.communicate(timeout=10)
+    # Restart through real GUI preparation, then resume the retained exact prefix.
+    models.tls.mode = "normal"
+    view = MainWindow(models.paths, interactive=False)
+    qtbot.addWidget(view)
+    view.initialize()
+    qtbot.waitUntil(lambda: view.ready and not view.preparer.isRunning(), timeout=10000)
+    assert part.stat().st_size == offset
+    dialog = models.create(registry=view.registry)
+    dialog.download_button.click()
+    wait_done(dialog, qtbot)
+    assert models.tls.requests == [None, f"bytes={offset}-"]
+    assert models.file.read_bytes() == DATA and not part.exists()

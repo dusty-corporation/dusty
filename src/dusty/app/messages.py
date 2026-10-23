@@ -457,8 +457,7 @@ DELETE_SELECTED = (
 )
 DELETE_VOICE = (
     "Delete {name}? Skip silent parts is on, so Start will be unavailable until "
-    "you download it again or turn off Skip silent parts in Options. "
-    "You can download it again later."
+    "you download it again or turn off Skip silent parts in Options."
 )
 CHOOSE_MODEL = "Choose a transcription model in Options."
 MODEL_PLACEHOLDER = "Choose a transcription model"
@@ -475,7 +474,7 @@ MODEL_QUALITY = {
     "silero-vad": 'Needed for "Skip silent parts"',
 }
 MODEL_NOTE = {
-    "large-v3-turbo-q8_0": "Recommended with a graphics card",
+    "large-v3-turbo-q8_0": "Fast on newer computers. Slow on older ones.",
     "small": "Works on any computer. May make more mistakes.",
     "small.en": "Works on any computer. May make more mistakes.",
     "medium": "Slower",
@@ -486,10 +485,10 @@ MODEL_BEST_FOR = dict(
     zip(
         ("large-v3-turbo-q8_0", "small", "small.en", "medium", "tiny", "silero-vad"),
         (
-            "Everyday use",
-            "Any computer",
-            "English recordings",
-            "Translation",
+            "Everything, if your computer is fast enough",
+            "Older or slower computers",
+            "English only, on older or slower computers",
+            "Translating to English",
             "Quick drafts",
             "Skipping silence",
         ),
