@@ -9,7 +9,9 @@ from dusty.models import ModelRegistry, load_manifest
 from dusty.runtime_paths import RuntimePaths
 
 
-def run_selftest(paths: RuntimePaths, model_id: str, *, backend: str = "auto") -> str:
+def run_selftest(
+    paths: RuntimePaths, model_id: str, *, backend: str = "auto", once: bool = False
+) -> str:
     """Return a reason code, with no transcript or path in diagnostics."""
     work = paths.user_dir / "work/selftest"
     work.mkdir(parents=True, exist_ok=True)
@@ -25,7 +27,14 @@ def run_selftest(paths: RuntimePaths, model_id: str, *, backend: str = "auto") -
         wav = work / "audio.wav"
         transcode_audio(paths.bin_dir / "ffmpeg/ffmpeg.exe", fixture, wav)
         backends: list[Literal["cpu", "vulkan"]] = ["cpu"]
-        if backend in {"auto", "vulkan"}:
+        if once:
+            if backend == "auto":
+                from dusty.installer_support import probe as device_probe
+
+                backends = ["vulkan"] if device_probe(paths, work / "probe.json") else ["cpu"]
+            else:
+                backends = ["vulkan"] if backend == "vulkan" else ["cpu"]
+        elif backend in {"auto", "vulkan"}:
             from dusty.engine.backend import probe_vulkan
 
             if probe_vulkan(paths, registry, model_id=model_id):
@@ -51,7 +60,7 @@ def run_selftest(paths: RuntimePaths, model_id: str, *, backend: str = "auto") -
             if "fellow americans" not in text or "your country" not in text:
                 return "TEXT_MISMATCH"
         logging.getLogger("dusty").info("status=done")
-        return "OK"
+        return "OK_" + backends[0].upper() if once else "OK"
     except Exception:
         logging.getLogger("dusty").info("status=failed")
         return "SELFTEST_FAILED"

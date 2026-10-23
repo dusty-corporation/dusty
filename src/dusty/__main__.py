@@ -22,10 +22,53 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--headless-batch", nargs="+", metavar="FILE")
     parser.add_argument("--out")
     parser.add_argument("--check-model-download", action="store_true", help=argparse.SUPPRESS)
+    for flag in (
+        "probe-vulkan",
+        "probe-vulkan-child",
+        "installer-test",
+        "installer-clear",
+        "model-size",
+    ):
+        parser.add_argument("--" + flag, action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
         "--uninstall-data", choices=("keep-models", "remove-models"), help=argparse.SUPPRESS
     )
     args = parser.parse_args(argv)
+
+    if args.probe_vulkan_child or args.probe_vulkan:
+        from pathlib import Path
+
+        from dusty.runtime_paths import resolve_paths
+
+        if not args.out:
+            return 2
+        paths = resolve_paths()
+        if args.probe_vulkan:
+            from dusty.installer_support import probe
+
+            return 0 if probe(paths, Path(args.out)) else 1
+        import json
+
+        from dusty.platform.vulkan_probe import probe_device
+
+        try:
+            ok = probe_device(paths.bin_dir / "vulkan")
+        except Exception:
+            ok = False
+        Path(args.out).write_text(json.dumps({"real_gpu_found": ok}), encoding="utf-8")
+        return 0
+
+    if args.installer_clear or args.model_size:
+        from pathlib import Path
+
+        from dusty.installer_support import clear_failed_selection, model_size
+        from dusty.runtime_paths import resolve_paths
+
+        if args.installer_clear:
+            clear_failed_selection(resolve_paths())
+        elif args.out:
+            Path(args.out).write_text(model_size(resolve_paths()), encoding="utf-8")
+        return 0
 
     if args.uninstall_data:
         from dusty.installer_cleanup import cleanup
@@ -46,16 +89,20 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         return run_download_check(args.model, Path(args.out))
 
-    if args.self_test:
+    if args.self_test or args.installer_test:
         from dusty.privacy.logging import configure_logger
         from dusty.runtime_paths import resolve_paths
         from dusty.selftest import run_selftest
 
         paths = resolve_paths()
         configure_logger(paths.user_dir)
-        code = run_selftest(paths, args.model, backend=args.backend)
+        code = run_selftest(paths, args.model, backend=args.backend, once=args.installer_test)
+        if args.installer_test and args.out:
+            from pathlib import Path
+
+            Path(args.out).write_text(code, encoding="utf-8")
         print(code)
-        return 0 if code == "OK" else 1
+        return 0 if code.startswith("OK") else 1
 
     if args.headless_batch:
         if not args.out:

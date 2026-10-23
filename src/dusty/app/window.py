@@ -816,6 +816,8 @@ class MainWindow(QMainWindow):
             hint = M.ADD_RECORDINGS_FIRST
         self.start_hint.setText(hint)
         self.start_hint.setVisible(bool(hint))
+        if self.settings.get("installer_test_failed"):
+            warning = M.INSTALLER_TEST_WARNING
         self.warning.setText(warning or M.EMPTY_CELL)
         self.warning.setVisible(bool(warning))
         self.choices_summary.setText(

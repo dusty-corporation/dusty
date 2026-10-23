@@ -51,7 +51,9 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     assert "PrivilegesRequired=lowest" in text
     assert "DownloadTemporaryFile(" not in text
     assert "UninstallDelete" not in text  # No broad recursive deletion of user data.
-    assert "--self-test --backend auto --model" in text
+    assert "--installer-test --backend " in text
+    assert "Stage := 4" in text  # Smallest model's additional CPU-only check.
+    assert "@@" not in text
     assert "{param:ACCEPTTERMS|}" in text
     assert "{param:ALLOWDOWNLOAD|}" in text
     assert "{param:REMOVEMODELS|}" in text

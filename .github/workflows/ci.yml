@@ -214,3 +214,10 @@ jobs:
             build/installer/acceptance/*.json
             build/installer/runtime-inputs.json
           if-no-files-found: warn
+      - name: Preserve gated installer page review only
+        if: success() && steps.installer_licenses.outcome == 'success' && steps.installer_acceptance.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: m5-installer-page-review
+          path: build/installer/review/Dusty-page-review.exe
+          if-no-files-found: error

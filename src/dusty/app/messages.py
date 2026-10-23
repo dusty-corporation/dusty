@@ -554,3 +554,61 @@ INSTALLER = {
         "Stop installation? Verified files are kept. Run Setup again to pick up the download."
     ),
 }
+
+INSTALLER.update(
+    LicenseDusty="Dusty's license",
+    LicenseNotices="Third-party notices",
+    LicenseMicrosoft="Microsoft runtime terms",
+    BestFor="Best for: %1",
+    CheckingGraphics=(
+        "Checking the graphics device... Small is the safe choice if this check cannot finish."
+    ),
+    LowMemory=(
+        "This computer has less memory than these models recommend. You can "
+        "still install Dusty, but transcription may be slow or may not finish."
+    ),
+    DownloadConsent="Download %1 from github.com (%2)?",
+    DownloadAction="Download and test",
+    DownloadPage="Download transcription models",
+    DownloadPageHelp=(
+        "Voice detection is included. Only the separate downloader connects to github.com."
+    ),
+    DownloadWorking="Downloading %1",
+    CheckingModel="Checking %1",
+    DownloadFailed=(
+        "The download or file check did not finish. Check your internet "
+        "connection and free space, then try again."
+    ),
+    SelfTestWorking="Testing %1 (%2 of %3)",
+    CpuTestWorking="Testing %1 on the processor (CPU fallback)",
+    SelfTestFailed=(
+        "The transcription test did not finish. You can retry, try the "
+        "processor, or finish without choosing a model."
+    ),
+    Retry="Retry",
+    RetryCpu="Retry on CPU",
+    FinishWithout="Finish without a model",
+    FinishedWithout=(
+        "Dusty is installed. Model setup did not finish. Open Options to choose"
+        " a transcription model, or download one in Model Manager."
+    ),
+    SetupComplete=(
+        "The selected models and voice detection were checked. Transcription tests passed."
+    ),
+    CpuOutcome=(
+        "The test passed on the processor (CPU). Graphics acceleration was not used for this test."
+    ),
+    GpuOutcome="The test passed using Vulkan graphics acceleration.",
+    RemoveModels="Also remove downloaded models (%1 GB)",
+    StopInstall=(
+        "Stop installation? The current partial download will be removed. Verified models are kept."
+    ),
+    ReviewOnly=(
+        "Installer page review only. Download amounts and progress states are "
+        "examples; no files are installed and no models are downloaded."
+    ),
+)
+INSTALLER_TEST_WARNING = (
+    "The installer transcription test did not finish. Choose a "
+    "transcription model in Options, or run the self-test again."
+)

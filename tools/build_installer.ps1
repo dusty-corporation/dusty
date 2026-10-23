@@ -64,3 +64,6 @@ $hash = (Get-FileHash -LiteralPath $installer.FullName -Algorithm SHA256).Hash.T
 "$hash  $($installer.Name)" | Set-Content -LiteralPath (Join-Path $work 'output/SHA256SUMS.txt') -Encoding utf8NoBOM
 @{ draft_only = $true; bytes = $installer.Length; sha256 = $hash; compiler = '6.7.3' } |
     ConvertTo-Json | Set-Content -LiteralPath (Join-Path $work 'output/installer.json') -Encoding utf8NoBOM
+# Same native page controls, with installation disabled, for page screenshots.
+& $iscc /DReviewOnly (Join-Path $work 'dusty.iss')
+if ($LASTEXITCODE -ne 0) { throw 'Installer page review compilation failed' }

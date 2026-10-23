@@ -11,6 +11,7 @@ if __package__ in (None, ""):
 
 from dusty import __version__  # noqa: E402
 from dusty.app import messages as M  # noqa: E402
+from dusty.app.model_manager import format_size  # noqa: E402
 from dusty.models import load_manifest  # noqa: E402
 from tools.installer_notices import runtime_notices  # noqa: E402
 
@@ -36,26 +37,64 @@ def generate(output: Path, bundle: Path) -> Path:
         + (ROOT / "packaging/licenses/microsoft/runtime-eula.txt").read_text(encoding="utf-8")
         + "\n\nINNO SETUP (INSTALLER RUNTIME)\n\n"
         + (ROOT / "packaging/licenses/inno/license.txt").read_text(encoding="utf-8")
+        + "\n\nTHIRD-PARTY NOTICES\n\n"
+        + runtime_notices(bundle)
     )
     (output / "LICENSE.txt").write_text(license_text, encoding="utf-8", newline="\n")
+    (output / "DUSTY-LICENSE.txt").write_text(
+        (ROOT / "LICENSE").read_text(encoding="utf-8")
+        + "\n\n"
+        + (ROOT / "NOTICE").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    (output / "MICROSOFT-LICENSE.txt").write_bytes(
+        (ROOT / "packaging/licenses/microsoft/runtime-eula.txt").read_bytes()
+    )
     (output / "THIRD_PARTY_NOTICES.md").write_text(
         runtime_notices(bundle), encoding="utf-8", newline="\n"
     )
     setup_models = []
     for index, (key, model) in enumerate(manifest.models.items()):
-        label = f"{M.MODEL_NAMES[key]}: {model.size_bytes / 1_000_000:.1f} MB"
+        label = (
+            f"{M.MODEL_TECHNICAL[key]}: {M.MODEL_QUALITY[key]} ({format_size(model.size_bytes)})"
+        )
+        detail = f"{M.MANAGER_HEADERS[1]}: {M.MODEL_BEST_FOR[key]}. {M.MODEL_NOTE[key]}"
         setup_models += [
             f"  ModelIds[{index}] := {pascal(key)};",
             f"  ModelBytes[{index}] := {model.size_bytes};",
+            f"  ModelNames[{index}] := {pascal(M.MODEL_TECHNICAL[key])};",
+            f"  ModelFiles[{index}] := {pascal(model.file_name)};",
+            f"  ModelLabels[{index}] := {pascal(label)};",
             f"  ModelsPage.Add({pascal(label)});",
+            f"  ModelsPage.CheckListBox.ItemSubItem[{index}] := {pascal(detail)};",
         ]
     template = (ROOT / "installer/dusty.iss.template").read_text(encoding="utf-8")
+    template = template.replace(
+        "@@WIZARD_CODE@@", (ROOT / "installer/wizard.iss").read_text(encoding="utf-8")
+    )
+    consent_cases = []
+    for mask in range(1, 1 << len(manifest.models)):
+        chosen = [
+            (key, item) for i, (key, item) in enumerate(manifest.models.items()) if mask & (1 << i)
+        ]
+        names = [M.MODEL_TECHNICAL[key] for key, _ in chosen] + [M.VOICE_MODEL]
+        total = sum(item.size_bytes for _, item in chosen) + raw["vad"][0]["size_bytes"]
+        consent = M.DOWNLOAD_CONFIRM.format(
+            names=M.DOWNLOAD_NAMES_JOIN.join(names), size=format_size(total)
+        )
+        consent_cases.append(f"    {mask}: Result := {pascal(consent)};")
     values = {
         "VERSION": __version__,
         "BUNDLE": str(bundle.resolve()),
         "MODEL_COUNT": str(len(manifest.models)),
         "MODEL_SETUP": "\n".join(setup_models),
         "VAD_BYTES": str(raw["vad"][0]["size_bytes"]),
+        "VAD_FILE": raw["vad"][0]["file_name"],
+        "VOICE_NAME": M.VOICE_MODEL,
+        "RECOMMENDED_SUFFIX": M.RECOMMENDED.format(name=""),
+        "MODEL_REVIEW": M.MODEL_REVIEW,
+        "MIN_RAM": str(raw["models"][0]["recommended_min_ram_gb"] * 1_000_000_000),
+        "CONSENT_CASES": "\n".join(consent_cases),
         "MESSAGES": "\n".join(f"{key}={value}" for key, value in M.INSTALLER.items()),
         "INNO_LICENSE": str(ROOT / "packaging/licenses/inno/license.txt"),
         "INSTALLER_NOTICES": str((output / "THIRD_PARTY_NOTICES.md").resolve()),
