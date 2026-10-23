@@ -139,6 +139,8 @@ def check_bundle(bundle: Path, inventory_path: Path) -> list[str]:
     required_texts = []
     if "libffi" in components:
         required_texts.append("libffi-MIT.txt")
+    if "openssl" in components:
+        required_texts.append("openssl-Apache-2.0.txt")
     if "ffmpeg" in components:
         required_texts.append("ffmpeg-LGPL-2.1.txt")
     if "pyside6-essentials" in components:

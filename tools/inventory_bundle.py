@@ -15,6 +15,7 @@ import tomllib
 import uuid
 from pathlib import Path
 
+import pefile  # type: ignore[import-untyped]
 from cyclonedx.schema import SchemaVersion
 from cyclonedx.validation.json import JsonStrictValidator
 
@@ -31,6 +32,17 @@ def digest(path: Path) -> str:
 
 def component(name: str, version: str, license_text: str, source: str, **extra) -> dict:
     return {"name": name, "version": version, "license": license_text, "source": source, **extra}
+
+
+def copyright_from_pe(path: Path) -> str:
+    with pefile.PE(str(path)) as executable:
+        for group in getattr(executable, "FileInfo", []):
+            for info in group:
+                for table in getattr(info, "StringTable", []):
+                    value = table.entries.get(b"LegalCopyright")
+                    if value:
+                        return value.decode("utf-8", "replace")
+    return "See retained upstream copyright notices"
 
 
 def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
@@ -240,12 +252,36 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
         "Copyright statements are preserved in those original texts; where no text is",
         "available, attribution and transitive notices are unresolved, not waived.",
         "",
-        "| Component | Version | License | Source/evidence |",
-        "|---|---|---|---|",
+        "| Component | Version | License | Copyright | Source/evidence |",
+        "|---|---|---|---|---|",
     ]
+    copyright_text = {
+        "dusty": "Copyright 2026 Dusty contributors",
+        "cpython": copyright_from_pe(bundle / "dusty/_internal/python312.dll"),
+        "pyside6-essentials": copyright_from_pe(bundle / "dusty/_internal/PySide6/Qt6Core.dll"),
+        "shiboken6": copyright_from_pe(bundle / "dusty/_internal/shiboken6/shiboken6.abi3.dll"),
+        "microsoft-visual-cpp-runtime": copyright_from_pe(
+            bundle / "dusty/_internal/VCRUNTIME140.dll"
+        ),
+        "pyinstaller-bootloader": (
+            "Copyright 2010-2023 PyInstaller Development Team; additional notices in COPYING.txt"
+        ),
+        "pyinstaller-runtime-hooks": (
+            "Copyright PyInstaller Development Team; original notice in COPYING.txt"
+        ),
+        "whisper.cpp": (bundle / "bin/cpu/LICENSE.txt").read_text(encoding="utf-8").splitlines()[2],
+        "ffmpeg": "Copyright 2000-2026 the FFmpeg developers; exact build banner retained below",
+        "libffi": (licenses / "libffi-MIT.txt").read_text(encoding="utf-8").splitlines()[0],
+        "jfk-fixture": "1961 US government work, President John F. Kennedy; public domain",
+    }
+    crypto = next((bundle / "dusty-fetch").rglob("libcrypto*.dll"), None)
+    if crypto:
+        copyright_text["openssl"] = copyright_from_pe(crypto)
     for item in sorted(components.values(), key=lambda item: item["name"]):
+        item["copyright"] = copyright_text.get(item["name"], "See retained upstream notices")
         lines.append(
-            f"| {item['name']} | {item['version']} | {item['license']} | {item['source']} |"
+            f"| {item['name']} | {item['version']} | {item['license']} | "
+            f"{item['copyright']} | {item['source']} |"
         )
     lines += [
         "",
@@ -324,6 +360,7 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
                 "name": item["name"],
                 "version": item["version"],
                 "licenses": [license_entry],
+                "copyright": item["copyright"],
             }
         )
     for item in files:
