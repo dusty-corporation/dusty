@@ -190,3 +190,4 @@ No further implementation or tests were started after the Owner requested this c
   Owner brief edit. Final M5 rebase carries this documentation only, then stop.
 | M5-S1 | M5 | Authorized packaging-only spike | doing | m5-packaging-spike based on m4-downloader 11354ce; PM scope in briefs/M5-packaging-spike-authorization.md; shared COLLECT experiment | - |
 | M5-S2 | M5 | Actual bundle license inventory, notices and CycloneDX SBOM | doing | 22 focused policy/packaging tests passed; local bundle audit fails closed on native findings, no binary upload; docs/dev/packaging-spike.md | ISSUE-013 |
+| M5-S3 | M5 | Packaged self-test under calibrated WFP audit | doing | Windows packaging-spike job builds, checks Qt exclusions, explicitly downloads Tiny with packaged fetch before audit, then runs windowed self-test; existing source job retained | - |
