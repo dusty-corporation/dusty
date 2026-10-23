@@ -8,7 +8,7 @@ function Read-InstallerEvents([datetime]$Since) {
 
 function Start-InstallerAudit([string]$Work) {
     if ($env:GITHUB_ACTIONS -ne 'true') { throw 'Installer audit runs only on disposable CI' }
-    $snapshot = Join-Path $Work 'download-audit-policy.csv'
+    $snapshot = Join-Path $Work ('download-audit-policy-' + [guid]::NewGuid().ToString('N') + '.csv')
     & auditpol /backup "/file:$snapshot" | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Installer audit backup failed' }
     $state = @{snapshot=$snapshot;rules=@();began=(Get-Date)}
