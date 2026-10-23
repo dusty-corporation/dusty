@@ -233,3 +233,15 @@ No further implementation or tests were started after the Owner requested this c
   before any metadata is deleted, so subsequent attempts remain safe.
 - Five cleanup tests passed (including both keep/remove model choices); two
   generator license/trust-anchor tests passed. No cleanup ran against real app data.
+
+### Installer prework: generated draft and pinned compiler
+
+- ADR 0022 records the PM's bundled dusty-fetch decision. Generator retains the
+  manifest trust anchor, creates full Apache/NOTICE/Microsoft EULA acceptance,
+  catalog selection plus VAD, verify/reuse/download/verify and self-test gates.
+- Per-user lowest-privilege layout, Start Menu/optional Desktop shortcut, retry,
+  incomplete exit code, child Job Object containment and model-removal checkbox
+  drafted. Safe cleanup tests pass; no Owner machine installation or data cleanup.
+- Inno 6.7.3 official bootstrap SHA pinned; CI compilation/artifact only. Source
+  license retained, SmartScreen/checksum guidance added. Seven focused tests pass;
+  real compilation, full regression and fresh-machine behavior still need evidence.

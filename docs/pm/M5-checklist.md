@@ -1,6 +1,7 @@
 # M5 installer and release checklist
 
-This is a future acceptance checklist; no installer is built in the packaging spike.
+This remains an acceptance checklist. An unsigned installer draft is compiled as
+a CI artifact during authorized prework; it is not a published or accepted installer.
 
 - [ ] Verify every Microsoft PE is a required vcruntime140*.dll/msvcp140*.dll
   copied unmodified from VS 2022 VC/redist release x64 Microsoft.VC143.CRT;
@@ -20,3 +21,12 @@ This is a future acceptance checklist; no installer is built in the packaging sp
   success; run installed-app PE, license and calibrated WFP gates.
 - [ ] Complete the remaining full M5 tasks and Owner fresh-machine walkthrough
   under the future M5 brief; this spike does not satisfy installer acceptance.
+- [ ] Confirm standard-user install needs no UAC, license acceptance precedes
+  downloads, and graphics/RAM defaults are conservative on both target machines.
+- [ ] Cancel and terminate Setup during download, confirm no downloader survives,
+  rerun to resume; force network/hash/self-test failures and verify retry and a
+  nonzero incomplete exit. Never show a success page after failure.
+- [ ] Upgrade retains verified models without HTTP; uninstall with each checkbox
+  choice preserves all transcript/output folders, including unusual internal paths.
+- [ ] Finish installer-wide SBOM, installed-app WFP audit and draft-only release
+  automation after fresh-machine evidence. The current CI job uploads only an artifact.
