@@ -91,6 +91,12 @@ def generate(output: Path, bundle: Path) -> Path:
         "VAD_BYTES": str(raw["vad"][0]["size_bytes"]),
         "VAD_FILE": raw["vad"][0]["file_name"],
         "VOICE_NAME": M.VOICE_MODEL,
+        "VOICE_DESCRIPTION": pascal(
+            f"{M.VOICE_MODEL} ({format_size(raw['vad'][0]['size_bytes'])}): "
+            f"{M.MODEL_QUALITY['silero-vad']}. "
+            f"{M.MANAGER_HEADERS[1]}: {M.MODEL_BEST_FOR['silero-vad']}. "
+            f"{M.MODEL_NOTE['silero-vad']}"
+        ),
         "RECOMMENDED_SUFFIX": M.RECOMMENDED.format(name=""),
         "MODEL_REVIEW": M.MODEL_REVIEW,
         "MIN_RAM": str(raw["models"][0]["recommended_min_ram_gb"] * 1_000_000_000),

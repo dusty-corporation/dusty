@@ -273,9 +273,11 @@ begin
   SetArrayLength(ModelBytes, @@MODEL_COUNT@@);
 @@MODEL_SETUP@@
   ModelsPage.CheckListBox.OnClickCheck := @ModelsClick;
-  ModelsPage.CheckListBox.Height := ModelsPage.SurfaceHeight - ScaleY(110);
+  ModelsPage.CheckListBox.Height := ModelsPage.SurfaceHeight - ScaleY(150);
+  Notice := NewLabel(ModelsPage.Surface, 0, 40, @@VOICE_DESCRIPTION@@);
+  Notice.Top := ModelsPage.CheckListBox.Top + ModelsPage.CheckListBox.Height + ScaleY(4);
   Notice := NewLabel(ModelsPage.Surface, 0, 45, '@@MODEL_REVIEW@@');
-  Notice.Top := ModelsPage.CheckListBox.Top + ModelsPage.CheckListBox.Height + ScaleY(8);
+  Notice.Top := ModelsPage.CheckListBox.Top + ModelsPage.CheckListBox.Height + ScaleY(48);
   MemoryNotice := NewLabel(ModelsPage.Surface, 0, 60, '');
   MemoryNotice.Top := Notice.Top + ScaleY(45);
   Requested := ExpandConstant('{param:MODELS|small}');
