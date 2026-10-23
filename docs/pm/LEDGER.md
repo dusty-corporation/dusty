@@ -56,4 +56,81 @@
 
 | M4-01 | M4 | Carry-over Start layout, recommendation labels and dark contrast | done | Start stays full width (including running/disabled), centered reason above; recommendation suffix simplified; dark disabled text contrast tested at least 4.5:1. Alt+Arrow routing handles table shortcut overrides explicitly; 25 Qt/theme tests and lint/types pass | - |
 
-| M4-02 | M4 | Model Manager and isolated downloader child | doing | Implementing manifest statuses, confirmation/progress/cancel/resume/verify/delete rules and main-window prompts using the accepted downloader CLI | - |
+| M4-02 | M4 | Model Manager and isolated downloader child | doing | WIP 66461dd pushed: Qt dialog, local verification/statuses/free space, consent, JSON progress, Job Object download/cancel/resume, delete protections, live Options/recommendation prompts and voice-model handling; 31 focused tests passed before the final PID metadata addition; final acceptance pending | - |
+
+## M4 checkpoint, 2026-10-22 - stopped at the Owner's usage request
+
+### Done
+
+- Main is the Owner-merged M3 revision e66788b. M4's own commits were rebased
+  onto main, then M5's own packaging commits onto rebased M4. Both feature
+  branches were pushed using explicit force-with-lease guards; main was not rewritten.
+- Rebased full suites passed: M4 **135 passed, 1 CI-only skip**, 94.2% strict
+  coverage; M5 **165 passed, 1 CI-only skip**, 94.4%. Logs are repository-local
+  build/m4-transition/rebased-m4-tests.log and rebased-m5-tests.log. These runs
+  precede the Model Manager changes and are not final M4 acceptance evidence.
+- Owner's uncommitted M4 brief was copied byte-for-byte and stashed with the
+  pending engineer M3 report before branch changes. Brief SHA-256:
+  528329b1f13884503500fcbfe3d87200348839249ef554f14a98c7964b6774b3.
+  Recovery copies and hashes remain in build/m4-transition; the stash is retained.
+- Archived main's M3 brief to briefs/M3-brief.md, restored the Owner's M4 brief
+  unchanged, and committed both as 7de0372. The pending M3 report evidence was
+  recovered and committed separately in 9a7ff51. SPEC was not edited.
+- First three M4 nits committed/pushed in 67a9a7b: full-width Start, centered
+  disabled reason above, ', recommended' labels and higher dark disabled-text
+  contrast. Actual Alt+Arrow handling now routes table shortcut overrides
+  explicitly after the active-window precondition alone proved insufficient.
+  **25 Qt/theme tests passed**, plus lint and types.
+- Model Manager WIP **66461dd** is committed and pushed on m4-downloader.
+  It lists five transcription models plus bundled voice detection, displays
+  verified/missing/damaged/downloading state and free space, confirms the named
+  download files and total size, and parses progress from a separate Job Object
+  child. Cancel/close keeps resumable parts; deletion protects the selected/last
+  transcription model and voice detection while in use. Verify all re-hashes.
+- Options and Tools open the manager; missing recommendations have Download it.
+  No-model Start guidance and live installed-choice updates are implemented.
+  An implicit recommendation becomes selected when available; explicit choices
+  are preserved. Required voice detection is included in the explicit consent
+  and download plan; missing/damaged voice detection blocks default VAD use.
+- Local TLS tests exercise real child downloads, progress, consent rejection,
+  cancel/restart resume, hash mismatch, verification, deletion rules, immediate
+  model-choice updates, missing-model prompts and closing cancellation.
+  **31 focused Model Manager/GUI tests passed** before the final PID change.
+  Development and split-package command resolution have unit coverage.
+
+### In progress / not yet verified
+
+- Final additive CLI JSON metadata now includes the real downloader PID, parsed
+  by the GUI for later WFP attribution (Windows launcher PIDs may differ).
+  This last change has passed lint/types but **has not been rerun through the
+  tests**. Existing downloader operations/hosts were not redesigned.
+- Latest lint and mypy passed (56 source files). The static no-network checker
+  passed during implementation with zero exceptions. The full suite, all policy
+  checks and final CI have not been rerun against 66461dd; no green final-M4
+  or packaged-integration claim is made.
+- No Model Manager download WFP scenario, WFP PID/count report, M4 screenshot
+  renderer/asset or M4-report.md exists yet. No M4 PR was opened.
+- M5 is rebased and tested through the transition at M4 1f583fc; it **does not
+  yet include** the new M4 brief, first nits or Model Manager WIP. Its packaging
+  code/CRT pins and split-layout safeguards were preserved during that rebase.
+
+### Next, in order
+
+1. Verify the PID addition with the focused Model Manager and downloader tests;
+   resolve any real failures, then run the full M4 suite and all quality/policy gates.
+   Cover remaining main-window/manager shutdown and entry-point integration as needed.
+2. Implement the real CI-only Model Manager download WFP scenario using the actual
+   manager/controller. Require zero GUI connection events and report the separate
+   downloader count. Attribute the real process IDs, including source Python
+   launcher behavior; retain calibrated source offline acceptance.
+3. Document the child command paths, JSON PID metadata and network audit method.
+   Generate M4 screenshots for manager states and main prompts in both themes/scales;
+   create/upload only to a new draft m4-screenshots release. Do not publish it.
+4. Rebase m5-packaging-spike onto completed m4-downloader again; preserve stdlib
+   DOCX, exact platform/Owner CRT pins and split layout. Rerun its suite and
+   packaged build, PE gate, license gate and packaged WFP self-test, including
+   GUI-to-downloader use in the split layout. Push with a feature-branch lease.
+5. Record verified CI/test/WFP counts, screenshot link and about six ThinkPad
+   checks in M4-report.md, then stop. Do not open a PR against main until PM acceptance.
+
+No further implementation or tests were started after the Owner requested this checkpoint.
