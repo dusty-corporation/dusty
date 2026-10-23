@@ -1,9 +1,17 @@
-param([string]$Installer = '')
+param([string]$Installer = '', [string]$PreviousInstaller = '')
 
 $ErrorActionPreference = 'Stop'
 if ($env:GITHUB_ACTIONS -ne 'true') { throw 'Installer lifecycle runs only on the disposable CI runner' }
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 if (-not $Installer) { $Installer = @(Get-ChildItem (Join-Path $repo 'build/installer/output') -Filter '*.exe')[0].FullName }
+$currentInstaller = $Installer
+$twoVersions = [bool]$PreviousInstaller
+if ($twoVersions) {
+    $older = [Diagnostics.FileVersionInfo]::GetVersionInfo((Resolve-Path $PreviousInstaller).Path).FileVersion
+    $newer = [Diagnostics.FileVersionInfo]::GetVersionInfo((Resolve-Path $Installer).Path).FileVersion
+    if ([version]$older -ge [version]$newer) { throw 'Upgrade acceptance requires increasing distinct installer versions' }
+    $Installer = (Resolve-Path $PreviousInstaller).Path
+}
 $work = Join-Path $repo 'build/installer/acceptance'
 New-Item -ItemType Directory -Path $work -Force | Out-Null
 $install = Join-Path $work 'app'
@@ -78,6 +86,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Installed WFP self-test failed' }
 if ($LASTEXITCODE -ne 0) { throw 'Installed PE import gate failed' }
 $models = @(Get-ChildItem -LiteralPath (Join-Path $data 'models') -Filter '*.bin' | ForEach-Object { @{name=$_.Name;hash=(Get-FileHash -LiteralPath $_.FullName).Hash;time=$_.LastWriteTimeUtc.Ticks} })
 $rule = 'Dusty-Installer-Upgrade-' + [guid]::NewGuid().ToString('N')
+$Installer = $currentInstaller
 try {
     New-NetFirewallRule -Name $rule -DisplayName $rule -Direction Outbound -Action Block -Profile Any -Program (Join-Path $install 'dusty-fetch/dusty-fetch.exe') | Out-Null
     Install-App
@@ -98,4 +107,4 @@ Uninstall-App 'yes'
 Assert-Output
 if (Test-Path -LiteralPath $data) { throw 'Remove-models uninstall left owned user data' }
 if (Test-Path -LiteralPath (Join-Path $install 'dusty/dusty.exe')) { throw 'Remove-models uninstall left app' }
-@{silent_per_user_install='passed';installer_download_tiny_and_vad='passed';installed_wfp='passed';upgrade_models_preserved_with_downloader_blocked='passed';uninstall_keep_models='passed';uninstall_remove_models='passed';user_outputs_unchanged=$true} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $work 'summary.json') -Encoding utf8NoBOM
+@{silent_per_user_install='passed';installer_download_tiny_and_vad='passed';installed_wfp='passed';two_distinct_versions=$twoVersions;upgrade_models_preserved_with_downloader_blocked='passed';uninstall_keep_models='passed';uninstall_remove_models='passed';user_outputs_unchanged=$true} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $work 'summary.json') -Encoding utf8NoBOM

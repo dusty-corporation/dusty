@@ -10,16 +10,26 @@ permissions:
 jobs:
   validate:
     runs-on: windows-latest
+    outputs:
+      previous_tag: ${{ steps.version.outputs.previous_tag }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - name: Reject unapproved tags
+        id: version
         shell: pwsh
-        run: python tools/release_version.py '${{ github.ref_name }}'
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python tools/release_version.py $env:RELEASE_TAG
+          if ($LASTEXITCODE -ne 0) { throw 'Unapproved release tag' }
+          $number = [int]($env:RELEASE_TAG -replace '^v0.5.0-m5.', '')
+          if ($number -gt 1) { "previous_tag=v0.5.0-m5.$($number - 1)" >> $env:GITHUB_OUTPUT }
   gates:
     needs: validate
     uses: ./.github/workflows/ci.yml
     with:
       release_tag: ${{ github.ref_name }}
+      previous_tag: ${{ needs.validate.outputs.previous_tag }}
   draft:
     needs: [validate, gates]
     runs-on: windows-latest

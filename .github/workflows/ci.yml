@@ -10,6 +10,10 @@ on:
         type: string
         required: false
         default: ''
+      previous_tag:
+        type: string
+        required: false
+        default: ''
 
 env:
   DUSTY_RELEASE_TAG: ${{ inputs.release_tag || '' }}
@@ -196,7 +200,17 @@ jobs:
         run: uv run python -m tools.inventory_installer
       - name: Silent install upgrade uninstall and installed WFP acceptance
         id: installer_acceptance
-        run: ./tools/test_installer.ps1
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIOUS_TAG: ${{ inputs.previous_tag || '' }}
+        run: |
+          if ($env:PREVIOUS_TAG) {
+            gh release download $env:PREVIOUS_TAG --repo '${{ github.repository }}' --pattern '*.exe' --dir build/previous-release
+            if ($LASTEXITCODE -ne 0) { throw 'Previous gated draft installer download failed' }
+            $older = @(Get-ChildItem build/previous-release -Filter '*.exe')
+            if ($older.Count -ne 1) { throw 'Expected one previous installer' }
+            ./tools/test_installer.ps1 -PreviousInstaller $older[0].FullName
+          } else { ./tools/test_installer.ps1 }
       - name: Installer-wide redistribution license policy
         id: installer_licenses
         if: always()
