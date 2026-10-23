@@ -789,3 +789,21 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Returned to m5-installer. Remaining overnight work: latest native review PNGs,
   draft screenshot upload, final tagged release/true two-version upgrade evidence,
   final report hashes/counts and clean checkpoint. Owner/PM checks remain manual.
+
+### M5 first successful draft and corrected upgrade gates
+
+- Draft .2: CI 40038534920 fully green; five assets, installer 34,670,296 bytes.
+  Corrected calibrated download audit: Setup 0, GUI/probe 0, native 0,
+  fetch allowed 4, blocked 0. Both uninstall choices and output preservation pass.
+  CI source 256 passed/2 skipped, 94.6%; separate public download 1 passed.
+- .3 run 40040057856 is in progress but its two-version harness compares the
+  old install with the new inventory before upgrade. 895e199 moves payload,
+  PE and installed WFP gates after upgrade, with an ordering regression.
+  Focused release/generator checks: 12 passed. No gate is weakened.
+- Authorized tag .4 starts the corrected true .2-to-.4 upgrade test. Test tags
+  are permitted for N=1,2,... by CURRENT_MILESTONE line 33; automatic review's
+  initial two-tag interpretation was resolved by presenting that explicit scope.
+- Page artifact 40039096810 is green. Corrected failure controls no longer
+  overlap; native uninstall form captured. Review-only folder description's
+  name placeholder is corrected in 895e199 and awaits its native artifact.
+- M5 report now records .2 asset hashes/counts and outstanding manual acceptance.

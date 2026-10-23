@@ -3,9 +3,10 @@
 ## Summary
 
 M5 implementation is on m5-installer; m5-packaging-spike and m6-docs remain
-untouched references. Source checks pass, the ThinkPad model-free GPU probe
-passed, and native page/release/WFP evidence is being completed in this autonomous
-session. M5 is not accepted: PM page review and fresh standard-user VM evidence
+untouched references, and updated guides are pushed on m6-docs-v2. The first
+successful draft release and calibrated Setup/probe/download audit passed;
+the second-version upgrade and final native page evidence are being collected.
+M5 is not accepted: PM page review and fresh standard-user VM evidence
 remain outstanding. No PR, merge or published release is authorized or created.
 
 ## Owner actions for the morning
@@ -30,11 +31,11 @@ remain outstanding. No PR, merge or published release is authorized or created.
 | Task 4: uninstall and model-size choice | Partial | Known owned files only, explicit retain/remove choice, protected transcript sentinel and source regressions; fresh VM both variants pending. |
 | Task 5: gated tag draft release and assets | Partial | release.yml reuses all CI gates; approved tag validation/version map and exact asset closure tested. Two draft tag runs pending. |
 | Task 6: SmartScreen README | Done | README gives unsigned explanation, More info/Run anyway, Get-FileHash and full checksum comparison. |
-| Acceptance: draft CI release with artifacts | Pending | First authorized tag v0.5.0-m5.1, run 40037642063; not yet claimed successful. |
+| Acceptance: draft CI release with artifacts | Done | v0.5.0-m5.2, run 40038534920, all gates and draft creation passed; five assets. |
 | Acceptance: SPEC 11.6 fresh VM | Owner needed | Final M5-checklist.md, standard user, all cases and expected results. |
-| Acceptance: installer size | Pending | Must use final successful release inventory, not review executable size. |
+| Acceptance: installer size | Done | First successful .2 installer: 34,670,296 bytes (34.67 MB); final .3 size will be recorded separately. |
 | Brief: all pages light 100%/150% | Partial | Native review build and PNG-only archive gate; capture/upload in progress, Owner guest 150% check still needed. |
-| Brief: Setup/probe/GUI/fetch WFP | Partial | Calibrated harness and negative parser cases added; final corrected audit counts pending. |
+| Brief: Setup/probe/GUI/fetch WFP | Done | .2 corrected audit: Setup 0, GUI/probe 0, native 0, fetch allowed 4, blocked 0; calibrated control and negative parser pass. |
 
 ## Test results
 
@@ -59,10 +60,26 @@ low RAM is a warning, never an installation block.
 
 ## Release assets and WFP counts
 
-Pending final gated run. Approved closure: unsigned installer,
-THIRD_PARTY_NOTICES.md, versioned CycloneDX SBOM, installer-jedi-source.zip,
-SHA256SUMS.txt. No portable release. The first test tag predates the corrected
-Setup image matcher and is not final Setup-isolation acceptance evidence.
+[Draft v0.5.0-m5.2](https://github.com/dusty-corporation/dusty/releases/tag/untagged-717061651366b4239b75),
+[CI 40038534920](https://github.com/dusty-corporation/dusty/actions/runs/40038534920):
+all gates passed. Installer 34,670,296 bytes. No portable release asset.
+
+| Asset | SHA-256 |
+|---|---|
+| Dusty-0.5.0-m5.2-draft-unsigned.exe | eb4c1efe73e4d11ddad09d6aa3ab887cc678ef7f45a1793214aa6fe57e08d8bb |
+| THIRD_PARTY_NOTICES.md | 29dc09e94eb1a43c0f6e4b2bf2cfaf754fbd557034808823eab1ce0cd4ab251e |
+| dusty-0.5.0-m5.2-sbom.json | 86b4bb27abbf8745dee8cc81bab8dad040fabbb9d58207dea2e6557ee9c40b1a |
+| installer-jedi-source.zip | 4dac842302518887fd2e8692da73ca1f2adcac9092c32cb634e4f7143f4ae217 |
+| SHA256SUMS.txt | 3484ed0475b5f46bd950253d389a7e970464630c87d3618ce01d3723d173b766 |
+
+The .2 installer audit is calibrated: Setup 0, GUI/probe 0, native 0, fetch
+allowed 4, blocked 0. Installed processing-only audit and both uninstall choices
+passed; transcript sentinel unchanged. Its upgrade reused the same build and is
+not two-version evidence. The corrected test tag .4 runs a true .2-to-.4 upgrade,
+including prior-installer checksum verification and downloader blocking.
+CI .2 source: 256 passed, 2 skipped, 94.6% coverage; separate real-network
+download test 1 passed. The failed .1 source golden/version attempt produced no
+release or installer upload. Its tag/history remain unchanged.
 
 ## Questions for the PM
 
