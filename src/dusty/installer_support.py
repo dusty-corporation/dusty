@@ -51,9 +51,19 @@ def accept_tests(paths: RuntimePaths, model_id: str) -> None:
 
 def model_size(paths: RuntimePaths) -> str:
     """Actual direct model/partial bytes, without following links or directories."""
+    from dusty.models import load_manifest
+
+    manifest = load_manifest(paths.resources_dir / "models.json")
+    names = {item.file_name for item in manifest.models.values()} | {manifest.vad_file_name}
+    names |= {name + ".part" for name in names.copy()}
     total = 0
     if paths.models_dir.exists():
         for file in paths.models_dir.iterdir():
-            if file.is_file() and not file.is_symlink() and not file.is_junction():
+            if (
+                file.name in names
+                and file.is_file()
+                and not file.is_symlink()
+                and not file.is_junction()
+            ):
                 total += file.stat().st_size
     return f"{total / 1_000_000_000:.1f}"

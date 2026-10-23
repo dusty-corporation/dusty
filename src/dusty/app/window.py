@@ -1227,6 +1227,10 @@ class MainWindow(QMainWindow):
 
     @Slot(bool)
     def _selftest_result(self, ok: bool) -> None:
+        if ok and self.settings.get("installer_test_failed"):
+            self.settings["installer_test_failed"] = False
+            self._save_settings()
+            self._refresh()
         text = M.SELF_TEST_OK if ok else M.SELF_TEST_ERROR
         if self.interactive:
             TextDialog(M.SELF_TEST, (text,), self).exec()

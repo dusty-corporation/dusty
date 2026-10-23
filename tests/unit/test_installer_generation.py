@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -58,6 +59,17 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     assert "{param:ALLOWDOWNLOAD|}" in text
     assert "{param:REMOVEMODELS|}" in text
     assert "CurStep = ssPostInstall" in text
+    code = text.split("[Code]", 1)[1]
+    assert not re.search(r"(?m)^\s*\[", code), "Inno parses leading arrays as sections"
+    for key in ("MODEL_BEST_FOR", "MODEL_NOTE"):
+        from dusty.app import messages as M
+
+        for value in getattr(M, key).values():
+            assert value.replace("'", "''") in text
+    assert "Finish without a model" in text
+    assert "GraphicsCandidate" not in text
+    assert "--probe-vulkan --out" in text
+    assert "'.part'" in text
 
 
 def test_installer_rejects_tampered_catalog(tmp_path):

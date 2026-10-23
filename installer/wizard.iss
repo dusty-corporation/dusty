@@ -1,4 +1,8 @@
 { Shared production and review page controls. No installer HTTP calls. }
+function InitializeUninstall: Boolean; forward;
+#ifdef ReviewOnly
+procedure ReviewTick; forward;
+#endif
 function NewLabel(Parent: TWinControl; Top, Height: Integer; Text: String): TNewStaticText;
 begin
   Result := TNewStaticText.Create(WizardForm);
@@ -36,7 +40,7 @@ end;
 procedure ReleaseChild;
 begin
   if ChildJob <> 0 then CloseChild(ChildJob);
-  if Child.Process <> 0 then WaitChild(Child.Process, 2000);
+  if (Child.Process <> 0) and (Stage <> -1) then WaitChild(Child.Process, 2000);
   if Child.Process <> 0 then CloseChild(Child.Process);
   ChildJob := 0; Child.Process := 0;
 end;
@@ -56,7 +60,10 @@ begin
   if Result then Result := WinAssignJob(ChildJob, Child.Process);
   if Result then Result := ResumeChild(Child.Thread) <> $FFFFFFFF;
   if Child.Thread <> 0 then begin CloseChild(Child.Thread); Child.Thread := 0; end;
-  if not Result then ReleaseChild;
+  if not Result then begin
+    if Child.Process <> 0 then TerminateChild(Child.Process, 130);
+    ReleaseChild;
+  end;
 end;
 
 procedure Failure(IsTest: Boolean);
@@ -102,8 +109,8 @@ begin
   end else begin
     Id := ModelIds[Selected[TestIndex]]; Name := ModelNames[Selected[TestIndex]];
     Backend := 'auto'; if CpuRetry then Backend := 'cpu';
-    Phase.Caption := FmtMessage(CustomMessage('SelfTestWorking'),
-      [Name, IntToStr(TestIndex + 1), IntToStr(GetArrayLength(Selected))]);
+    Phase.Caption := FmtMessage(CustomMessage('SelfTestWorking'), [
+      Name, IntToStr(TestIndex + 1), IntToStr(GetArrayLength(Selected))]);
   end;
   if not StartChild(ExpandConstant('{app}\dusty\dusty.exe'),
     '--installer-test --backend ' + Backend + ' --model ' + Quoted(Id) +
@@ -121,6 +128,13 @@ end;
 procedure PollChild(A, B, C, D: LongWord);
 var Code: LongWord; I: Integer; Memory: TMemoryStatus; S: AnsiString;
 begin
+#ifdef ReviewOnly
+  ReviewTick;
+  Exit;
+#endif
+  if (Stage = -1) and (Child.Process <> 0) and (Tick - ProbeBegan > 7000) then begin
+    ReleaseChild; Stage := 0; MemoryNotice.Caption := ''; Exit;
+  end;
   if (Child.Process = 0) or (WaitChild(Child.Process, 0) <> 0) then Exit;
   Code := 1; ChildExit(Child.Process, Code); ReleaseChild;
   if Stage = -1 then begin
@@ -188,7 +202,8 @@ begin
   SetArrayLength(Selected, 0); Smallest := -1;
   for I := 0 to GetArrayLength(ModelIds) - 1 do if ModelsPage.Values[I] then begin
     Count := GetArrayLength(Selected); SetArrayLength(Selected, Count + 1); Selected[Count] := I;
-    if (Smallest < 0) or (ModelBytes[I] < ModelBytes[Smallest]) then Smallest := I;
+    if Smallest < 0 then Smallest := I
+    else if ModelBytes[I] < ModelBytes[Smallest] then Smallest := I;
   end;
   if GetArrayLength(Selected) = 0 then Exit;
   SetArrayLength(Downloads, GetArrayLength(Selected) + 1);
@@ -204,7 +219,12 @@ procedure RetryClick(Sender: TObject);
 begin
   RetryButton.Visible := False; CpuButton.Visible := False; WithoutButton.Visible := False;
   Busy := True;
-  if Stage >= 3 then begin CpuRetry := False; BeginTest; end else DownloadClick(Sender);
+  if Stage = 5 then begin
+    if not StartChild(ExpandConstant('{app}\dusty\dusty.exe'), '--installer-clear') then Failure(True);
+  end else if Stage = 6 then begin
+    if not StartChild(ExpandConstant('{app}\dusty\dusty.exe'),
+      '--installer-pass --model ' + Quoted(ModelIds[Selected[0]])) then Failure(True);
+  end else if Stage >= 3 then begin CpuRetry := False; BeginTest; end else DownloadClick(Sender);
 end;
 
 procedure CpuClick(Sender: TObject);
@@ -298,7 +318,7 @@ begin
     MemoryNotice.Caption := CustomMessage('CheckingGraphics');
     ExtractTemporaryFiles('{tmp}\probe\*');
     ProbeRoot := ExpandConstant('{tmp}\probe');
-    Stage := -1;
+    Stage := -1; ProbeBegan := Tick;
     if not StartChild(ProbeRoot + '\dusty\dusty.exe', '--probe-vulkan --out ' +
       Quoted(ExpandConstant('{tmp}\probe-result.json'))) then Stage := 0;
 #endif
@@ -377,9 +397,65 @@ function UninstallModelSize: String;
 var Code: Integer; S: AnsiString;
 begin
   Result := '0.0';
+#ifdef ReviewOnly
+  Result := '1.4'; Exit;
+#endif
   if Exec(ExpandConstant('{app}\dusty\dusty.exe'), '--model-size --out ' +
     Quoted(ExpandConstant('{tmp}\model-size.txt')), '', SW_HIDE, ewWaitUntilTerminated, Code) then
     if (Code = 0) and LoadStringFromFile(ExpandConstant('{tmp}\model-size.txt'), S) then Result := String(S);
+end;
+
+#ifdef ReviewOnly
+procedure ReviewTick;
+var Wanted: String; Page: Integer; Button: TNewButton;
+begin
+  if ReviewShown then Exit;
+  Wanted := ExpandConstant('{param:REVIEWPAGE|welcome}');
+  Page := WizardForm.CurPageID;
+  if ((Wanted = 'welcome') and (Page = wpWelcome)) or
+     ((Wanted = 'models') and (Page = ModelsPage.ID)) or
+     ((Wanted = 'directory') and (Page = wpSelectDir)) or
+     ((Wanted = 'shortcuts') and (Page = wpSelectTasks)) or
+     ((Wanted = 'ready') and (Page = wpReady)) then begin
+    ReviewShown := True; WizardForm.NextButton.Enabled := False; Exit;
+  end;
+  if (Page = wpLicense) and ((Wanted = 'license') or (Wanted = 'notices') or (Wanted = 'microsoft')) then begin
+    ReviewShown := True;
+    if Wanted <> 'license' then begin
+      Button := TNewButton.Create(WizardForm);
+      if Wanted = 'notices' then Button.Tag := 1 else Button.Tag := 2;
+      LicenseClick(Button); Button.Free;
+    end;
+    WizardForm.NextButton.Enabled := False; Exit;
+  end;
+  if (Page = DownloadPage.ID) and (Wanted <> 'ready') then begin
+    ReviewShown := True;
+    if Wanted = 'finish' then begin
+      WizardForm.FinishedLabel.Caption := CustomMessage('SetupComplete');
+      WizardForm.OuterNotebook.ActivePage := WizardForm.FinishedPage;
+      WizardForm.NextButton.Caption := SetupMessage(msgButtonFinish);
+      WizardForm.NextButton.Enabled := False;
+    end;
+    if Wanted = 'finish-without' then begin
+      WizardForm.FinishedLabel.Caption := CustomMessage('FinishedWithout');
+      WizardForm.OuterNotebook.ActivePage := WizardForm.FinishedPage;
+      WizardForm.NextButton.Caption := SetupMessage(msgButtonFinish);
+      WizardForm.NextButton.Enabled := False;
+    end;
+    if Wanted = 'uninstall' then InitializeUninstall;
+    Exit;
+  end;
+  if Page = wpLicense then WizardForm.LicenseAcceptedRadio.Checked := True;
+  if Page <> wpReady then WizardForm.NextButton.OnClick(WizardForm.NextButton);
+end;
+#endif
+
+function ShouldSkipPage(Page: Integer): Boolean;
+begin
+  Result := False;
+#ifdef ReviewOnly
+  if (Page = DownloadPage.ID) and (ExpandConstant('{param:REVIEWPAGE|}') = 'ready') then Result := True;
+#endif
 end;
 
 procedure DeinitializeSetup;
