@@ -17,7 +17,8 @@ def main() -> None:
     profile = root / "build/packaged-gui/user"
     (profile / "Dusty").mkdir(parents=True, exist_ok=True)
     (profile / "Dusty/settings.json").write_text(
-        json.dumps({"schema_version": 1, "welcome_seen": True}), encoding="utf-8"
+        json.dumps({"schema_version": 1, "output_dir": str(profile / "transcripts")}),
+        encoding="utf-8",
     )
     environment = {**os.environ, "LOCALAPPDATA": str(profile), "QT_QPA_PLATFORM": "windows"}
     startup = subprocess.STARTUPINFO()

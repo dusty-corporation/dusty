@@ -197,3 +197,5 @@ No further implementation or tests were started after the Owner requested this c
 | M5-S7 | M5 | ADR 0019 standard-library DOCX implementation | done | 5ba88dd; unchanged DOCX goldens plus python-docx openability/Unicode/empty metadata pass; runtime closure and bundle exclude docx/lxml, export coverage 98.6% | ISSUE-014 resolved |
 | M5-S8 | M5 | Owner-verified Persian fixture documentation | done | m3-gui docs-only 2a6e065 pushed; Owner confirmed [107, 122) s is a complete Farsi quatrain; AUDIO_SOURCES.md and M3 report updated | - |
 | M5-S9 | M5 | Community redistribution evidence and protective terms | done | Owner exact regular CRT pins f266d98; 11 needed copies/5 names byte-identical locally and in CI, hashes/versions/importers and 3 original PDFs retained, EULA included, future installer checklist updated | ISSUE-013 and ISSUE-016 resolved |
+
+| M5-S10 | M5 | Carry final accepted M3 UI polish | doing | M3 merged locally into spike; GUI smoke profile now declares its explicit synthetic output folder so it tests the main window under the folder-based Welcome rule; final CI pending | - |
