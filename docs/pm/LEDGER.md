@@ -490,3 +490,21 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   selection background for each row; the corrected 150% light capture is legible.
 - Screenshot upload will use this last product revision, retaining earlier
   draft assets. Complete final source/packaged CI remains required.
+
+
+### Final selection and source acceptance
+
+- Final synchronized local suite: 204 passed, 1 CI-only skip in 191.96 seconds;
+  94.5% strict coverage. The additional explicit backend-choice regression passes
+  separately: refreshing a recommendation cannot replace a user-chosen model.
+- M4 full local coverage run: 154 passed/1 skip, 172.46 seconds, 94.2%; the two
+  selected-row contrast regressions also pass separately. Final CI runs the
+  complete combined test set, including these additions.
+- Corrected antialias-aware CI is green at 12bd62e / 39991998164.
+- Source WFP at b884fae / 39992418056: calibrated, GUI 0, fetch 4 allowed/0 blocked,
+  real consent path and model/VAD verified; redacted m4-download-audit downloaded.
+- Final visually checked draft asset m4-screenshots-b884fae.zip: 84 PNGs,
+  4,097,039 bytes, SHA-256
+  05387171a91849629a6e755b0511935a2575b0f833d02af0a9c3a4c3bc3295cc.
+  Release remains draft, all earlier assets retained. Backend-choice guard does
+  not change any rendered state. Next: final packaged acceptance/report.

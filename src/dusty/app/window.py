@@ -688,7 +688,9 @@ class MainWindow(QMainWindow):
     def _device_changed(self) -> None:
         if self._applying:
             return
-        self._follow_recommendation = self.model_choice.currentData() == self._recommendation
+        self._follow_recommendation = (
+            not self._explicit_model and self.model_choice.currentData() == self._recommendation
+        )
         self._rules()
         if self.ready and self.interactive and not self.running:
             self.ready = False
