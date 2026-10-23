@@ -276,7 +276,7 @@ procedure InitializeWizard;
 var I: Integer; Requested: String; Notice: TNewStaticText; Button: TNewButton;
 begin
   ModelsPage := CreateInputOptionPage(wpLicense, CustomMessage('ChooseModels'),
-    CustomMessage('ChooseModelsHelp'), '');
+    CustomMessage('ChooseModelsHelp'), '', False, True);
   SetArrayLength(ModelIds, @@MODEL_COUNT@@); SetArrayLength(ModelNames, @@MODEL_COUNT@@);
   SetArrayLength(ModelFiles, @@MODEL_COUNT@@); SetArrayLength(ModelLabels, @@MODEL_COUNT@@);
   SetArrayLength(ModelBytes, @@MODEL_COUNT@@);
