@@ -6,6 +6,9 @@ All notable changes to Dusty will be documented here. This project follows Keep 
 
 ### Added
 
+- Packaging spike with separate offline GUI and TLS downloader folders, actual
+  file inventory, CycloneDX SBOM, runtime notices and calibrated packaged WFP CI.
+
 - M0 project foundation and minimal application window.
 - M1 pinned CPU and Vulkan engine builds, minimal FFmpeg, reproducible model
   draft release, and offline benchmark kits.
@@ -23,6 +26,9 @@ All notable changes to Dusty will be documented here. This project follows Keep 
 
 ### Fixed
 
+- Standard-library DOCX export removes runtime lxml; exact platform PE pins,
+  Owner-sourced Visual C++ runtime copies and license evidence gate the bundle.
+
 - Portable CPU backend dispatch after the CI-native instruction failure.
 - Distinct public and private benchmark summary names with overwrite checks.
 - Segment and word timestamps across VAD-removed silence, using the approved
@@ -39,3 +45,7 @@ All notable changes to Dusty will be documented here. This project follows Keep 
 - M4 downloader-only prework: isolated standard-library HTTPS download/verify CLI,
   strict redirect hosts, verified resumable parts, space/cancellation safety and
   local TLS plus explicit CI-only public model integration tests.
+
+### Changed
+
+- Dusty code uses Apache-2.0 with an explicit patent grant (Owner decision).
