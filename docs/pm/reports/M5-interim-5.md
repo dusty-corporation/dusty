@@ -48,7 +48,7 @@ computer, and no release or PR was created.
   reported one 229.671 ms Qt event-loop gap against the unchanged 200 ms limit:
   1 failed, 186 passed, 2 skipped; no threshold was relaxed or test disabled.
   The preceding 39914143568 source checks passed. Final code verification is
-  39916465602 at 0adc037; its result will be appended below.
+  39916465602 at 0adc037; its result is recorded below.
 
 ### Final code verification
 

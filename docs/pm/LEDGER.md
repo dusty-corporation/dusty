@@ -318,3 +318,16 @@ No further implementation or tests were started after the Owner requested this c
 - M5-interim-5.md records the morning license decision and remaining VM/release
   acceptance. M4 app review artifact: run 39916465602, m4-review-bundle,
   artifact 12484769263. Final cross-branch report/documentation sync is next.
+
+### Final branch synchronization
+
+| ID | Milestone | Task | Status | Evidence | Issues |
+|---|---|---|---|---|---|
+| M5-R2 | M5 prework | Carry completed M4 and final handoff forward | done | Rebased onto M4 3b874d3; diff against pre-rebase 87f08cb contains only M4 report/ledger, implementation unchanged; final code gates remain 39916465602 evidence | - |
+| M5-P1 | M5 prework | Per-user installer source, compiler and safe cleanup | done for prework | Compiles with pinned 6.7.3; 10 focused tests; final local 189/1 skip and CI 188/2 skips; full VM acceptance remains future work | - |
+| M5-P2 | M5 prework | Installer wrapper license clearance | blocked | InnoSetup rejected without an engineer exception; binary upload skipped; audit metadata and proposed ADR 0023 retained | ISSUE-017 |
+| M5-P3 | M5 | Complete installer-wide inventory, installed-app audit and VM/release gates | todo | After PM license decision: complete wrapper/subcomponent SBOM and notices, rerun license/installed-app WFP, then Owner standard-user VM checklist and Owner-controlled release | ISSUE-017 |
+
+Both feature branches are pushed. No implementation changes were made during
+this final report rebase; no additional optional testing or next-milestone work
+is needed. Return the workspace to m4-downloader with a clean tree for the Owner.
