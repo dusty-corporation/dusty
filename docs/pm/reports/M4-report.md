@@ -2,229 +2,231 @@
 
 ## 1. Summary
 
-M4 engineering acceptance is complete: Model Manager downloads, verifies,
-resumes, cancels and deletes models through a separate dusty-fetch process.
-All M4 quality gates and CI pass; calibrated WFP found zero GUI connections
-during real downloads. The synchronized M5 split bundle also passes its PE,
-license, GUI and packaged WFP gates. Optional installer prework compiles, but
-binary upload is held for the PM's InnoSetup license-policy decision (ISSUE-017).
-ThinkPad review and clean-machine installer acceptance remain Owner work; no PR was opened.
+Owner ThinkPad review of the packaged app: **all six checks PASS functionally**
+(received 2026-10-23; i7-1365U, Iris Xe). The subsequent PM UX changes are
+implemented: unrestricted confirmed deletion, an explicitly empty model choice,
+fresh downloads after cancel/close, revised model descriptions, simpler consent,
+contextual main-window prompts and clear disabled controls in both themes.
+
+Final source and packaged acceptance are green on the implementation commits
+listed below. The final report/changelog/ledger carry-forward changes documentation
+only; the verified product source, tests and workflow are unchanged. No PR, merge
+to main, published release or repository-setting change was made.
 
 ### Branches
 
-- `m4-downloader`: M3 carried forward, unchanged Owner M4 brief plus archived
-  M3 brief, Start/label/contrast corrections, complete Model Manager, tests,
-  source WFP audit, screenshots and this report. Product/renderer source aab3ec6.
-- `m5-packaging-spike`: rebased onto M4; retains approved stdlib DOCX,
-  separate offline/downloader runtimes, exact PE/CRT pins and license evidence.
-  Packaged acceptance is green at 5ca1180. Optional installer prework is draft
-  only: ADR 0022, generated per-user setup, complete license acceptance,
-  bundled downloader/self-test gates, conservative uninstall cleanup and
-  audit-only CI. Compilation passes; installer binary upload is blocked by its
-  separate license gate. See M5-interim-5.md on that branch.
-- `main`: unchanged by the engineer; no merge, publication or repository-setting change.
+- `m4-downloader`: Model Manager and all Owner UX corrections, source tests,
+  screenshot renderer, developer documentation and this report.
+- `m5-packaging-spike`: M4 changes carried forward into the accepted split bundle
+  and installer spike; retains approved licenses, exact platform/CRT pins,
+  installer inventory and upload ordering regression. Packaged acceptance below.
+- `m6-docs`: M5 carried forward, plus user/privacy/contributor documentation;
+  wording updated for unrestricted deletion and removal of cancelled partials.
+- `main`: unchanged by the engineer.
 
 ### Owner actions for the morning
 
-1. Review the [M4 screenshot draft](https://github.com/dusty-corporation/dusty/releases/tag/untagged-6184fb70591dd06d1c63)
-   and run the six ThinkPad checks in section 8. Send pass/fail by number.
-2. Give the PM this report. Wait for PM acceptance before a PR against main;
-   the Owner controls merge and publication.
-3. Ask the PM to resolve M5 ISSUE-017: approve proposed ADR 0023's narrow
-   InnoSetup exception (recommended), or replace the approved Inno architecture.
-   The full license permits redistribution but its distinct identifier is not
-   in SPEC 10.2's allowlist; no exception was added by the engineer. Only audit
-   metadata is uploaded. This is an M5 policy decision, not an M4 blocker.
-4. After license clearance and remaining installer inventory, review an installable
-   M5 draft on a fresh standard-user Windows 11 VM using docs/pm/M5-checklist.md.
-   No installer was run on the Owner's desktop. Fresh install, cancel/resume,
-   failed install/retry, upgrade, both uninstall choices and installed-app WFP
-   remain M5 acceptance work.
-5. Keep the real Surface Vulkan smoke test on the required pre-M7 list. It
-   does not block M4 and has not been replaced by a hosted-runner result.
+1. Review the new screenshot asset in the existing draft m4-screenshots release
+   and the short changed-behavior checklist in section 8. The earlier six-check
+   functional result is already recorded as PASS; it does not need repeating.
+2. PM accepts the revised M4 report before any PR against main. Owner controls
+   merges and publication.
+3. M5 clean standard-user Windows 11 VM checks remain in M5-checklist.md on the
+   packaging branch. Licensing ISSUE-017/018/019 decisions are resolved there;
+   unsigned installers remain CI artifacts, never published releases.
+4. Keep the real Surface Vulkan smoke test as a required pre-M7 check. Hosted
+   runner and ThinkPad results do not replace that hardware check.
 
 ## 2. Acceptance criteria
 
 | Criterion | Status | Evidence |
 |---|---|---|
-| Catalog/statuses, sizes and free disk space | met | All five catalog models plus voice detection; local integrity scan, Installed/Not installed/Damaged/Downloading; Qt/local-TLS tests. |
-| Consent, progress, cancel and restart/resume | met | Named files, total MB, explicit GitHub consent; real CLI JSON progress; Job Object cancellation, retained .part, new manager/registry resumes by Range. |
-| Damaged model never used | met | Hash mismatch displays Damaged/Download again, removes bad partial; registry integrity remains mandatory for transcription. |
-| Delete confirmation/protections and Verify all | met | Selected/last model and in-use voice detection protected in UI and worker; Verify all forces re-hash, including same-size/mtime tampering. |
-| Main-window integration | met | No-models Start hint, one-click missing recommendation, live Options refresh, explicit user choice retained, implicit recommendation selected when available; missing VAD handled. |
-| Voice detection auto-include | met | Missing required VAD joins the same named consent and verified child-download sequence; standalone voice row also supported. |
-| Separate process, development and packaged paths | met | Source Python -m dusty_fetch; packaged sibling dusty-fetch/dusty-fetch.exe; unit resolution tests and actual source/packaged GUI downloads. No GUI import of dusty_fetch. |
-| Zero processing connections | met | Source and packaged WFP tables below; guard installed, consent confirmed and both assets verified. Static policy unchanged, zero exceptions. |
-| M3 carry-over corrections | met | Start stays full width in idle/running/disabled states, reason centered above; consistent ', recommended' suffix; dark disabled text contrast at least 4.5:1. |
-| Automated suite, types, policy and CI | met | 149 local passes/1 CI-only skip; 94.2% strict coverage; M4 run 39910270912 green. |
-| Screenshot review and ThinkPad interaction | partial | 76 reviewed synthetic PNGs uploaded; Owner's short real-hardware check pending. |
+| Catalog and local integrity | met | Five transcription models plus Voice detection; Installed/Not installed/Damaged/Downloading, sizes, free disk space and Verify all. Local TLS/Qt tests cover hash failures and re-hashing same-size/mtime tampering. |
+| Catalog layout | met | Bold name once, quality line, smaller note; narrow Best for column; quiet accuracy warning below the list. Recommended suffix follows the name. |
+| Consent and download progress | met | Single named GitHub/MB question, including Voice detection when needed; separate child JSON-lines progress. |
+| Cancel and close | met | Child Job Object is terminated/joined before GUI removes the manifest-owned partial. Ctrl+C/cooperative CLI cancellation also removes it. Next user attempt starts fresh. |
+| Delete every model | met | Selected, last and in-use Voice detection are deletable after confirmation. Selected-model deletion clears Options without replacement; last-model deletion returns to the no-models state. |
+| Selection | met | Only newly installed models can fill an empty choice. An existing choice is never replaced by another download. Cleared selection persists across relaunch. |
+| Main-window prompts | met | Recommendation only when no transcription model is installed; missing VAD has its own action. Empty selection has Choose a transcription model and an Options button. Ready when you are appears only if Start is enabled. |
+| Layout and disabled controls | met | Full-width Start with reason above; Choose folder adjacent to path; name-first Options labels. Actual light/dark renders test gray disabled text/borders and text contrast of at least 4.5:1. |
+| Separate process and no-network policy | met | Dev and split-package resolution tested; GUI never imports dusty_fetch; static no-network rule has zero exceptions. WFP counts below. |
+| Owner hardware result | met | All six original packaged M4 ThinkPad checks PASS functionally; latest UX changes verified automatically and supplied for screenshot review. |
 
-## 3. What was built
+## 3. What was built and approved changes
 
-- app/model_manager.py: modal catalog, worker/controller, consent, child
-  protocol, cancellation, verification and deletion rules.
-- app/window.py, workers.py, messages.py and theme.py: manager entry points,
-  recommendation/no-models/VAD integration, current choice preservation and
-  the three Start/label/contrast corrections.
-- runtime_paths.py: explicit source/frozen downloader command resolution.
-  Each downloader JSON event includes its actual PID for reliable WFP attribution
-  across Python launcher and packaged child layouts.
-- Hidden CI-only GUI download exercise plus calibrated WFP harness; source
-  and packaged paths drive the actual manager and consent dialog.
-- Local-TLS Qt regression coverage, reproducible render_models.py, developer
-  downloader documentation and AUDIT-NOTES.md. The first audit item is the
-  private ModelRegistry._verified cache access; no optional refactor was added.
+The PM's 2026-10-23 UX decision supersedes the Owner brief's earlier selected/last
+model deletion protections and resume-after-cancel wording. The brief and SPEC
+remain unchanged. HTTP Range validation remains available after network failures;
+explicit user cancellation/normal app close removes the partial instead.
+A forced OS crash cannot execute cleanup, but an orphan prefix cannot become a
+final model without the complete size and SHA-256 check.
+
+Files: app/model_manager.py (catalog/worker/consent), app/window.py (selection
+and prompts), app/theme.py (disabled/selected rendering), queue/storage.py
+(explicit empty selection), dusty_fetch/downloader.py (cancel cleanup), focused
+Qt/local-TLS tests, render_models.py and docs/dev/downloader.md. M6 user/privacy
+docs describe the same behavior.
+
+All UI wording remains in messages.py. No catalog, dependency, network host or
+app license-policy exception was added. Audit hook ADR 0017, exact platform
+primitive pins ADR 0021 and the split runtime layout remain in force.
+ModelRegistry private cache access and other non-urgent audit items remain in
+AUDIT-NOTES.md; enterprise proxy support remains in BACKLOG.md.
 
 ## 4. Test results
 
-### Local and CI
-
 | Check | Result |
 |---|---|
-| Full M4 suite | 149 passed, 1 CI-only skip; 169.01 s |
-| Strict-package line coverage | 94.2% total; core 93.7%, export 98.5%, models 94.4%, queue 93.0%, privacy 95.2% |
-| Focused downloader/manager/boundary suite | 31 passed; guarded real GUI/local-TLS subprocess also passed |
-| Ruff / format / mypy | Passed; 98 formatted files, 58 source files checked |
-| Three policy checks | Passed: check_no_network.py, check_no_huggingface.py, check_licenses.py |
-| M4 implementation CI | [39909561630](https://github.com/dusty-corporation/dusty/actions/runs/39909561630), 01bcc73, green |
-| M4 renderer/evidence CI | [39910270912](https://github.com/dusty-corporation/dusty/actions/runs/39910270912), aab3ec6, green |
-| M4 report/checkpoint CI | [39913841073](https://github.com/dusty-corporation/dusty/actions/runs/39913841073), 34256af, green; subsequent report changes are documentation only |
-| M5 after M4 rebase | [39910562031](https://github.com/dusty-corporation/dusty/actions/runs/39910562031), 5ca1180, all jobs green; 178 CI passes/2 expected skips, real-network integration separately passed |
-| Rebased M5 local suite | 179 passed, 1 CI-only skip; 197.64 s; 94.4% coverage |
-| Packaged gates | 64 PE files checked against exact pins; layout, license/SBOM, GUI smoke and both WFP scenarios passed |
-| Final M5 prework code | [39916465602](https://github.com/dusty-corporation/dusty/actions/runs/39916465602), 0adc037: source 188 passed/2 expected skips, 94.5%; all app gates and installer compile pass; installer-only Inno license gate deliberately fails |
+| M4 final implementation CI | [39993285087](https://github.com/dusty-corporation/dusty/actions/runs/39993285087), 51e6d2a: green; 156 passed, 2 expected skips in 309.99 s; real-network Tiny integration passed separately. |
+| M4 strict-package coverage | 94.2% total; core 93.7%, export 98.5%, models 94.4%, queue 93.0%, privacy 95.2%. |
+| M4 local full suite | 154 passed, 1 CI-only skip in 172.46 s; the later two selection-render tests and backend-choice regression passed separately. Final CI above runs all additions together. |
+| Final carry-forward local suite | 204 passed, 1 CI-only skip in 191.96 s; final backend-choice regression passed separately. |
+| M5 synchronized CI | [39993290851](https://github.com/dusty-corporation/dusty/actions/runs/39993290851), 545dac4; 204 passed, 2 expected skips in 300.88 s; 94.5% coverage. All four jobs green, including installer-wide license, installed-payload/lifecycle/WFP and upload-order regression gates. |
+| M6 synchronized CI | [39993330554](https://github.com/dusty-corporation/dusty/actions/runs/39993330554), e0e34e2; source checks and all app packaged gates pass. All four jobs green, including installer-wide and installed-app acceptance. |
+| Carry-forward strict coverage | 94.5%; core 93.7%, stdlib export 98.6%, models 95.2%, queue 93.0%, privacy 96.2%. |
+| Ruff / format / mypy | Passed locally and in CI; 98 formatted files/58 source files on M4; 124/69 on the packaging/docs branches. |
+| Three source policy checks | Passed, zero static no-network exceptions and no app license-policy expansion. |
+| Final packaged review bundle (M6 run) | 216 files, 161,991,287 bytes; 64 PE files checked, no findings; unchanged exact platform/Owner CRT pins; no excluded networking modules. |
+| Packaged license and GUI | Bundle license check passed; packaged GUI smoke passed; source and split-layout downloader resolution exercised. |
+| Visual regression | Actual disabled-control borders and rendered glyph contrast >=4.5:1 in both themes; selected three-line labels >=4.5:1 against selection. |
 
-The ordinary suite skips the explicit CI-only real-network test. Hosted CI
-also skips Vulkan transcript comparison when there is no usable Vulkan device;
-this is not a substitute for hardware acceptance.
+Early CI failures in the new exact-foreground-pixel assertion were corrected:
+Windows antialiasing blends thin glyphs. The final check requires glyph pixels
+near the intended gray AND rendered contrast >=4.5:1; light disabled text is
+darker for margin. Exact gray border checks remain. No test was disabled.
+The selected-row label fix also passed visual inspection before the final upload.
+
+The ordinary suite skips the explicit CI-only real-network test. CI runs that
+Tiny release download separately. A hosted runner can also skip Vulkan transcript
+comparison when no usable GPU exists; this does not replace hardware acceptance.
+The earlier M6 checkpoint run 39987905683 timed out in a 30-second real CPU
+self-test guard subprocess. No test threshold or assertion was weakened.
+Final carry-forward results are recorded above.
 
 ### WFP evidence
 
 | Scenario | Processing / GUI events | Fetch allowed | Fetch blocked | Calibration |
 |---|---:|---:|---:|---|
-| Source self-test, headless and GUI processing | 0 | outside audit | outside audit | Blocked positive control passed |
-| Source real Model Manager download | 0 | 4 | 0 | Blocked positive control passed |
-| Packaged offline self-test | 0 | outside audit | outside audit | Blocked positive control passed |
-| Packaged real Model Manager download | 0 | 4 | 0 | Blocked positive control passed |
+| Final source self-test, headless and GUI processing | 0 | outside audit | outside audit | passed |
+| Final source Model Manager download | 0 | 4 | 0 | passed |
+| Final packaged self-test | 0 | outside audit | outside audit | passed |
+| Final packaged Model Manager download | 0 | 4 | 0 | passed |
 
-Source download evidence is artifact m4-download-audit in 39909561630;
-packaged evidence is packaging-spike-audit in 39910562031. Both download
-results confirm the guard, user-consent exercise and successful model/VAD hashes.
-For source runs, GUI/fetch share the Python image, so actual reported PIDs
-separate them; the existing blocked-image processing test remains unchanged.
-For packaged runs, Dusty's own image remains blocked during download while
-the separate fetch image is allowed. No hostname/address data is retained.
+Source evidence: m4-download-audit in 39993285087. Final packaged evidence:
+packaging-spike-audit in 39993330554, including offline-pe.json (64 checked,
+no findings), license-findings.txt and the redacted WFP summaries.
+
+Both source and packaged Model Manager scenarios drive the real consent/controller
+path, verify the model and Voice detection, and confirm the audit hook is installed.
+The positive blocked control calibrates auditing. Source attribution separates
+actual GUI/fetch PIDs despite a shared Python image; the packaged GUI image is
+firewall-blocked while the sibling downloader is allowed. No host/address data
+is retained in the redacted evidence.
 
 ### Screenshots
 
-Draft asset: m4-screenshots-aab3ec6.zip, 76 PNGs, 3,605,372 bytes.
-SHA-256: `1d7d30ea6d3e83824502f77dcfd22122f5178be8f2800ebeccdebcb15594e7f6`.
-There are 19 states in light/dark at 100%/150%: main prompts, updated Options,
-catalog states, delete protections/confirmation, consent with VAD, progress,
-verification, pause, mismatch, disk/connection failure and Verify all.
-These are synthetic widget captures, not claims of completed hardware review;
-42 GB free space is illustrative. Native title bars/tooltips are outside grabs.
+[Draft screenshot release](https://github.com/dusty-corporation/dusty/releases/tag/untagged-6184fb70591dd06d1c63).
+New asset: `m4-screenshots-b884fae.zip`, 84 PNGs, 4,097,039 bytes.
+SHA-256: `05387171a91849629a6e755b0511935a2575b0f833d02af0a9c3a4c3bc3295cc`.
+
+21 states in light/dark at 100%/150% cover the main prompts, Options, catalog,
+selected/last deletion, Voice detection confirmation, consent, progress,
+cancelled-part removal, hash mismatch, disk/network errors and Verify all.
+These synthetic widget captures contain no user data or actual downloads;
+42 GB free space is illustrative. Native title bars are outside the captures.
+The release remains draft; previous assets are retained.
 
 ## 5. Deviations from SPEC
 
-No new M4 security-policy exception, dependency or catalog change. Accepted
-ADR 0017 audit-hook and ADR 0021 exact platform primitive pins remain in force.
-The source layout uses the current interpreter; the packaged split layout is
-the already accepted M5 arrangement. Optional M5 installer prework follows the
-PM's ADR 0022 bundled-fetch decision instead of Inno's built-in HTTP downloader.
+The PM-approved UX changes are described in section 3. Network isolation,
+host allowlisting, full-file hashing, voice auto-include and offline processing
+remain mandatory. No source static-check exceptions were introduced.
+M5 installer licensing exceptions remain confined to the already approved
+packaging branch/context and do not expand the app's license allowlist.
 
 ## 6. Issues
 
-No new S0/S1 issue found in M4. M5's ISSUE-017 (S1, open) records the installer
-wrapper license-policy gap; proposed ADR 0023 has not been accepted.
-AUDIT-NOTES.md records non-urgent review areas;
-enterprise proxy support remains in BACKLOG.md. Previously accepted M5 licensing
-and native-import resolutions were retained during the rebase.
+| ID | Severity | Status | Summary |
+|---|---|---|---|
+| ISSUE-018 | S1 | Resolved on M5 | PM-approved installer-only component terms, retained notices and reviewed upstream source evidence. |
+| ISSUE-019 | S1 process | Resolved on M5 | Owner containment completed; installer upload depends on complete gates, with a failing-gate-prevents-upload regression. |
+
+No new S0/S1 privacy, licensing or correctness issue was found in these M4 fixes.
+The M5 checkpoint was clean/pushed before switching to M4; its final run
+39987858934 is green. ISSUE-018 and process S1 ISSUE-019 are resolved with
+installer notices/source evidence and a failing-gate-prevents-upload regression.
+See M5-interim-7.md on the packaging branch for that separate milestone's evidence.
+Clean-machine installer acceptance remains Owner work, not a claim of this report.
+
+Cold startup without a model cannot complete the speech-based backend probe;
+the CPU-safe recommendation applies until a model permits the real probe.
+Literal static checks are not an obfuscation defense; runtime, PE and calibrated
+WFP layers remain required.
 
 ## 7. Decisions needed from PM/Owner
 
-PM acceptance after screenshot/ThinkPad review. No unresolved M4 architecture,
-privacy or licensing decision. Installer fresh-machine acceptance is a separate
-M5 gate, not implied by this report. The separate M5 license decision is described
-in the morning list and M5-interim-5.md; it does not change M4's app allowlist.
+1. PM screenshot/report acceptance (recommended). No unresolved M4 correctness,
+   privacy, licensing or install decision. Do not open a PR until acceptance.
+2. Owner handles the later clean Windows 11 VM and real Surface checks listed
+   above; neither is claimed by the hosted-runner results.
 
-## 8. Short ThinkPad check list
+## 8. Actions needed from the Owner: changed-behavior check list
 
-Use the audited [app review artifact](https://github.com/dusty-corporation/dusty/actions/runs/39916465602/artifacts/12484769263).
-The run is red solely at the installer license gate; source and all app gates
-are green. No repo clone or Python is needed. In a folder of your choice:
+Use the [final audited app review artifact](https://github.com/dusty-corporation/dusty/actions/runs/39993330554/artifacts/12519212190).
+No repo clone or Python is needed:
 
 ```powershell
-gh run download 39916465602 --repo dusty-corporation/dusty --name m4-review-bundle --dir Dusty-M4-review
-$dustyReviewData = Join-Path $PWD 'Dusty-M4-review-data'
+gh run download 39993330554 --repo dusty-corporation/dusty --name m4-review-bundle --dir Dusty-M4-review-polish
 $dustyReviewPreviousLocal = $env:LOCALAPPDATA
-$env:LOCALAPPDATA = $dustyReviewData
-Start-Process .\Dusty-M4-review\dusty\dusty.exe -Wait
-$env:LOCALAPPDATA = $dustyReviewPreviousLocal
+try {
+    $env:LOCALAPPDATA = Join-Path $PWD 'Dusty-M4-review-polish-data'
+    Start-Process .\Dusty-M4-review-polish\dusty\dusty.exe -Wait
+} finally {
+    $env:LOCALAPPDATA = $dustyReviewPreviousLocal
+}
 ```
 
-This uses an isolated profile for the no-models test and preserves your current
-profile/models. Repeat the environment/launch lines for a relaunch. Keep dusty,
-dusty-fetch, bin, resources and licenses side by side. Do not move the executables
-out of their folders. Allow about 10-15 minutes plus model download time.
+Use an isolated review profile if testing no-models behavior; keep dusty,
+dusty-fetch, bin, resources and licenses together. Do not replace the normal
+profile or remove its models just for testing. About 10 minutes plus downloads.
 
-1. **Empty state/layout:** no models means Start disabled with its reason
-   centered above a full-width button. Output-folder line remains visible.
-   Check dark mode and 150% scaling; recommendation suffix reads ', recommended'.
-2. **Find models:** open from Tools and from Options. Confirm plain model labels,
-   technical names, sizes, statuses, free disk space and the focused recommended row.
-3. **Consent/download:** Download it opens that model. With Skip silent parts on,
-   missing voice detection is included in the named consent/MB total. Reject once
-   (nothing downloads), then accept and observe percentage/MB progress.
-4. **Cancel/relaunch/resume:** cancel an incomplete download, close/reopen Dusty
-   and download it again. It resumes, verifies and becomes Installed; Options
-   updates without restarting. A deliberately chosen model is not replaced.
-5. **Integrity/delete:** Verify all remains responsive. The selected/last installed
-   model cannot be deleted. Choose a different model when at least two are
-   installed; reject then accept deletion. Only the downloaded model disappears.
-6. **Offline use:** after a verified model and voice detection are installed,
-   disconnect Wi-Fi, transcribe a short public fixture and save Text/Word.
-   No downloader or consent should appear during transcription. Send pass/fail
-   by step, Windows scale/theme and any visible plain error; no private recordings.
+1. In both themes at 150%, inspect the three-line Model Manager rows, Best for,
+   recommendation suffix, accuracy note and clearly gray unavailable controls.
+2. Confirm the one-sentence named GitHub/MB consent. Cancel or close during an
+   incomplete download: no .part remains; the next attempt starts from zero.
+3. Download another model while one is selected: selection stays. Delete the
+   selected model: confirm the specific warning, empty Options selection and
+   disabled Start with Choose a transcription model plus an Options button.
+4. Delete the last model: no-models recommendation prompt returns. Download a
+   model: it fills an empty selection. A main recommendation prompt disappears
+   as soon as any transcription model is installed.
+5. With Skip silent parts on, delete Voice detection after its warning. Start
+   explains how to download it or turn the option off; the download button opens
+   Voice detection even if a recommended transcription model is absent.
+6. Check name-first Options labels, Choose folder next to the output path, and
+   Ready when you are only when Start can actually run.
 
 ## 9. Risks for the next milestone
 
-- Installer drafts still need real standard-user/upgrade/uninstall and
-  installed-app network acceptance; compiler success is insufficient.
-- Cold startup without any model cannot perform the speech-based backend probe;
-  the CPU-safe recommendation applies until a model permits a real probe.
-- Cancellation/recovery, protocol boundaries and private registry cache access
-  should receive independent M6 review. Literal static checks do not prove the
-  absence of obfuscated code; runtime/PE/WFP layers remain required.
-- Existing Persian fixture provenance remains: [original recording](https://archive.org/download/rubaiyat_bilingual_1207_librivox/rubaiyat_01_khayyam_whinfield_64kb.mp3),
-  exact source interval [107, 122) s (00:01:47.000 to 00:02:02.000),
-  Owner-verified by listening as a complete spoken Farsi quatrain on 2026-10-22.
-  Canonical provenance file is tests/fixtures/AUDIO_SOURCES.md; no new audio added.
+Clean-machine installer acceptance and the real Surface Vulkan check remain
+Owner actions. Private cache use, selection/protocol boundaries and layered
+network isolation need the planned independent M6 audit. No optional refactor
+was added here.
+
+### Provenance and repository checks
+
+Existing Persian fixture: [original recording](https://archive.org/download/rubaiyat_bilingual_1207_librivox/rubaiyat_01_khayyam_whinfield_64kb.mp3),
+exact interval [107, 122) s (00:01:47.000 to 00:02:02.000), Owner-verified by
+listening as a complete spoken Farsi quatrain on 2026-10-22.
+Canonical provenance: tests/fixtures/AUDIO_SOURCES.md. No audio added here.
+
+Long-dash verification command: `rg -n '[\x{2013}\x{2014}]' .`
+Output: none; exit 1 (no matches). SPEC and the Owner brief were not edited.
 
 ## 10. Time/effort notes
 
-The main work was safe Qt worker shutdown, preserving explicit choices,
-restart/resume through a real TLS child and reliable source/packaged WFP
-attribution. Rebase conflicts were additive ledger/workflow changes; accepted
-license evidence and exact binary pins were retained. No engineering-hour
-estimate or unperformed hardware result is asserted.
-
-## Overnight follow-up
-
-- M5 final local tests: 189 passed/1 CI-only skip, 174.00 s; 94.5% coverage.
-  Final source CI: 188 passed/2 expected skips, 274.44 s. An earlier M5 source
-  run (39915503372) observed a 229.671 ms Qt event gap; the unchanged 200 ms
-  test passed in final verification. No threshold or test was weakened.
-- Latest app bundle: 207 files, 161,936,952 bytes; all 64 PE checks and app
-  license/GUI/WFP gates pass. The two files added over the 205-file baseline
-  are Inno license/provenance text; no PE was added.
-- Unsigned installer draft compiled: 34,593,012 bytes. Its binary was not
-  uploaded; m5-installer-draft-audit contains only hash/size/terms and findings.
-  InnoSetup is a distinct [SPDX license](https://spdx.org/licenses/InnoSetup.html),
-  absent from the allowlist. Proposed ADR 0023 and ISSUE-017 are on M5; PM
-  clearance and a complete installer-wide inventory are required before distribution.
-- No PR, merge, publication, settings change or new milestone beyond the
-  explicitly authorized M5 prework. All code and reports are committed/pushed;
-  final branch synchronization changes documentation only.
-- Long-dash check: `rg -n '[\x{2013}\x{2014}]' AGENTS.md README.md LICENSE NOTICE src tools tests docs installer packaging native modelpipeline .github pyproject.toml uv.lock`.
-  Output: none (exit 1, no matches). SPEC and the Owner's M4 brief were not edited.
+Most work concerned preserving deliberate selection, safe child shutdown/cleanup,
+plain catalog presentation and proving disabled controls through actual rendering.
+Forward merges preserve M5 license and runtime pins. No engineering-hour estimate
+or unperformed hardware result is asserted. Non-essential improvements remain
+in BACKLOG.md rather than being implemented.
