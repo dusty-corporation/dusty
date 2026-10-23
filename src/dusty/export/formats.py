@@ -4,11 +4,10 @@ import io
 import json
 import re
 import textwrap
+import zipfile
 from datetime import UTC, datetime
+from html import escape
 from pathlib import Path
-
-from docx import Document
-from docx.shared import Pt
 
 from dusty import __version__
 from dusty.core import Segment, Transcript
@@ -129,29 +128,81 @@ def render_docx(
     created_utc: datetime | None = None,
     timestamps: bool = True,
 ) -> bytes:
-    document = Document()
-    properties = document.core_properties
-    properties.author = ""
-    properties.last_modified_by = ""
-    properties.comments = ""
-    properties.keywords = ""
-    properties.category = ""
-    properties.identifier = ""
-    properties.subject = ""
-    properties.title = ""
-    normal = document.styles["Normal"]
-    normal.font.name = "Calibri"
-    normal.font.size = Pt(11)
-    normal.paragraph_format.space_after = Pt(7)
-    document.add_heading(source.stem, level=0)
     created = created_utc or datetime.now(UTC)
     date = created.astimezone(UTC).strftime("%Y-%m-%d")
-    document.add_paragraph(
-        f"{date} | {transcript.duration_sec:.1f} s | {transcript.model_id} | {transcript.language}"
-    )
+    paragraphs = [
+        (source.stem, "Title"),
+        (
+            f"{date} | {transcript.duration_sec:.1f} s | "
+            f"{transcript.model_id} | {transcript.language}",
+            "",
+        ),
+    ]
     for start, text in _paragraphs(transcript.segments):
         prefix = f"[{_timestamp(start, separator='.').split('.')[0]}] " if timestamps else ""
-        document.add_paragraph(prefix + text)
+        paragraphs.append((prefix + text, ""))
+
+    def paragraph(text: str, style: str) -> str:
+        # XML 1.0 excludes control characters and lone surrogates.
+        clean = re.sub(r"[^\x09\x0a\x0d\x20-\ud7ff\ue000-\ufffd\U00010000-\U0010ffff]", "", text)
+        properties = f'<w:pPr><w:pStyle w:val="{style}"/></w:pPr>' if style else ""
+        return f'<w:p>{properties}<w:r><w:t xml:space="preserve">{escape(clean)}</w:t></w:r></w:p>'
+
+    declaration = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    word_ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    rel_ns = "http://schemas.openxmlformats.org/package/2006/relationships"
+    office_rel = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+    parts = {
+        "[Content_Types].xml": (
+            '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+            '<Default Extension="rels" '
+            'ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+            '<Default Extension="xml" ContentType="application/xml"/>'
+            '<Override PartName="/word/document.xml" '
+            'ContentType="application/vnd.openxmlformats-officedocument.'
+            'wordprocessingml.document.main+xml"/>'
+            '<Override PartName="/word/styles.xml" '
+            'ContentType="application/vnd.openxmlformats-officedocument.'
+            'wordprocessingml.styles+xml"/>'
+            '<Override PartName="/docProps/core.xml" '
+            'ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>'
+            "</Types>"
+        ),
+        "_rels/.rels": (
+            f'<Relationships xmlns="{rel_ns}">'
+            f'<Relationship Id="rId1" Type="{office_rel}/officeDocument" '
+            'Target="word/document.xml"/>'
+            '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/'
+            'package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'
+            "</Relationships>"
+        ),
+        "word/_rels/document.xml.rels": (
+            f'<Relationships xmlns="{rel_ns}">'
+            f'<Relationship Id="rId1" Type="{office_rel}/styles" Target="styles.xml"/>'
+            "</Relationships>"
+        ),
+        "word/document.xml": (
+            f'<w:document xmlns:w="{word_ns}"><w:body>'
+            + "".join(paragraph(text, style) for text, style in paragraphs)
+            + "<w:sectPr/></w:body></w:document>"
+        ),
+        "word/styles.xml": (
+            f'<w:styles xmlns:w="{word_ns}">'
+            '<w:style w:type="paragraph" w:default="1" w:styleId="Normal">'
+            '<w:name w:val="Normal"/><w:pPr><w:spacing w:after="140"/></w:pPr>'
+            '<w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" '
+            'w:eastAsia="Calibri" w:cs="Calibri"/>'
+            '<w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:style>'
+            '<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/>'
+            '<w:basedOn w:val="Normal"/><w:rPr><w:sz w:val="52"/></w:rPr></w:style>'
+            "</w:styles>"
+        ),
+        "docProps/core.xml": (
+            '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"/>'
+        ),
+    }
     stream = io.BytesIO()
-    document.save(stream)
+    with zipfile.ZipFile(stream, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for name, xml in parts.items():
+            archive.writestr(name, (declaration + xml).encode("utf-8"))
     return stream.getvalue()

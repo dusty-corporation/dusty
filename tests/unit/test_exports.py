@@ -71,6 +71,27 @@ def test_docx_clears_author_metadata() -> None:
     assert any("Hello world." in paragraph.text for paragraph in document.paragraphs)
 
 
+def test_stdlib_docx_opens_with_escaped_unicode_and_no_timestamps() -> None:
+    transcript = Transcript(
+        (Segment(0, 0, 2, '<tag> & "سلام" 😀\x01'),), "fa", "transcribe", "tiny", "cpu", 2
+    )
+    payload = render_docx(transcript, Path("A & B.wav"), timestamps=False)
+    document = Document(io.BytesIO(payload))
+    assert document.paragraphs[0].text == "A & B"
+    assert document.paragraphs[-1].text == '<tag> & "سلام" 😀'
+    for name in (
+        "author",
+        "last_modified_by",
+        "comments",
+        "title",
+        "subject",
+        "keywords",
+        "category",
+        "identifier",
+    ):
+        assert getattr(document.core_properties, name) == ""
+
+
 def golden_transcript() -> Transcript:
     return Transcript(
         (Segment(0, 0, 1, "  Hello  world. "), Segment(1, 3, 4, "سلام دنیا")),
