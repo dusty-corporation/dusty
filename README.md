@@ -36,3 +36,10 @@ Dusty's own code is [Apache-2.0](LICENSE), with [NOTICE](NOTICE). Third-party
 components retain their licenses. Each draft release includes complete
 THIRD_PARTY_NOTICES.md, a CycloneDX SBOM and retained installer component sources.
 The Visual C++ runtime protective terms are also reachable in Setup.
+
+## Draft user guide
+
+Start with [Install](docs/user/install.md) and [First run](docs/user/first-run.md).
+The [user guide](docs/user/README.md) covers folders, models, vocabulary hints
+and troubleshooting. Read [Privacy and local data](docs/privacy.md) before using
+confidential material. Developers can use [CONTRIBUTING](CONTRIBUTING.md).

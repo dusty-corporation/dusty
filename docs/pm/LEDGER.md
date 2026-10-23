@@ -780,3 +780,14 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   updated. Prepared local-link and prohibited-dash checks: zero findings.
 - Tracked UTF-8 text scan via git ls-files -z: em/en dash matches: 0. Host scale
   unchanged; all development changes stay in whisper_app.
+
+### M6 docs v2 authorized prework
+
+- New m6-docs-v2 branch from m5-installer 20cce6b; reference m6-docs and
+  m5-packaging-spike untouched. Ported user/privacy/CONTRIBUTING Markdown only.
+- Updated shared model names/deletion and voice-detection blocking, normal-stop
+  versus crash resumption, seven-day partial cleanup, installer license/probe/
+  selection/testing/Finish without behavior, SmartScreen and local privacy paths.
+- Preserved the exact SPEC 9.6 HIPAA/accuracy/privacy wording. Corrected fixture
+  provenance documentation path. Local Markdown links and dash scan: no findings.
+- Documentation prework only; no M6 acceptance, hardware check or release claimed.
