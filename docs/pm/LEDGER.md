@@ -2,6 +2,7 @@
 
 | ID | Milestone | Task | Status (todo/doing/blocked/done) | Evidence | Issues |
 |----|-----------|------|----------------------------------|----------|--------|
+| LICENSE-APACHE | M3 | Owner-authorized Apache-2.0 relicense | done | Owner is sole contributor; full LICENSE, NOTICE, README, pyproject metadata and amended ADR 0012; docs/metadata only | - |
 | M0-01 | M0 | Repo structure, license, README, changelog | done | `6324f8c`, `90def49`; `git add --renormalize .` had no line-ending warnings | ISSUE-001 (resolved) |
 | M0-02 | M0 | Pinned Python dependencies and lockfile | done | `6324f8c`; `uv sync --locked --python 3.12` resolved 60 packages | ISSUE-001 (resolved) |
 | M0-03 | M0 | Review AGENTS.md, ledger, ADRs | done | AGENTS.md retained and updated; ADRs 0001-0014 in `bb03965`, `dee07bf`; PM spec revision `39bf2ae` | ISSUE-001 (resolved) |
