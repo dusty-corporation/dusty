@@ -38,6 +38,10 @@ jobs:
         run: uv run python tools/measure_coverage.py
         env:
           QT_QPA_PLATFORM: offscreen
+      - name: CI-only downloader public release integration
+        run: uv run pytest -q -m real_network tests/integration/test_downloader_network.py
+        env:
+          DUSTY_CI_REAL_NETWORK: '1'
       - name: Network isolation
         run: uv run python tools/check_no_network.py
       - name: Model host exclusion
@@ -70,3 +74,14 @@ jobs:
         run: ./tests/offline/test_wfp_events.ps1
       - name: Firewall and WFP offline acceptance
         run: ./tools/test_network_isolation.ps1
+      - name: Model Manager GUI and allowed downloader WFP audit
+        run: ./tools/test_model_download_isolation.ps1
+      - name: Preserve redacted Model Manager audit evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: m4-download-audit
+          path: |
+            build/model-download-*/summary.json
+            build/model-download-*/download-result.json
+          if-no-files-found: warn

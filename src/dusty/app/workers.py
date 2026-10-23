@@ -9,7 +9,7 @@ from PySide6.QtCore import QThread, Signal
 
 from dusty.core import BatchOptions, Job
 from dusty.core.types import CollisionPolicy
-from dusty.models import ModelCorrupt, ModelMissing, ModelRegistry
+from dusty.models import ModelCorrupt, ModelMissing, ModelRegistry, cleanup_stale_partials
 from dusty.queue import Coordinator, cleanup_orphaned_work, load_batch
 from dusty.queue.scanning import scan_inputs
 from dusty.queue.storage import load_settings
@@ -22,6 +22,7 @@ class Prepared:
     vulkan_ok: bool
     settings: dict[str, Any]
     recovered: tuple[BatchOptions, list[Job]] | None = None
+    vad_installed: bool = True
 
 
 class PrepareWorker(QThread):
@@ -39,6 +40,7 @@ class PrepareWorker(QThread):
         from dusty.engine.backend import probe_vulkan
 
         try:
+            cleanup_stale_partials(self.paths.models_dir)
             cleanup_orphaned_work(self.paths.user_dir / "work")
             installed = []
             for model_id in self.registry.manifest.models:
@@ -49,13 +51,18 @@ class PrepareWorker(QThread):
                     installed.append(model_id)
                 except (ModelMissing, ModelCorrupt):
                     continue
+            try:
+                self.registry.vad_path()
+                vad_installed = True
+            except (ModelMissing, ModelCorrupt):
+                vad_installed = False
             probe_model = "tiny" if "tiny" in installed else next(iter(installed), "tiny")
             ok = bool(installed) and probe_vulkan(
                 self.paths, self.registry, model_id=probe_model, refresh=self.refresh_probe
             )
             settings = load_settings(self.paths.user_dir / "settings.json")
             recovered = load_batch(self.paths.user_dir / "state/queue.json")
-            self.ready.emit(Prepared(tuple(installed), ok, settings, recovered))
+            self.ready.emit(Prepared(tuple(installed), ok, settings, recovered, vad_installed))
         except Exception:
             self.failed.emit()
 

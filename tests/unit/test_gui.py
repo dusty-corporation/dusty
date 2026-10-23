@@ -94,7 +94,7 @@ def test_backend_defaults_language_translation_and_hint_rules(window, qtbot, tmp
         Prepared(tuple(window.registry.manifest.models), True, {"schema_version": 1})
     )
     assert window.model_choice.currentData() == "large-v3-turbo-q8_0"
-    assert "Recommended" in window.model_choice.currentText()
+    assert ", recommended" in window.model_choice.currentText()
     window.model.set_jobs([Job(tmp_path / "clip.wav")])
     window._refresh()
     assert window.start_button.isEnabled()
@@ -253,7 +253,7 @@ def test_device_reprobe_preserves_user_choice_and_relabels_default(
     qtbot.waitUntil(lambda: window.ready and not window.preparer.isRunning())
     assert window.device_choice.currentData() == "cpu"
     assert window.model_choice.currentData() == "small"
-    assert "Recommended" in window.model_choice.currentText()
+    assert ", recommended" in window.model_choice.currentText()
     window.interactive = False
 
 
@@ -302,7 +302,7 @@ def test_options_are_modal_without_reflow_and_extra_formats_persist(window, qtbo
     assert window.move_actions[0].shortcut().toString() == "Alt+Up"
     window.activateWindow()
     window.table.setFocus()
-    qtbot.waitUntil(window.table.hasFocus)
+    qtbot.waitUntil(lambda: window.isActiveWindow() and window.table.hasFocus())
     qtbot.keyClick(window.table, Qt.Key.Key_Up, Qt.KeyboardModifier.AltModifier)
     assert window.model.jobs[0].source.name == "one.wav"
 
@@ -458,8 +458,9 @@ def test_message_area_and_disabled_start_guidance(window, tmp_path) -> None:
     QApplication.processEvents()
     assert window.start_button.isVisible() and not window.start_button.isEnabled()
     assert window.start_hint.text() == M.CHOOSE_OUTPUT_FIRST
-    assert window.start_hint.geometry().right() < window.start_button.geometry().left()
-    assert window.start_hint.geometry().center().y() == window.start_button.geometry().center().y()
+    assert window.start_hint.geometry().bottom() < window.start_button.geometry().top()
+    assert window.start_hint.alignment() & Qt.AlignmentFlag.AlignHCenter
+    assert window.start_button.width() == window.table.width()
     window.output_dir = tmp_path / "out"
     job.status = JobStatus.DONE
     window._refresh()
@@ -497,8 +498,8 @@ def test_all_dialogs_have_one_title_and_errors_only_name_reason(window, qtbot) -
 
 def test_model_labels_no_estimates_and_cpu_only_slow_warning(window) -> None:
     assert window.model_choice.accessibleName() == M.MODEL == "Transcription model"
-    assert M.MODEL_NAMES["small"] == "Balanced (all languages)"
-    assert M.MODEL_NAMES["small.en"] == "Balanced (English only)"
+    assert M.MODEL_NAMES["small"] == "Small: Balanced, all languages"
+    assert M.MODEL_NAMES["small.en"] == "Small English: Balanced, English only"
     window.options_dialog.show()
     for vulkan in (False, True):
         window.vulkan_ok = vulkan
@@ -567,3 +568,36 @@ def test_welcome_finishes_before_resume_and_reentrant_startup_is_ignored(
     qtbot.waitUntil(lambda: "started" in seen)
     assert seen == ["welcome opened", "welcome dismissed", "resume", "started"]
     assert window.model.jobs[0].elapsed_sec == 0
+
+
+def test_start_stays_full_width_and_disabled_text_contrast(window, qtbot, tmp_path):
+    from dusty.app.theme import DISABLED_COLORS, apply_theme, contrast_ratio
+
+    window.model.set_jobs([Job(tmp_path / "one.wav")])
+    for running, output in ((False, None), (False, tmp_path / "out"), (True, tmp_path / "out")):
+        window.output_dir = output
+        window.running = running
+        window._refresh()
+        QApplication.processEvents()
+        assert window.start_button.isVisible()
+        assert window.start_button.width() == window.table.width()
+        if not window.start_button.isEnabled():
+            assert window.start_hint.isVisible() and window.start_hint.text()
+            assert window.start_hint.geometry().bottom() < window.start_button.geometry().top()
+    window.running = False
+    window.output_dir = None
+    window._refresh()
+    apply_theme(QApplication.instance(), "dark")
+    qtbot.wait(20)
+    image = window.start_button.grab().toImage()
+    colors = {
+        image.pixelColor(x, y).name() for x in range(image.width()) for y in range(image.height())
+    }
+    assert DISABLED_COLORS["dark"]["ink"] in colors
+    assert (
+        contrast_ratio(DISABLED_COLORS["dark"]["ink"], DISABLED_COLORS["dark"]["background"]) >= 4.5
+    )
+    for model_id in window.installed:
+        name = M.RECOMMENDED.format(name=M.MODEL_NAMES[model_id])
+        assert name.endswith(", recommended") and "(Recommended)" not in name
+    apply_theme(QApplication.instance(), "light")

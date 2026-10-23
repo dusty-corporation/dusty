@@ -1,0 +1,38 @@
+"""Age out abandoned model download prefixes without following links."""
+
+import stat
+import time
+from pathlib import Path
+
+PARTIAL_MAX_AGE_SEC = 7 * 24 * 60 * 60
+
+
+def cleanup_stale_partials(directory: Path, *, now: float | None = None) -> int:
+    """Remove regular .part files older than seven days, directly in the model folder.
+
+    A locked/removed file is left alone; cleanup is retried at the next startup.
+    Recent prefixes remain eligible for the downloader's full size/hash checks.
+    """
+    cutoff = (time.time() if now is None else now) - PARTIAL_MAX_AGE_SEC
+    removed = 0
+    try:
+        entries = list(directory.iterdir())
+    except OSError:
+        return 0
+    for path in entries:
+        if not path.name.lower().endswith(".part"):
+            continue
+        try:
+            info = path.lstat()
+            if (
+                not stat.S_ISREG(info.st_mode)
+                or getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+                or info.st_mtime >= cutoff
+            ):
+                continue
+            path.unlink()
+            removed += 1
+        except OSError:
+            # Never turn a busy prefix into an app-startup failure or log its name.
+            continue
+    return removed

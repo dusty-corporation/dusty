@@ -31,6 +31,9 @@ MOVE_UP = "Move up"
 MOVE_DOWN = "Move down"
 CLEAR = "Clear list"
 START = "Start"
+ADD_RECORDINGS_FIRST = "Add recordings to start."
+START_RUNNING = "A transcription is in progress."
+SELF_TEST_RUNNING = "Checking the transcription model..."
 CANCEL_CURRENT = "Cancel current file"
 CANCEL_ALL = "Cancel all"
 OPTIONS = "Options..."
@@ -61,11 +64,11 @@ FORMATS = {
 }
 MODEL = "Transcription model"
 MODEL_NAMES = {
-    "large-v3-turbo-q8_0": "Best quality (Large v3 Turbo)",
-    "small": "Balanced (all languages)",
-    "small.en": "Balanced (English only)",
-    "tiny": "Fastest (Tiny)",
-    "medium": "Best for translating to English (Medium)",
+    "large-v3-turbo-q8_0": "Large v3 Turbo: Best quality",
+    "small": "Small: Balanced, all languages",
+    "small.en": "Small English: Balanced, English only",
+    "tiny": "Tiny: Fastest",
+    "medium": "Medium: Translates to English",
 }
 MODEL_DETAILS = {
     "large-v3-turbo-q8_0": "Recommended with a graphics card",
@@ -75,9 +78,9 @@ MODEL_DETAILS = {
     "medium": "Slower",
 }
 
-RECOMMENDED = "{name} (Recommended)"
-MISSING_RECOMMENDATION = "{name} is recommended but is not installed. Choose an installed model."
-NO_MODELS = "No verified models are installed. Model downloads will be available in Model Manager."
+RECOMMENDED = "{name}, recommended"
+MISSING_RECOMMENDATION = "The recommended model, {name}, is not installed yet."
+NO_MODELS = "Download a transcription model first."
 MANAGE_MODELS = "Manage models"
 MANAGE_LATER = "Additional model downloads are not available yet."
 CANCEL = "Cancel"
@@ -410,3 +413,103 @@ def scan_summary(added: int, unsupported: int, duplicates: int, name: str = "") 
             else DUPLICATE_MANY.format(count=duplicates)
         )
     return "; ".join(parts)
+
+
+MODEL_MANAGER = "Transcription models"
+MODEL_TECHNICAL = {
+    "tiny": "Tiny",
+    "small": "Small",
+    "small.en": "Small English",
+    "medium": "Medium",
+    "large-v3-turbo-q8_0": "Large v3 Turbo",
+    "silero-vad": "Silero VAD",
+}
+VOICE_MODEL = "Voice detection"
+VOICE_DETAILS = "Voice detection. Required when Skip silent parts is on."
+MANAGER_HEADERS = ("Model", "Best for", "Size", "Status")
+MODEL_STATUSES = {
+    "installed": "Installed",
+    "not_installed": "Not installed",
+    "damaged": "Damaged",
+    "downloading": "Downloading",
+}
+DOWNLOAD = "Download"
+DOWNLOAD_AGAIN = "Download again"
+CANCEL_DOWNLOAD = "Cancel download"
+DELETE_MODEL = "Delete"
+VERIFY_ALL = "Verify all"
+VERIFYING_MODELS = "Checking the downloaded files..."
+VERIFYING_DOWNLOAD = "Checking the download..."
+FREE_SPACE = "Free space for models: {gb:.1f} GB"
+FREE_SPACE_UNKNOWN = "Free space for models is unavailable."
+MODEL_SIZE = "{value:.1f}\u00a0{unit}"
+MEGABYTES = "MB"
+GIGABYTES = "GB"
+DOWNLOAD_NAMES_JOIN = " and "
+DOWNLOAD_PROGRESS = "{done} of {total}"
+DOWNLOADING_MODEL = "Downloading {name}"
+DOWNLOAD_TITLE = "Download transcription files?"
+DOWNLOAD_CONFIRM = "Download {names} from github.com ({size})?"
+DELETE_TITLE = "Delete this downloaded model?"
+DELETE_CONFIRM = "Delete {name}? You can download it again later."
+DELETE_SELECTED = (
+    "Delete {name}? It is the model chosen in Options. You can download it again later."
+)
+DELETE_VOICE = (
+    "Delete {name}? Skip silent parts is on, so Start will be unavailable until "
+    "you download it again or turn off Skip silent parts in Options."
+)
+CHOOSE_MODEL = "Choose a transcription model in Options."
+MODEL_PLACEHOLDER = "Choose a transcription model"
+NO_MODEL_SELECTED = "No model selected"
+DOWNLOAD_RECOMMENDED = "Download recommended model ({name})"
+DOWNLOAD_VOICE = "Download voice detection"
+MODEL_REVIEW = "All models can make mistakes. Review transcripts before relying on them."
+MODEL_QUALITY = {
+    "large-v3-turbo-q8_0": "Best quality",
+    "small": "Balanced, all languages",
+    "small.en": "Balanced, English only",
+    "medium": "Translates to English",
+    "tiny": "Fastest",
+    "silero-vad": 'Needed for "Skip silent parts"',
+}
+MODEL_NOTE = {
+    "large-v3-turbo-q8_0": "Fast on newer computers. Slow on older ones.",
+    "small": "Works on any computer. May make more mistakes.",
+    "small.en": "Works on any computer. May make more mistakes.",
+    "medium": "Slower",
+    "tiny": "Lowest accuracy. Good for quick drafts.",
+    "silero-vad": "Small download",
+}
+MODEL_BEST_FOR = dict(
+    zip(
+        ("large-v3-turbo-q8_0", "small", "small.en", "medium", "tiny", "silero-vad"),
+        (
+            "Everything, if your computer is fast enough",
+            "Older or slower computers",
+            "English only, on older or slower computers",
+            "Translating to English",
+            "Quick drafts",
+            "Skipping silence",
+        ),
+        strict=True,
+    )
+)
+MODELS_READY = "Your downloaded models have been checked."
+DOWNLOAD_FINISHED = "The download is complete and verified."
+DOWNLOAD_PAUSED = "Download cancelled. The partial download was removed."
+MODEL_DELETED = "The downloaded model was deleted."
+DOWNLOAD_IT = "Download it"
+VAD_MISSING = "Download voice detection first, or turn off Skip silent parts in Options."
+FETCH_ERRORS = {
+    "INVALID": "The download details could not be read.",
+    "BLOCKED": "The download address is not allowed.",
+    "MISMATCH": "The download is damaged. Download it again.",
+    "DISK_FULL": "There is not enough free space for this download.",
+    "NETWORK": "The download could not finish. Check your connection and try again.",
+    "IO": "Dusty could not save the downloaded file.",
+    "BUSY": "Another download is already using this file.",
+    "START_FAILED": "The downloader could not start. Check the installed files.",
+    "PROTOCOL": "The downloader did not finish correctly. Try the download again.",
+    "DELETE": "The downloaded model could not be deleted.",
+}

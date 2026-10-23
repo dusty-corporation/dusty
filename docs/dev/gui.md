@@ -122,3 +122,12 @@ now remains -- until decoding, and the known decoded PCM WAV is probed before
 Whisper. Real coordinator and actual Qt add/start tests cover jfk.amr. A custom
 Qt item delegate plus unavailable text makes disabled task entries explicit;
 English-only selection preserves the previous multilingual language choice.
+
+
+## M4 Best for wrapping
+
+On pinned PySide6/Qt 6.9.2, the Model Manager uses word wrap with ElideNone in
+its 240-logical-pixel Best for column. The approved longer descriptions fit two
+lines with the 10 pt UI font inside the existing 88-pixel row. The regression
+uses pinned Qt's QTextLayout to count the actual wrapped lines, rather than
+inferring a line count from QFontMetrics' padded pixel bounding rectangle.

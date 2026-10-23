@@ -18,6 +18,8 @@ All notable changes to Dusty will be documented here. This project follows Keep 
 - Repository-local test app data and a PM backlog for deferred work.
 - M3 desktop queue with collapsed options, background processing, progress,
   cancellation, safe collision handling, resume, themes and privacy warnings.
+- M4 Model Manager with isolated verified downloads, local integrity checks,
+  disk-space display and source/packaged network-isolation acceptance.
 - Centralized interface copy, real Qt batch acceptance tests and a draft
   screenshot matrix covering light/dark appearance at two display scales.
 
@@ -33,6 +35,14 @@ All notable changes to Dusty will be documented here. This project follows Keep 
   named collision/error/summary dialogs, and measured light/dark control contrast.
 - Valid AMR with missing probe duration now transcribes; same-run names number
   safely, output selection is always visible, model choices explain their
-  purpose and estimated speed, and resume starts unfinished recordings directly.
+  purpose, and resume starts unfinished recordings directly.
 - ThinkPad-reviewed list, duplicate, summary, error and keyboard improvements;
   explicit development fetch option for the recommended Small and Turbo models.
+- M4 downloader-only prework: isolated standard-library HTTPS download/verify CLI,
+  strict redirect hosts, verified resumable parts, space/cancellation safety and
+  local TLS plus explicit CI-only public model integration tests.
+- Owner-reviewed model deletion and empty selection, fresh downloads after cancel,
+  name-first model labels, clearer consent and main prompts, and disabled/selected
+  control contrast in both themes.
+- Final Model Manager wording, MB/GB sizing, progress labels and explicit
+  verification feedback.
