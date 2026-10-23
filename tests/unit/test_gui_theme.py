@@ -61,6 +61,9 @@ def test_all_interactive_control_boundaries_have_three_to_one_contrast(qapp, qtb
 
 @pytest.mark.parametrize("theme", ["light", "dark"])
 def test_disabled_controls_have_gray_borders_and_legible_text_in_render(qapp, qtbot, theme):
+    from PySide6.QtGui import QStandardItem, QStandardItemModel
+    from PySide6.QtWidgets import QLabel
+
     from dusty.app.theme import DISABLED_COLORS
 
     apply_theme(qapp, theme)
@@ -81,10 +84,16 @@ def test_disabled_controls_have_gray_borders_and_legible_text_in_render(qapp, qt
         QPlainTextEdit(),
         QCheckBox("Skip silent parts"),
         QRadioButton("Replace"),
+        QTableView(),
+        QScrollArea(),
     ]
     controls[5].setText("Options")
     controls[6].addItem("Small")
     controls[8].setPlainText("Vocabulary")
+    model = QStandardItemModel(controls[11])
+    model.appendRow(QStandardItem("Recording"))
+    controls[11].setModel(model)
+    controls[12].setWidget(QLabel("Options"))
     for control in controls:
         layout.addWidget(control)
         control.setEnabled(False)

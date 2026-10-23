@@ -163,7 +163,8 @@ def apply_theme(app: QApplication, mode: str = "system") -> None:
             font-weight: 600; padding: 12px 32px; }}
         QPushButton:disabled, QPushButton#startButton:disabled,
         QPushButton#primaryButton:disabled, QToolButton:disabled,
-        QComboBox:disabled, QSpinBox:disabled, QPlainTextEdit:disabled {{
+        QComboBox:disabled, QSpinBox:disabled, QPlainTextEdit:disabled,
+        QTableView:disabled, QScrollArea:disabled, QProgressBar:disabled {{
             background: {disabled["background"]}; color: {disabled["ink"]};
             border: 1px solid {disabled["edge"]}; }}
         QCheckBox:disabled, QRadioButton:disabled {{ color: {disabled["ink"]}; }}
@@ -175,7 +176,8 @@ def apply_theme(app: QApplication, mode: str = "system") -> None:
             color: {ink}; border: 1px solid {edge}; border-radius: 4px; }}
         QComboBox QAbstractItemView, QMenu {{ background: {base}; color: {ink};
             border: 1px solid {edge}; }}
-        QComboBox QAbstractItemView::item:disabled {{ color: #87968d; background: {base}; }}
+        QComboBox QAbstractItemView::item:disabled, QMenu::item:disabled {{
+            color: {disabled["ink"]}; background: {disabled["background"]}; }}
         QCheckBox, QRadioButton {{ spacing: 8px; }}
         QPushButton:focus, QToolButton:focus, QComboBox:focus, QSpinBox:focus,
         QPlainTextEdit:focus, QTableView:focus {{ border: 2px solid {accent}; }}

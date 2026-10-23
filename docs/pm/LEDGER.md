@@ -220,3 +220,16 @@ No further implementation or tests were started after the Owner requested this c
   Empty Options now also has an explicit placeholder and plain summary wording.
 - Full M4 coverage run and CI 39989976906 are running. Screenshot upload and
   packaging carry-forward acceptance remain pending; no final-green claim yet.
+
+
+### M4 full source verification and screenshot upload
+
+- Full local suite/coverage: 153 passed, 1 CI-only skip in 170.71 seconds;
+  94.2% total (core 93.7%, export 98.5%, models 94.4%, queue 93.0%, privacy 95.2%).
+- Final empty-selection persistence test passes. Disabled render coverage now
+  also paints real table/scroll-panel content; all four theme tests pass.
+- New draft asset m4-screenshots-6fa2c7b.zip: 84 PNGs, 4,119,558 bytes,
+  SHA-256 14ed33cc1566c9e1e7b35c3fa70f48161313abe603b5f0c769fcab12da876c82.
+  Upload verified; release remains draft and older asset is retained.
+- Next: final code CI, forward merges to M5/M6, full source verification on each,
+  packaged build/PE/license/GUI/WFP acceptance, report refresh. No PR opened.
