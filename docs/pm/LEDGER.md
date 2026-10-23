@@ -56,7 +56,7 @@
 
 | M4-01 | M4 | Carry-over Start layout, recommendation labels and dark contrast | done | Start stays full width (including running/disabled), centered reason above; recommendation suffix simplified; dark disabled text contrast tested at least 4.5:1. Alt+Arrow routing handles table shortcut overrides explicitly; 25 Qt/theme tests and lint/types pass | - |
 
-| M4-02 | M4 | Model Manager and isolated downloader child | doing | WIP 66461dd pushed: Qt dialog, local verification/statuses/free space, consent, JSON progress, Job Object download/cancel/resume, delete protections, live Options/recommendation prompts and voice-model handling; 31 focused tests passed before the final PID metadata addition; final acceptance pending | - |
+| M4-02 | M4 | Model Manager and isolated downloader child | done | aab3ec6; 149 local passes/1 CI-only skip, 94.2% coverage, CI 39910270912 green; source and packaged WFP GUI=0/fetch allowed=4/blocked=0; report and draft screenshot evidence | - |
 
 ## M4 checkpoint, 2026-10-22 - stopped at the Owner's usage request
 
@@ -164,3 +164,12 @@ No further implementation or tests were started after the Owner requested this c
   scales = 76 PNGs. Visually checked main prompt, dark manager/progress and
   150% consent; upload to the new draft release is next.
 - Remaining: draft screenshot upload, report, M5 rebase and packaged acceptance.
+
+### M4 engineering complete, Owner morning review pending
+
+- M4-report.md records all acceptance evidence, branch scope, draft screenshots,
+  source and packaged WFP counts, exact Persian fixture provenance, and six
+  ThinkPad checks. PM/Owner hardware review remains pending; no PR opened.
+- Screenshots are a new draft m4-screenshots release, not published. M5 was
+  synchronized and its app gates passed in 39910562031. Optional installer
+  prework remains isolated to M5; its compilation follow-up is not M4 acceptance.
