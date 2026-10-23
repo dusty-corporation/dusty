@@ -188,3 +188,22 @@ No further implementation or tests were started after the Owner requested this c
   are documented; no PR, merge, publishing or repository-setting change.
 - No em/en dash matches in the report's recorded repository search; no SPEC or
   Owner brief edit. Final M5 rebase carries this documentation only, then stop.
+
+
+### M4 Owner review corrections, 2026-10-23 (in progress)
+
+- Owner ThinkPad packaged app: all six M4 checks passed functionally.
+- M5 ISSUE-018/019 checkpoint is clean and pushed at 0e70c31; its final CI
+  39987858934 is green. M6 checkpoint ca1ac2a is pushed; CI 39987905683
+  timed out in the real CPU self-test entry-point guard test (30 seconds).
+  No failure was hidden; carry-forward acceptance will rerun the complete suite.
+- PM replaced earlier cancel/resume UX: Ctrl+C/cooperative cancellation removes
+  the partial. GUI cancellation also removes it after joining the terminated
+  downloader child. Existing Range integrity checks remain for network failures.
+- Focused downloader/GUI first run: 57 passed, three GUI expectations needed
+  adjustment for the new labels/style and missing recovery-model selection.
+  After correcting recovery behavior, focused GUI/manager/theme tests: 42 passed.
+- In progress: unrestricted model deletion, explicit cleared Options selection,
+  three-line catalog/Best for column, consent, contextual prompts and disabled
+  styling. Next: full suite/coverage, fresh screenshots, CI, carry to M5/M6,
+  packaged PE/license/GUI/WFP gates and final M4 report.
