@@ -230,3 +230,25 @@ plain catalog presentation and proving disabled controls through actual renderin
 Forward merges preserve M5 license and runtime pins. No engineering-hour estimate
 or unperformed hardware result is asserted. Non-essential improvements remain
 in BACKLOG.md rather than being implemented.
+
+
+## Polish round (2026-10-23)
+
+- Commit `789e56b` (UI changes `7c7d5cf`); [M4 CI 39998311028](https://github.com/dusty-corporation/dusty/actions/runs/39998311028)
+  is green: 169 passed, 2 expected skips, 94.2% coverage. Local full suite:
+  170 passed/1 CI-only skip. Quality/policy gates pass; no em/en dash matches.
+- All seven polish items implemented: short recommendation names, and-joined
+  consent with unbreakable MB/GB units, named deletion/re-download advice,
+  download labels without duplicate percentages, explicit Verify all feedback
+  only with installed models, and one existing Options button.
+- **Voice detection behavior:** deleting it while Skip silent parts is on blocks
+  Start until it is downloaded again or that option is turned off. It does not
+  automatically continue with silence skipping disabled. The confirmation says so.
+- New [draft screenshot asset](https://github.com/dusty-corporation/dusty/releases/tag/untagged-6184fb70591dd06d1c63):
+  `m4-screenshots-polish-789e56b.zip`, 28 PNGs, 759,997 bytes. Only 14 changed
+  states in light-1/dark-1, generated after CI passed and visually inspected.
+  SHA-256: `e3b3b14e25ff1c2af290468790ad1aab33ac31498ebb068310e8794dbb38476c`.
+- Matching review bundle: **m4-review-bundle**, run **39998318413**,
+  [artifact 12520629143](https://github.com/dusty-corporation/dusty/actions/runs/39998318413/artifacts/12520629143).
+  All four workflow jobs are green, including PE/license/GUI/WFP and installed
+  acceptance. Changes also carried to M6, green run 39998323956. No PR opened.
