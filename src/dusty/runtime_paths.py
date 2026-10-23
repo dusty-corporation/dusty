@@ -36,3 +36,14 @@ def resolve_paths(
         Path(env["DUSTY_MODELS_DIR"]) if env.get("DUSTY_MODELS_DIR") else root / "build/models"
     )
     return RuntimePaths(bin_dir, models_dir, root / "resources", user_dir)
+
+
+def resolve_fetch_command(
+    *, frozen: bool | None = None, executable: Path | None = None
+) -> list[str]:
+    """The downloader is always a separate process, including split onedir builds."""
+    installed = bool(getattr(sys, "frozen", False)) if frozen is None else frozen
+    app = Path(sys.executable) if executable is None else executable
+    if installed:
+        return [str((app.parent.parent / "dusty-fetch/dusty-fetch.exe").resolve())]
+    return [str(app.resolve()), "-m", "dusty_fetch"]

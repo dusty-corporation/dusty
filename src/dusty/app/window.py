@@ -60,6 +60,7 @@ from .dialogs import (
     TextDialog,
     WelcomeDialog,
 )
+from .model_manager import VOICE_ID, ModelManager
 from .presentation import TERMINAL, counts, eta_seconds, overall_progress
 from .table import ProgressDelegate, QueueModel
 from .theme import application_icon, apply_theme
@@ -77,6 +78,9 @@ class MainWindow(QMainWindow):
         self.settings: dict = {"schema_version": 1}
         self.installed: tuple[str, ...] = ()
         self.vulkan_ok = False
+        self.vad_installed = True
+        self._explicit_model = False
+        self.model_manager: ModelManager | None = None
         self.ready = False
         self.running = False
         self.closing = False
@@ -223,6 +227,12 @@ class MainWindow(QMainWindow):
             notice_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             notice_label.setStyleSheet("font-size: 16px")
             message_layout.addWidget(notice_label)
+        self.download_recommended_button = self._button(M.DOWNLOAD_IT, self.download_recommended)
+        prompt_actions = QHBoxLayout()
+        prompt_actions.addStretch()
+        prompt_actions.addWidget(self.download_recommended_button)
+        prompt_actions.addStretch()
+        message_layout.addLayout(prompt_actions)
         layout.addWidget(self.message_area)
         self.output_row = QWidget()
         output_layout = QHBoxLayout(self.output_row)
@@ -270,10 +280,8 @@ class MainWindow(QMainWindow):
         self.model_warning = self._label(M.EMPTY_CELL, warning=True)
         form.addRow(self.model_details)
         form.addRow(self.model_warning)
-        manage = self._button(M.MANAGE_MODELS, lambda: None)
-        manage.setEnabled(False)
-        manage.setToolTip(M.MANAGE_LATER)
-        form.addRow(manage)
+        self.manage_models_button = self._button(M.MANAGE_MODELS, self.open_model_manager)
+        form.addRow(self.manage_models_button)
         self.task_choice = self._combo(M.TASKS, M.TASK)
         form.addRow(M.TASK, self.task_choice)
         self.language_choice = QComboBox()
@@ -363,10 +371,11 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(body)
         for combo in (self.model_choice, self.task_choice, self.language_choice):
             combo.currentIndexChanged.connect(self._rules)
-        self.model_choice.activated.connect(self._confirm_resume_model)
+        self.model_choice.activated.connect(self._model_chosen)
         self.same_folder.toggled.connect(self._rules)
         self.device_choice.currentIndexChanged.connect(self._device_changed)
         self.prompt.textChanged.connect(self._rules)
+        self.vad.toggled.connect(self._rules)
         self.theme_choice.currentIndexChanged.connect(self._theme_changed)
 
     def _menus(self) -> None:
@@ -386,6 +395,7 @@ class MainWindow(QMainWindow):
             menu.addAction(action)
             self.edit_actions.append(action)
         file_menu.addAction(M.EXIT, self.close)
+        self.manage_models_action = tools.addAction(M.MANAGE_MODELS, self.open_model_manager)
         self.selftest_action = tools.addAction(M.SELF_TEST, self.run_selftest)
         help_menu.addAction(
             M.PRIVACY_TITLE,
@@ -420,6 +430,8 @@ class MainWindow(QMainWindow):
             prepared.settings,
         )
         self.ready = True
+        self.vad_installed = prepared.vad_installed
+        self._explicit_model = bool(self.settings.get("model_id"))
         self.model_choice.blockSignals(True)
         self.model_choice.clear()
         recommended = recommend_model(vulkan_ok=self.vulkan_ok, task="transcribe")
@@ -576,6 +588,62 @@ class MainWindow(QMainWindow):
         if self.ready:
             self._save_settings()
 
+    def _model_chosen(self) -> None:
+        self._explicit_model = True
+        self._confirm_resume_model()
+
+    def _track_model_worker(self, worker: QThread) -> None:
+        self._tasks.append(worker)
+        worker.finished.connect(lambda: QTimer.singleShot(0, self._background_finished))
+
+    def download_recommended(self) -> None:
+        target = self._recommendation if self._recommendation not in self.installed else VOICE_ID
+        self.open_model_manager(focus_id=target)
+
+    def open_model_manager(self, *, focus_id: str | None = None) -> None:
+        if not self.ready or self.running:
+            return
+        dialog = ModelManager(
+            self.registry,
+            self.paths,
+            self,
+            selected=lambda: self.model_choice.currentData(),
+            voice_in_use=self.vad.isChecked,
+            recommended=self._recommendation,
+            focus_id=focus_id or self.model_choice.currentData(),
+            track_worker=self._track_model_worker,
+        )
+        self.model_manager = dialog
+        dialog.models_changed.connect(self._models_changed)
+        dialog.exec()
+        self._refresh()
+
+    @Slot(object)
+    def _models_changed(self, statuses: dict[str, str]) -> None:
+        previous = self.model_choice.currentData()
+        self.installed = tuple(
+            key for key, state in statuses.items() if state == "installed" and key != VOICE_ID
+        )
+        self.vad_installed = statuses.get(VOICE_ID) == "installed"
+        self.model_choice.blockSignals(True)
+        self.model_choice.clear()
+        for key in self.installed:
+            self.model_choice.addItem(M.MODEL_NAMES[key], key)
+        desired = (
+            previous
+            if self._explicit_model and previous in self.installed
+            else (
+                self._recommendation
+                if self._recommendation in self.installed
+                else previous
+                if previous in self.installed
+                else next(iter(self.installed), "")
+            )
+        )
+        self._set_combo(self.model_choice, desired)
+        self.model_choice.blockSignals(False)
+        self._refresh()
+
     def eventFilter(self, watched, event) -> bool:
         if (
             watched is getattr(self, "table", None)
@@ -634,6 +702,7 @@ class MainWindow(QMainWindow):
     @Slot(object)
     def _device_prepared(self, prepared: Prepared) -> None:
         self.vulkan_ok = prepared.vulkan_ok
+        self.vad_installed = prepared.vad_installed
         if "backend_probe" in prepared.settings:
             self.settings["backend_probe"] = prepared.settings["backend_probe"]
         self.ready = True
@@ -692,7 +761,7 @@ class MainWindow(QMainWindow):
             self.model_choice.setItemText(
                 index, M.RECOMMENDED.format(name=name) if candidate == recommended else name
             )
-        if model and recommended not in self.installed:
+        if self.ready and recommended not in self.installed:
             unavailable = M.MISSING_RECOMMENDATION.format(name=M.MODEL_NAMES[recommended])
             warning = unavailable + ("\n" + warning if warning else "")
         self.resume_model_button.setVisible(bool(self._missing_resume_model))
@@ -700,8 +769,18 @@ class MainWindow(QMainWindow):
             M.USE_INSTALLED.format(model=M.MODEL_NAMES.get(model_id, M.PREPARING))
         )
         self.resume_model_button.setEnabled(bool(model and not invalid and not self.running))
+        needs_voice = self.vad.isChecked() and not self.vad_installed
+        if model and needs_voice and recommended in self.installed:
+            warning = M.VAD_MISSING
+        prompt = self.ready and (recommended not in self.installed or needs_voice)
+        self.download_recommended_button.setVisible(bool(prompt) and not self.running)
+        self.download_recommended_button.setEnabled(not self.running)
         hint = M.EMPTY_CELL
-        if not self.output_dir and not self.same_folder.isChecked():
+        if not model and self.ready:
+            hint = M.NO_MODELS
+        elif needs_voice:
+            hint = M.VAD_MISSING
+        elif not self.output_dir and not self.same_folder.isChecked():
             hint = M.CHOOSE_OUTPUT_FIRST
         elif self.model.jobs and all(
             job.status in {JobStatus.DONE, JobStatus.SKIPPED} for job in self.model.jobs
@@ -756,6 +835,7 @@ class MainWindow(QMainWindow):
                 self.ready
                 and model
                 and not invalid
+                and not needs_voice
                 and not self._missing_resume_model
                 and not self.running
                 and self.model.jobs
@@ -772,6 +852,7 @@ class MainWindow(QMainWindow):
         )
 
     def _use_medium(self) -> None:
+        self._explicit_model = True
         self._set_combo(self.model_choice, "medium")
         self._set_combo(self.task_choice, "translate")
         self._missing_resume_model = None
@@ -800,6 +881,8 @@ class MainWindow(QMainWindow):
             button.setVisible(has_jobs)
         for action in self.edit_actions:
             action.setEnabled(editing)
+        self.manage_models_button.setEnabled(self.ready and not self.running)
+        self.manage_models_action.setEnabled(self.ready and not self.running)
         self.options_button.setEnabled(self.ready and not self.running)
         self.options_scroll.setEnabled(self.ready and not self.running)
         for action in self.move_actions:
@@ -1137,6 +1220,8 @@ class MainWindow(QMainWindow):
             self.status.setText(text)
 
     def closeEvent(self, event: QCloseEvent) -> None:
+        if self.model_manager and self.model_manager.busy:
+            self.model_manager.done(QDialog.DialogCode.Rejected)
         if self.running:
             if not self.closing and CloseDialog(self).exec() != QDialog.DialogCode.Accepted:
                 event.ignore()

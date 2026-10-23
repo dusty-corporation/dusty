@@ -79,8 +79,8 @@ MODEL_DETAILS = {
 }
 
 RECOMMENDED = "{name}, recommended"
-MISSING_RECOMMENDATION = "{name} is recommended but is not installed. Choose an installed model."
-NO_MODELS = "No verified models are installed. Model downloads will be available in Model Manager."
+MISSING_RECOMMENDATION = "{name} is recommended but is not installed."
+NO_MODELS = "Download a transcription model first."
 MANAGE_MODELS = "Manage models"
 MANAGE_LATER = "Additional model downloads are not available yet."
 CANCEL = "Cancel"
@@ -413,3 +413,63 @@ def scan_summary(added: int, unsupported: int, duplicates: int, name: str = "") 
             else DUPLICATE_MANY.format(count=duplicates)
         )
     return "; ".join(parts)
+
+
+MODEL_MANAGER = "Transcription models"
+MODEL_TECHNICAL = {
+    "tiny": "Tiny",
+    "small": "Small",
+    "small.en": "Small English",
+    "medium": "Medium",
+    "large-v3-turbo-q8_0": "Large v3 Turbo (q8_0)",
+    "silero-vad": "Silero VAD",
+}
+VOICE_MODEL = "Skip silent parts"
+VOICE_DETAILS = "Voice detection. Required when Skip silent parts is on."
+MANAGER_HEADERS = ("Model", "Size", "Status")
+MODEL_STATUSES = {
+    "installed": "Installed",
+    "not_installed": "Not installed",
+    "damaged": "Damaged",
+    "downloading": "Downloading",
+}
+DOWNLOAD = "Download"
+DOWNLOAD_AGAIN = "Download again"
+CANCEL_DOWNLOAD = "Cancel download"
+DELETE_MODEL = "Delete"
+VERIFY_ALL = "Verify all"
+VERIFYING_MODELS = "Checking the downloaded files..."
+VERIFYING_DOWNLOAD = "Checking the download..."
+FREE_SPACE = "Free space for models: {gb:.1f} GB"
+FREE_SPACE_UNKNOWN = "Free space for models is unavailable."
+MODEL_SIZE = "{mb:.1f} MB"
+DOWNLOAD_PROGRESS = "{percent}% ({done:.1f} MB of {total:.1f} MB)"
+DOWNLOAD_TITLE = "Download transcription files?"
+DOWNLOAD_CONTENTS = "Files: {names}"
+DOWNLOAD_CONFIRM = (
+    "Dusty will connect to github.com to download {mb:.1f} MB and will not send "
+    "your recordings, transcripts, or vocabulary hints."
+)
+DELETE_TITLE = "Delete this downloaded model?"
+DELETE_CONFIRM = "Delete {name}? You can download it again later."
+DELETE_SELECTED = "Choose another transcription model in Options before deleting this one."
+DELETE_LAST = "Keep at least one installed transcription model."
+DELETE_VOICE = "Turn off Skip silent parts in Options before deleting voice detection."
+MODELS_READY = "Your downloaded models have been checked."
+DOWNLOAD_FINISHED = "The download is complete and verified."
+DOWNLOAD_PAUSED = "Download cancelled. Download again to pick up where it stopped."
+MODEL_DELETED = "The downloaded model was deleted."
+DOWNLOAD_IT = "Download it"
+VAD_MISSING = "Download voice detection first, or turn off Skip silent parts in Options."
+FETCH_ERRORS = {
+    "INVALID": "The download details could not be read.",
+    "BLOCKED": "The download address is not allowed.",
+    "MISMATCH": "The download is damaged. Download it again.",
+    "DISK_FULL": "There is not enough free space for this download.",
+    "NETWORK": "The download could not finish. Check your connection and try again.",
+    "IO": "Dusty could not save the downloaded file.",
+    "BUSY": "Another download is already using this file.",
+    "START_FAILED": "The downloader could not start. Check the installed files.",
+    "PROTOCOL": "The downloader did not finish correctly. Try the download again.",
+    "DELETE": "The downloaded model could not be deleted.",
+}

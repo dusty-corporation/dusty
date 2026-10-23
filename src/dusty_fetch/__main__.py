@@ -3,6 +3,7 @@
 import argparse
 import http.client
 import json
+import os
 import signal
 import ssl
 import urllib.error
@@ -13,6 +14,7 @@ from .downloader import Downloader, Exit, FetchError, io_error, load_asset
 
 
 def emit(event: dict) -> None:
+    event["pid"] = os.getpid()
     print(json.dumps(event, separators=(",", ":")), flush=True)
 
 
