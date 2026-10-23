@@ -2,7 +2,7 @@
 
 - Severity: S1
 - Milestone: M5 installer prework
-- Status: Open, PM decision needed
+- Status: Resolved by PM, 2026-10-23
 - Environment: pinned Inno Setup 6.7.3, Windows CI, unsigned installer draft
 
 ## Expected
@@ -46,6 +46,13 @@ component inventory. Alternative: PM chooses another installer architecture,
 which would replace ADR 0008. Recommendation: the narrow exception.
 
 ## Regression
+
+Resolution: PM accepted ADR 0023, permitting exactly InnoSetup for the installer
+wrapper with retained notices and the revenue-threshold purchase commitment.
+The explicit installer context is required; app dependencies still reject it.
+Updated regression asserts both the narrow approval and the denied contexts.
+
+Historical finding before approval:
 
 The installer policy check uses the same allowed_license function as the app
 gate; it rejects InnoSetup today. The dedicated negative test prevents the

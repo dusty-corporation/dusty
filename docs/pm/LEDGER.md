@@ -331,3 +331,8 @@ No further implementation or tests were started after the Owner requested this c
 Both feature branches are pushed. No implementation changes were made during
 this final report rebase; no additional optional testing or next-milestone work
 is needed. Return the workspace to m4-downloader with a clean tree for the Owner.
+
+### PM-approved overnight continuation, 2026-10-23
+
+- ISSUE-017 resolved: ADR 0023 Accepted by PM, exact InnoSetup exception only in installer context. App dependencies still reject it; focused positive/negative test passes.
+- Installer-wide inventory and CI lifecycle acceptance now in progress. M6 docs and desktop long-recording tests explicitly authorized by PM; Owner machine install is not required tonight.

@@ -20,10 +20,8 @@ def check() -> list[str]:
     findings = []
     if hashlib.sha256(license_file.read_bytes()).hexdigest() != pins["repository_sha256"]:
         findings.append("Inno Setup license text differs from its pinned provenance")
-    if not allowed_license("inno-setup-installer", "InnoSetup"):
-        findings.append(
-            "Inno Setup 6.7.3: InnoSetup is not allowlisted; ISSUE-017 needs PM decision"
-        )
+    if not allowed_license("inno-setup-installer", "InnoSetup", installer_wrapper=True):
+        findings.append("Inno Setup installer wrapper license is not approved")
     return findings
 
 

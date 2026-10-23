@@ -43,10 +43,15 @@ def normalized(name: str) -> str:
     return name.lower().replace("_", "-").replace(".", "-")
 
 
-def allowed_license(name: str, license_text: str | None) -> bool:
+def allowed_license(
+    name: str, license_text: str | None, *, installer_wrapper: bool = False
+) -> bool:
     if not license_text or license_text == "UNKNOWN":
         return False
     if normalized(name) == "pyinstaller-bootloader" and license_text == PYINSTALLER_BOOTLOADER:
+        return True
+    # ADR 0023 is scoped to the installer wrapper, never an app dependency.
+    if installer_wrapper and name == "inno-setup-installer" and license_text == "InnoSetup":
         return True
     # A dual-license package may be used under one permitted alternative.
     options = license_text.split(" OR ")
