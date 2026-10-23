@@ -1,3 +1,34 @@
+# Current M5 page implementation (2026-10-23)
+
+The historical spike notes below are superseded where they describe registry
+GPU guessing, popup consent, first-model-only testing or outstanding license
+clearance. Current controls are in installer/wizard.iss, included by the generator.
+Catalog names, notes, Best for, consent and decimal sizes come from messages.py
+and the Model Manager formatter. The complete license page includes all notices;
+three buttons expose Apache/NOTICE, third-party notices and Microsoft terms.
+
+Pinned Inno 6.7.3 interfaces verified from its source/help:
+- TNewCheckListBox.ItemSubItem and ItemCaption provide the shared model details.
+- CreateCallback/SetTimer keep operations asynchronous; no busy UI wait loop.
+- CreateProcessW uses a 68-byte Win32 STARTUPINFO and four-DWORD PROCESS_INFORMATION.
+  Children start suspended and join a nested kill-on-close Job Object before resume.
+- Vulkan properties are read with the fixed Vulkan 1.0 prefix. Physical integrated
+  and discrete types only; software implementations are rejected. The existing
+  ggml C exports initialize and clear/synchronize 4 KiB without a model.
+- The guarded Dusty probe child has a five-second deadline; Setup bounds its
+  supervising process to seven seconds. Default Small remains usable throughout.
+- LicenseMemo uses UTF8Decode for generated UTF-8 notices. An array expression
+  must not start a script line: Inno's section scanner treats it as a section.
+- ReviewOnly is a separate compile define, not a production command-line bypass.
+  It disables installation and downloads, uses the real native page controls,
+  and shows explicit synthetic progress/error/uninstall-size states for review.
+  The review artifact upload is downstream of license and installed acceptance.
+
+Full installer download-event attribution, clean-machine acceptance, final tags,
+version mapping and release automation remain separate M5 work after page review.
+
+---
+
 # Installer prework (M5 draft only)
 
 ## Reproduce on disposable Windows CI

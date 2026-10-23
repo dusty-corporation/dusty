@@ -681,3 +681,18 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - WFP harness now exercises the model-free probe under the same blocked images
   and zero-event requirement. Review executable is a CI artifact only, gated
   after license/installed acceptance, and cannot install or download.
+
+
+### M5 Step B source verification and first compilation
+
+- Full local source at 775289b: 245 passed/1 expected skip in 198.01 s,
+  94.6% coverage. Current focused generator regression also passes (3 tests).
+- CI 40015931598 / 40016359782 reached native compilation after passing source,
+  bundle PE/license/GUI/WFP gates, then rejected a leading array expression as
+  an Inno section. c1993b4 fixes the parser layout and adds a negative regression.
+- The shared-description regression then caught missing Voice detection details;
+  03aa70c adds the always-included Voice detection row text and size. No test
+  was removed or weakened. Those intermediate failing runs are not acceptance.
+- Standalone diagnostic passed on desktop with both PowerShell 7 and Windows
+  PowerShell 5.1. Production guarded entry returned real_gpu_found=true too.
+- Current native compile/review artifact and PNG captures remain pending CI.
