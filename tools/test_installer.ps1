@@ -77,13 +77,7 @@ try {
     Install-App
     Complete-InstallerAudit $audit $Installer $work
 } finally { Stop-InstallerAudit $audit }
-& (Join-Path $repo '.venv/Scripts/python.exe') (Join-Path $PSScriptRoot 'check_installed_payload.py') $install --output (Join-Path $work 'installed-files.json')
-if ($LASTEXITCODE -ne 0) { throw 'Installed file inventory failed' }
 Save-UserState
-& (Join-Path $PSScriptRoot 'test_network_isolation.ps1') -Bundle $install -InstalledModels
-if ($LASTEXITCODE -ne 0) { throw 'Installed WFP self-test failed' }
-& (Join-Path $repo '.venv/Scripts/python.exe') (Join-Path $PSScriptRoot 'check_pe_imports.py') (Join-Path $install 'dusty') --native (Join-Path $install 'bin') --output (Join-Path $work 'installed-pe.json')
-if ($LASTEXITCODE -ne 0) { throw 'Installed PE import gate failed' }
 $models = @(Get-ChildItem -LiteralPath (Join-Path $data 'models') -Filter '*.bin' | ForEach-Object { @{name=$_.Name;hash=(Get-FileHash -LiteralPath $_.FullName).Hash;time=$_.LastWriteTimeUtc.Ticks} })
 $rule = 'Dusty-Installer-Upgrade-' + [guid]::NewGuid().ToString('N')
 $Installer = $currentInstaller
@@ -96,6 +90,13 @@ foreach ($model in $models) {
     if ((Get-FileHash -LiteralPath $file.FullName).Hash -ne $model.hash -or $file.LastWriteTimeUtc.Ticks -ne $model.time) { throw 'Upgrade did not preserve verified model' }
 }
 Assert-Output
+# Audit the new version after upgrade, not the preceding draft's different bytes.
+& (Join-Path $repo '.venv/Scripts/python.exe') (Join-Path $PSScriptRoot 'check_installed_payload.py') $install --output (Join-Path $work 'installed-files.json')
+if ($LASTEXITCODE -ne 0) { throw 'Installed file inventory failed' }
+& (Join-Path $PSScriptRoot 'test_network_isolation.ps1') -Bundle $install -InstalledModels
+if ($LASTEXITCODE -ne 0) { throw 'Installed WFP self-test failed' }
+& (Join-Path $repo '.venv/Scripts/python.exe') (Join-Path $PSScriptRoot 'check_pe_imports.py') (Join-Path $install 'dusty') --native (Join-Path $install 'bin') --output (Join-Path $work 'installed-pe.json')
+if ($LASTEXITCODE -ne 0) { throw 'Installed PE import gate failed' }
 Uninstall-App 'no'
 Assert-Output
 if (Test-Path -LiteralPath (Join-Path $install 'dusty/dusty.exe')) { throw 'Uninstall left app executable' }
