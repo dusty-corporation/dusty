@@ -149,3 +149,18 @@ No further implementation or tests were started after the Owner requested this c
   counts. Local tests use only TLS loopback; Windows firewall changes remain CI-only.
 - Next: obtain real CI WFP evidence, complete screenshots and full M4 gates,
   then sync/reverify M5. Installer drafts are separately authorized only after that.
+
+### M4 acceptance evidence, 2026-10-23
+
+- Full local suite: 149 passed, 1 CI-only skip in 169.01 s; strict-package coverage
+  94.2% (core 93.7%, export 98.5%, models 94.4%, queue 93.0%, privacy 95.2%).
+- Ruff, format (98 files), mypy (58 source files) and all three policy checks passed.
+- CI run 39909561630 at 01bcc73: checks and offline both green, including the real
+  public-release integration and calibrated Model Manager download WFP scenario.
+- Download WFP: GUI 0 connection events; downloader 4 allowed, 0 blocked;
+  positive control blocked event present. Model and voice detection verified,
+  consent confirmed, guard installed. Redacted artifact: m4-download-audit.
+- Added reproducible synthetic M4 screenshots: 19 states x two themes x two
+  scales = 76 PNGs. Visually checked main prompt, dark manager/progress and
+  150% consent; upload to the new draft release is next.
+- Remaining: draft screenshot upload, report, M5 rebase and packaged acceptance.

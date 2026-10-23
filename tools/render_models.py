@@ -1,0 +1,186 @@
+"""Render synthetic M4 model-management states without downloading any files."""
+
+import argparse
+import os
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def render(output: Path, theme: str) -> None:
+    from dusty.privacy.network_guard import install_guard
+
+    install_guard()
+    from PySide6.QtGui import QFont, QRawFont
+    from PySide6.QtWidgets import QApplication
+
+    from dusty.app import messages as M
+    from dusty.app.dialogs import TextDialog
+    from dusty.app.model_manager import DownloadDialog, ModelManager, ModelWorker, model_name
+    from dusty.app.theme import apply_theme
+    from dusty.app.window import MainWindow
+    from dusty.app.workers import Prepared
+    from dusty.core import Job
+    from dusty.runtime_paths import RuntimePaths
+
+    app = QApplication([])
+    apply_theme(app, theme)
+    if not QRawFont.fromFont(QFont("Segoe UI", 10)).supportsCharacter("A"):
+        raise RuntimeError("Screenshot font is unavailable")
+    output.mkdir(parents=True, exist_ok=True)
+    paths = RuntimePaths(
+        ROOT / "build/bin", output / "models", ROOT / "resources", output / "state"
+    )
+    window = MainWindow(paths, interactive=False)
+    window.apply_prepared(
+        Prepared((), False, {"schema_version": 1, "theme": theme}, vad_installed=False)
+    )
+    window.output_dir = None
+
+    def capture(widget, name: str) -> None:
+        widget.show()
+        app.processEvents()
+        if not widget.grab().save(str(output / (name + ".png"))):
+            raise RuntimeError("Screenshot save failed")
+
+    window._refresh()
+    capture(window, "01-no-models-no-output")
+    window.output_dir = Path("C:/Transcripts")
+    window.model.set_jobs([Job(Path("C:/Recordings/Lecture.wav"), duration_sec=900)])
+    window._refresh()
+    capture(window, "02-no-models-start-hint")
+    statuses = {key: "not_installed" for key in window.registry.manifest.models}
+    statuses["tiny"] = statuses["silero-vad"] = "installed"
+    window._models_changed(statuses)
+    capture(window, "03-recommended-download-prompt")
+    statuses["small"] = "installed"
+    window._models_changed(statuses)
+    capture(window, "04-recommendation-now-installed")
+    window.options_dialog.show()
+    capture(window.options_dialog, "05-options-and-model-manager-entry")
+    window.options_dialog.hide()
+
+    manager = ModelManager(
+        window.registry, paths, window, selected=lambda: "small", recommended="small"
+    )
+    manager.show()
+    deadline = time.monotonic() + 10
+    while (not manager.workers or manager.busy) and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(0.01)
+    if manager.busy or not manager.workers:
+        raise RuntimeError("Initial local model scan did not finish")
+
+    def manager_capture(name: str) -> None:
+        manager._refresh()
+        manager.free_space.setText(M.FREE_SPACE.format(gb=42))
+        capture(manager, name)
+
+    manager_capture("06-all-not-installed")
+    manager.statuses.update(statuses)
+    manager.statuses["medium"] = "damaged"
+    manager.table.selectRow(manager.ids.index("medium"))
+    manager_capture("07-damaged-download-again")
+    manager.table.selectRow(manager.ids.index("small"))
+    manager_capture("08-selected-model-delete-protected")
+    manager.table.selectRow(manager.ids.index("tiny"))
+    manager_capture("09-other-model-delete-enabled")
+    confirm = TextDialog(
+        M.DELETE_TITLE, (M.DELETE_CONFIRM.format(name=model_name("tiny")),), manager
+    )
+    confirm.button(M.CANCEL, confirm.reject, default=True)
+    confirm.button(M.DELETE_MODEL, confirm.accept)
+    capture(confirm, "10-delete-confirmation")
+    confirm.hide()
+    consent = DownloadDialog(("large-v3-turbo-q8_0", "silero-vad"), window.registry, manager)
+    capture(consent, "11-download-consent-with-voice-detection")
+    consent.hide()
+
+    # A never-started worker models busy controls; no child or network is created.
+    manager.worker = ModelWorker(window.registry, paths, action="download")
+    manager.table.selectRow(manager.ids.index("large-v3-turbo-q8_0"))
+    total = window.registry.manifest.models["large-v3-turbo-q8_0"].size_bytes
+    manager.progress.show()
+    manager._progress(
+        {"id": "large-v3-turbo-q8_0", "event": "downloading", "bytes": total // 3, "total": total}
+    )
+    manager_capture("12-downloading-progress-and-cancel")
+    manager._progress(
+        {"id": "large-v3-turbo-q8_0", "event": "verifying", "bytes": total, "total": total}
+    )
+    manager_capture("13-verifying-download")
+    manager.worker = None
+    for error, name in (
+        ("CANCELLED", "14-cancelled-resumable"),
+        ("MISMATCH", "15-hash-mismatch-damaged"),
+        ("DISK_FULL", "16-disk-space-error"),
+        ("NETWORK", "17-connection-error"),
+    ):
+        manager.statuses["large-v3-turbo-q8_0"] = (
+            "damaged" if error == "MISMATCH" else "not_installed"
+        )
+        manager._result({"statuses": manager.statuses, "error": error, "action": "download"})
+        manager_capture(name)
+    manager.statuses = {key: "not_installed" for key in manager.ids}
+    manager.statuses["tiny"] = "installed"
+    manager.table.selectRow(manager.ids.index("tiny"))
+    manager_capture("18-last-model-delete-protected")
+    manager.worker = ModelWorker(window.registry, paths, action="verify")
+    manager.message.setText(M.VERIFYING_MODELS)
+    manager_capture("19-verify-all-busy")
+    manager.worker = None
+    manager.close()
+    window.ready = False
+    window.close()
+    app.processEvents()
+    print(f"Rendered {len(list(output.glob('*.png')))} M4 screens")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, default=ROOT / "build/m4-screenshots")
+    parser.add_argument("--child", action="store_true")
+    parser.add_argument("--theme", choices=("light", "dark"), default="light")
+    args = parser.parse_args()
+    output = args.output.resolve()
+    if not output.is_relative_to(ROOT):
+        raise ValueError("Screenshot output must stay inside the repository")
+    if args.child:
+        render(output, args.theme)
+        return
+    for theme in ("light", "dark"):
+        for scale in ("1", "1.5"):
+            subprocess.run(
+                [
+                    sys.executable,
+                    __file__,
+                    "--child",
+                    "--output",
+                    str(output / f"{theme}-{scale}"),
+                    "--theme",
+                    theme,
+                ],
+                env=dict(
+                    os.environ,
+                    QT_QPA_PLATFORM="offscreen",
+                    QT_SCALE_FACTOR=scale,
+                    LOCALAPPDATA=str(output / "appdata"),
+                ),
+                cwd=ROOT,
+                check=True,
+            )
+    (output / "README.md").write_text(
+        "# M4 UI review\n\n19 synthetic states in both themes at 100% and 150% (76 PNGs).\n"
+        "No user content or real downloads; 42 GB free-space value is synthetic.\n"
+        "The actual Model Manager and main-window widgets are rendered with PySide6 6.9.2.\n"
+        "Client areas only: native title bars and hover tooltips are not in widget grabs.\n"
+        "Reproduce: uv run python tools/render_models.py\n",
+        encoding="utf-8",
+    )
+
+
+if __name__ == "__main__":
+    main()
