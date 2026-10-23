@@ -19,7 +19,7 @@ def render(output: Path, theme: str) -> None:
 
     from dusty.app import messages as M
     from dusty.app.dialogs import TextDialog
-    from dusty.app.model_manager import DownloadDialog, ModelManager, ModelWorker, model_name
+    from dusty.app.model_manager import DownloadDialog, ModelManager, ModelWorker
     from dusty.app.theme import apply_theme
     from dusty.app.window import MainWindow
     from dusty.app.workers import Prepared
@@ -55,7 +55,7 @@ def render(output: Path, theme: str) -> None:
     statuses = {key: "not_installed" for key in window.registry.manifest.models}
     statuses["tiny"] = statuses["silero-vad"] = "installed"
     window._models_changed(statuses)
-    capture(window, "03-recommended-download-prompt")
+    capture(window, "03-installed-no-recommendation-prompt")
     statuses["small"] = "installed"
     window._models_changed(statuses)
     capture(window, "04-recommendation-now-installed")
@@ -85,12 +85,10 @@ def render(output: Path, theme: str) -> None:
     manager.table.selectRow(manager.ids.index("medium"))
     manager_capture("07-damaged-download-again")
     manager.table.selectRow(manager.ids.index("small"))
-    manager_capture("08-selected-model-delete-protected")
+    manager_capture("08-selected-model-delete-enabled")
     manager.table.selectRow(manager.ids.index("tiny"))
     manager_capture("09-other-model-delete-enabled")
-    confirm = TextDialog(
-        M.DELETE_TITLE, (M.DELETE_CONFIRM.format(name=model_name("tiny")),), manager
-    )
+    confirm = TextDialog(M.DELETE_TITLE, (M.DELETE_SELECTED,), manager)
     confirm.button(M.CANCEL, confirm.reject, default=True)
     confirm.button(M.DELETE_MODEL, confirm.accept)
     capture(confirm, "10-delete-confirmation")
@@ -114,7 +112,7 @@ def render(output: Path, theme: str) -> None:
     manager_capture("13-verifying-download")
     manager.worker = None
     for error, name in (
-        ("CANCELLED", "14-cancelled-resumable"),
+        ("CANCELLED", "14-cancelled-part-removed"),
         ("MISMATCH", "15-hash-mismatch-damaged"),
         ("DISK_FULL", "16-disk-space-error"),
         ("NETWORK", "17-connection-error"),
@@ -127,11 +125,20 @@ def render(output: Path, theme: str) -> None:
     manager.statuses = {key: "not_installed" for key in manager.ids}
     manager.statuses["tiny"] = "installed"
     manager.table.selectRow(manager.ids.index("tiny"))
-    manager_capture("18-last-model-delete-protected")
+    manager_capture("18-last-model-delete-enabled")
     manager.worker = ModelWorker(window.registry, paths, action="verify")
     manager.message.setText(M.VERIFYING_MODELS)
     manager_capture("19-verify-all-busy")
     manager.worker = None
+    window._models_changed({**statuses, "tiny": "not_installed"})
+    window.model_choice.setCurrentIndex(-1)
+    window._refresh()
+    capture(window, "20-no-selected-model-options-prompt")
+    voice_confirm = TextDialog(M.DELETE_TITLE, (M.DELETE_VOICE,), manager)
+    voice_confirm.button(M.CANCEL, voice_confirm.reject, default=True)
+    voice_confirm.button(M.DELETE_MODEL, voice_confirm.accept)
+    capture(voice_confirm, "21-voice-deletion-confirmation")
+    voice_confirm.hide()
     manager.close()
     window.ready = False
     window.close()
@@ -173,7 +180,7 @@ def main() -> None:
                 check=True,
             )
     (output / "README.md").write_text(
-        "# M4 UI review\n\n19 synthetic states in both themes at 100% and 150% (76 PNGs).\n"
+        "# M4 UI review\n\n21 synthetic states in both themes at 100% and 150% (84 PNGs).\n"
         "No user content or real downloads; 42 GB free-space value is synthetic.\n"
         "The actual Model Manager and main-window widgets are rendered with PySide6 6.9.2.\n"
         "Client areas only: native title bars and hover tooltips are not in widget grabs.\n"

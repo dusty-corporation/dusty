@@ -155,6 +155,9 @@ def _validate_settings(settings: dict[str, Any]) -> None:
     names = {field.name for field in fields(BatchOptions)}
     preferences: dict[str, Any] = {"model_id": "tiny", "output_dir": Path(".")}
     preferences.update({key: value for key, value in settings.items() if key in names})
+    if preferences["model_id"] is None:
+        # A cleared GUI choice is valid storage, but never a runnable batch.
+        preferences["model_id"] = "tiny"
     if "output_dir" in settings:
         if not isinstance(settings["output_dir"], str) or not settings["output_dir"]:
             raise ValueError("Invalid saved output directory")

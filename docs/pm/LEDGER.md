@@ -389,3 +389,48 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Unsigned installer only as CI artifact 12516525534, 34618916 bytes, SHA-256 4ea17b60157593ff989c06e9d6d8e745b8e25ba61f0bb77478706ee58e1a2720. No release upload. Full notice/SBOM/runtime/installed acceptance audit artifact 12516480610.
 - Source, packaged and installed processing WFP events 0. Source/packaged Manager GUI 0, fetch allowed 4/blocked 0. Silent install with Tiny/VAD, verified upgrade while downloader blocked, both uninstall choices and unchanged output sentinel pass. Owner clean-VM checklist remains.
 - M5-interim-7.md supersedes historical interim-6 stop instructions. No outstanding containment or license decision for ISSUE-018/019. Final report-only branch heads will be checked in CI before handoff; no new product work begins.
+
+
+### M4 Owner review corrections, 2026-10-23 (in progress)
+
+- Owner ThinkPad packaged app: all six M4 checks passed functionally.
+- M5 ISSUE-018/019 checkpoint is clean and pushed at 0e70c31; its final CI
+  39987858934 is green. M6 checkpoint ca1ac2a is pushed; CI 39987905683
+  timed out in the real CPU self-test entry-point guard test (30 seconds).
+  No failure was hidden; carry-forward acceptance will rerun the complete suite.
+- PM replaced earlier cancel/resume UX: Ctrl+C/cooperative cancellation removes
+  the partial. GUI cancellation also removes it after joining the terminated
+  downloader child. Existing Range integrity checks remain for network failures.
+- Focused downloader/GUI first run: 57 passed, three GUI expectations needed
+  adjustment for the new labels/style and missing recovery-model selection.
+  After correcting recovery behavior, focused GUI/manager/theme tests: 42 passed.
+- In progress: unrestricted model deletion, explicit cleared Options selection,
+  three-line catalog/Best for column, consent, contextual prompts and disabled
+  styling. Next: full suite/coverage, fresh screenshots, CI, carry to M5/M6,
+  packaged PE/license/GUI/WFP gates and final M4 report.
+
+
+### M4 UX implementation checkpoint
+
+- 42 focused manager/GUI/theme tests pass, including selected/last/VAD deletion,
+  no automatic replacement, persisted empty selection, automatic first download
+  selection, cancel/close cleanup and rendered disabled controls in both themes.
+- Ruff, format, mypy and all three source policy gates pass on eb0bd60.
+- New renderer covers 21 states in both themes at 100%/150% (84 PNGs).
+  Visually inspected the dark catalog, 150% no-selection main screen and consent.
+  Empty Options now also has an explicit placeholder and plain summary wording.
+- Full M4 coverage run and CI 39989976906 are running. Screenshot upload and
+  packaging carry-forward acceptance remain pending; no final-green claim yet.
+
+
+### M4 full source verification and screenshot upload
+
+- Full local suite/coverage: 153 passed, 1 CI-only skip in 170.71 seconds;
+  94.2% total (core 93.7%, export 98.5%, models 94.4%, queue 93.0%, privacy 95.2%).
+- Final empty-selection persistence test passes. Disabled render coverage now
+  also paints real table/scroll-panel content; all four theme tests pass.
+- New draft asset m4-screenshots-6fa2c7b.zip: 84 PNGs, 4,119,558 bytes,
+  SHA-256 14ed33cc1566c9e1e7b35c3fa70f48161313abe603b5f0c769fcab12da876c82.
+  Upload verified; release remains draft and older asset is retained.
+- Next: final code CI, forward merges to M5/M6, full source verification on each,
+  packaged build/PE/license/GUI/WFP acceptance, report refresh. No PR opened.
