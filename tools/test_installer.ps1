@@ -55,7 +55,20 @@ function Save-UserState {
     @{schema_version=1;output_dir=$outputs} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $data 'settings.json') -Encoding utf8NoBOM
 }
 
-Install-App
+. (Join-Path $PSScriptRoot 'installer_download_audit.ps1')
+$audit = Start-InstallerAudit $work
+try {
+    # Explicitly cover the production bounded probe even in unattended setup,
+    # where Windows may skip displaying the Choose model page.
+    $probeResult = Join-Path $work 'probe.json'
+    $p = Start-Process -FilePath (Join-Path $repo 'dist/Dusty/dusty/dusty.exe') -ArgumentList @('--probe-vulkan','--out',('"'+$probeResult+'"')) -PassThru -WindowStyle Hidden
+    if (-not $p.WaitForExit(15000)) { $p.Kill($true); throw 'Installed acceptance probe exceeded outer deadline' }
+    if ($p.ExitCode -notin @(0,1) -or -not (Test-Path -LiteralPath $probeResult)) { throw 'Probe did not return a supported result' }
+    $probe = Get-Content -LiteralPath $probeResult -Raw | ConvertFrom-Json
+    if ($probe.real_gpu_found -isnot [bool]) { throw 'Probe evidence missing boolean result' }
+    Install-App
+    Complete-InstallerAudit $audit $Installer $work
+} finally { Stop-InstallerAudit $audit }
 & (Join-Path $repo '.venv/Scripts/python.exe') (Join-Path $PSScriptRoot 'check_installed_payload.py') $install --output (Join-Path $work 'installed-files.json')
 if ($LASTEXITCODE -ne 0) { throw 'Installed file inventory failed' }
 Save-UserState
