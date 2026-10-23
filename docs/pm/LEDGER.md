@@ -465,3 +465,17 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   in the empty-model state, and removal of cancelled/closed download partials.
 - No installer behavior or exact HIPAA wording changed. Next: final source and
   packaged acceptance, M4 report with current artifacts and WFP counts.
+### CI render portability correction
+
+- M4 CI 39990574645 and M5 CI 39990617610 failed the new exact-foreground-pixel
+  assertion for disabled combo boxes in both themes. Actual CI glyph pixels
+  were antialiased (for example #636c67 instead of #606964), not missing text.
+- Corrected on M4: light disabled ink is darker (#535c57). The visual regression
+  requires a rendered glyph near the intended gray AND actual contrast >=4.5:1;
+  backgrounds/borders cannot satisfy the glyph color bound. Exact gray border
+  assertions remain. All four theme tests pass locally. No product assertion,
+  policy check or test was disabled; failing CI prevented packaging uploads.
+- Synchronized M6 local full suite: 202 passed/1 CI-only skip, 186.83 seconds,
+  94.5% strict coverage. Its docs match the new M4 cancellation/deletion policy.
+- Next: push this render correction through M5/M6, final CI and packaged gates,
+  regenerate the screenshots for the stronger light disabled ink, update report.
