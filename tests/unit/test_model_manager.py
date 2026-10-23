@@ -400,6 +400,8 @@ def test_selected_last_and_voice_deletion_clear_choice_without_replacement(
     wait_done(dialog, qtbot)
     assert M.DELETE_SELECTED in confirmations
     assert view.model_choice.currentIndex() == -1 and view.installed == ("small",)
+    assert view.model_choice.placeholderText() == M.CHOOSE_MODEL
+    assert M.NO_MODEL_SELECTED in view.choices_summary.text()
     assert view.start_hint.text() == M.CHOOSE_MODEL
     assert view.choose_model_button.isVisible() and not view.start_button.isEnabled()
     assert view.status.text() != M.READY

@@ -207,3 +207,16 @@ No further implementation or tests were started after the Owner requested this c
   three-line catalog/Best for column, consent, contextual prompts and disabled
   styling. Next: full suite/coverage, fresh screenshots, CI, carry to M5/M6,
   packaged PE/license/GUI/WFP gates and final M4 report.
+
+
+### M4 UX implementation checkpoint
+
+- 42 focused manager/GUI/theme tests pass, including selected/last/VAD deletion,
+  no automatic replacement, persisted empty selection, automatic first download
+  selection, cancel/close cleanup and rendered disabled controls in both themes.
+- Ruff, format, mypy and all three source policy gates pass on eb0bd60.
+- New renderer covers 21 states in both themes at 100%/150% (84 PNGs).
+  Visually inspected the dark catalog, 150% no-selection main screen and consent.
+  Empty Options now also has an explicit placeholder and plain summary wording.
+- Full M4 coverage run and CI 39989976906 are running. Screenshot upload and
+  packaging carry-forward acceptance remain pending; no final-green claim yet.

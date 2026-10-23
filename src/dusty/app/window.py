@@ -275,6 +275,7 @@ class MainWindow(QMainWindow):
         options = QWidget()
         form = QFormLayout(options)
         self.model_choice = QComboBox()
+        self.model_choice.setPlaceholderText(M.CHOOSE_MODEL)
         self.model_choice.setAccessibleName(M.MODEL)
         form.addRow(M.MODEL, self.model_choice)
         self.model_details = self._label(M.EMPTY_CELL)
@@ -821,7 +822,7 @@ class MainWindow(QMainWindow):
         self.warning.setVisible(bool(warning))
         self.choices_summary.setText(
             M.CHOICES_SUMMARY.format(
-                model=M.MODEL_NAMES.get(model_id, M.PREPARING),
+                model=M.MODEL_NAMES.get(model_id, M.NO_MODEL_SELECTED),
                 language=self.language_choice.currentText(),
                 device=M.DEVICES["cpu" if cpu_only else "vulkan"],
             )
