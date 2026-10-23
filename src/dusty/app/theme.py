@@ -23,7 +23,7 @@ CONTROL_COLORS = {
 }
 
 DISABLED_COLORS = {
-    "light": {"ink": "#606964", "background": "#e4e8e5", "edge": "#8b958f"},
+    "light": {"ink": "#535c57", "background": "#e4e8e5", "edge": "#8b958f"},
     "dark": {"ink": "#a8b0ab", "background": "#25302b", "edge": "#69766f"},
 }
 
