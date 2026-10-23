@@ -188,3 +188,4 @@ No further implementation or tests were started after the Owner requested this c
   are documented; no PR, merge, publishing or repository-setting change.
 - No em/en dash matches in the report's recorded repository search; no SPEC or
   Owner brief edit. Final M5 rebase carries this documentation only, then stop.
+| M5-S1 | M5 | Authorized packaging-only spike | doing | m5-packaging-spike based on m4-downloader 11354ce; PM scope in briefs/M5-packaging-spike-authorization.md; shared COLLECT experiment | - |
