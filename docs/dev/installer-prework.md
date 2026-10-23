@@ -61,7 +61,30 @@ is included in the installer terms and installed licenses folder.
   The offline cleanup entry point deletes only recognized data and empty folders;
   unknown files, saved outputs and source recordings are preserved. Corrupt
   metadata, links/junctions or overlapping output paths fail closed with a message.
-  Silent uninstall is deliberately refused until it can express the same choice.
+  Silent uninstall requires an explicit /REMOVEMODELS=yes or /REMOVEMODELS=no.
+
+## Silent acceptance and inventory
+
+The pinned ISHelp/isx.xml confirms NextButtonClick is called on silent installs,
+but rejection automatically exits only before installation starts. Silent
+post-install work therefore runs in CurStepChanged(ssPostInstall) and raises on
+failure. /ACCEPTTERMS=yes and /ALLOWDOWNLOAD=yes are mandatory explicit consent;
+/SUPPRESSMSGBOXES alone never approves either. Models still verify before reuse.
+
+tools/test_installer.ps1 runs only in disposable CI, with no pre-existing user
+data. Inno resolves {localappdata} through Windows known folders, not an environment
+override. The harness checks both roots agree, uses a repository-local install
+directory and checks real runner-user model/settings cleanup. It never runs on
+the Owner desktop. The installed-app WFP audit reuses its downloaded models.
+
+tools/inventory_installer.py extends the actual app inventory and validated
+CycloneDX 1.6 SBOM with the wrapper and separately identified static components.
+packaging/licenses/inno/components.json pins source hashes and retained notices.
+This source-level attribution cannot prove the Delphi RTL/VCL binary's provenance;
+ISSUE-018 records that limit and additional license findings. Installer artifacts
+remain gated. Compression=lzma2 does not embed isunzlib/isbunzip DLLs; the pinned
+Compiler.SetupCompiler.pas selects those only for zip/bzip compression. No optional
+external 7-Zip library is selected. ISCC, ISPP and compression helpers are build-only.
 
 ## Child lifetime and outstanding acceptance
 

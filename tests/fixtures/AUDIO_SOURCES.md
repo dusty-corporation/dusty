@@ -84,3 +84,19 @@ No Owner recording is stored here.
 - Reproduce with the pinned minimal FFmpeg: `ffmpeg -nostdin -hide_banner
   -loglevel error -protocol_whitelist file,pipe -i <source.mp3> -ss 107 -t 15
   -ac 1 -ar 16000 -c:a pcm_s16le rubaiyat-fa.wav`.
+
+## M6 desktop long recording (generated, not committed)
+
+The existing public-domain LibriVox Swineherd fixture is decoded to 16 kHz mono
+PCM and repeated 12 times by tools/bench/long-recording.ps1. The result is
+7920.1875 seconds (2 h 12 min 0.1875 s). This is a repeated-content endurance
+test, not two hours of unique speech or an accuracy benchmark. Both generated
+WAVs, app profile and transcripts stay in ignored build/m6-long-recording/.
+
+Original recording source:
+https://archive.org/download/thelittlematchgirl_1311_librivox/thelittlematchgirl_02_andersen_128kb.mp3
+Collection: https://librivox.org/the-little-match-girl-by-hans-christian-andersen/ .
+Reader Phil Chenevert; Hans Christian Andersen text and LibriVox recording are
+public domain in the USA. No private recording is used. The harness verifies
+model hashes, invokes the packaged app's shared coordinator with VAD enabled,
+and records sampled process-tree working set and temporary work-file bytes.
