@@ -10,6 +10,44 @@ from pathlib import Path
 
 import pefile  # type: ignore[import-untyped]
 
+from tools.check_pe_imports import imports
+
+PINS = Path(__file__).resolve().parents[1] / "packaging/microsoft-runtime.json"
+
+
+def runtime_pins() -> dict:
+    return json.loads(PINS.read_text(encoding="utf-8"))
+
+
+def file_version(path: Path) -> str:
+    with pefile.PE(str(path)) as executable:
+        fixed = executable.VS_FIXEDFILEINFO[0]
+        return ".".join(
+            str(value)
+            for value in (
+                fixed.FileVersionMS >> 16,
+                fixed.FileVersionMS & 0xFFFF,
+                fixed.FileVersionLS >> 16,
+                fixed.FileVersionLS & 0xFFFF,
+            )
+        )
+
+
+def crt_importers(bundle: Path) -> dict[str, list[str]]:
+    """Normal and delayed imports, scoped to each executable family."""
+    result: dict[str, list[str]] = {}
+    for path in sorted(bundle.rglob("*")):
+        if not path.is_file():
+            continue
+        with path.open("rb") as stream:
+            if stream.read(2) != b"MZ":
+                continue
+        relative = path.relative_to(bundle)
+        for name in imports(path):
+            if is_crt(name) and name != path.name.lower():
+                result.setdefault(relative.parts[0] + "/" + name, []).append(relative.as_posix())
+    return result
+
 
 def sha256(path: Path) -> str:
     with path.open("rb") as stream:
@@ -68,68 +106,63 @@ def find_redist() -> Path:
 def valid_source(source: Path, redist: Path) -> bool:
     source, redist = source.resolve(), redist.resolve()
     relative = source.relative_to(redist)
-    parts = [part.lower() for part in relative.parts]
     return (
         redist.name.lower() == "redist"
         and redist.parent.name.lower() == "vc"
-        and "x64" in parts
-        and "microsoft.vc143.crt" in parts
-        and "debug_nonredist" not in parts
-        and "onecore" not in parts
-        and is_crt(source.name)
+        and relative.parent.as_posix().lower() == runtime_pins()["folder"].lower()
+        and source.name.lower() in runtime_pins()["files"]
     )
 
 
 def stage(bundle: Path, redist: Path, receipt: Path) -> None:
-    records = []
+    records: list[dict] = []
+    pins = runtime_pins()
+    # Prune unreferenced CRTs before recording imports, then inspect the final set.
+    importers = crt_importers(bundle)
+    for target in sorted(bundle.rglob("*")):
+        if target.is_file() and is_crt(target.name):
+            key = target.relative_to(bundle).parts[0] + "/" + target.name.lower()
+            if key not in importers:
+                target.unlink()
     for target in sorted(bundle.rglob("*")):
         if not target.is_file():
             continue
         if is_crt(target.name):
-            candidates = [path for path in redist.rglob(target.name) if valid_source(path, redist)]
-            if not candidates:
-                # Windows filenames are case insensitive; glob matching can vary by host.
-                candidates = [
-                    path
-                    for path in redist.rglob("*.dll")
-                    if path.name.lower() == target.name.lower() and valid_source(path, redist)
-                ]
-            if not candidates:
-                raise ValueError(f"Required CRT not found in release VC/redist: {target.name}")
-            source = max(
-                candidates,
-                key=lambda path: tuple(
-                    int(part) for part in path.relative_to(redist).parts[1].split(".")
-                ),
-            )
-            if not microsoft_vendor(source):
-                raise ValueError("Release CRT source is not a Microsoft PE")
+            source = redist / pins["folder"] / target.name.lower()
+            if not source.is_file() or not valid_source(source, redist):
+                raise ValueError(
+                    f"Required pinned CRT not found in release VC/redist: {target.name}"
+                )
+            pin = pins["files"][target.name.lower()]
+            if not microsoft_vendor(source) or sha256(source) != pin["sha256"]:
+                raise ValueError(f"CRT source differs from Owner's pinned copy: {target.name}")
+            if file_version(source) != pin["version"]:
+                raise ValueError(f"CRT source version changed: {target.name}")
+            collected_sha, collected_version = sha256(target), file_version(target)
             shutil.copyfile(source, target)
             if sha256(source) != sha256(target):
                 raise ValueError("CRT copy changed bytes")
-            with pefile.PE(str(source)) as executable:
-                fixed = executable.VS_FIXEDFILEINFO[0]
-                version = ".".join(
-                    str(part)
-                    for part in (
-                        fixed.FileVersionMS >> 16,
-                        fixed.FileVersionMS & 0xFFFF,
-                        fixed.FileVersionLS >> 16,
-                        fixed.FileVersionLS & 0xFFFF,
-                    )
-                )
             records.append(
                 {
                     "path": target.relative_to(bundle).as_posix(),
                     "source": str(source.resolve()),
                     "redist": str(redist.resolve()),
                     "sha256": sha256(target),
-                    "version": version,
+                    "version": file_version(source),
+                    "collected_sha256": collected_sha,
+                    "collected_version": collected_version,
                     "basis": "VS2022-Community-section-4/Visual-C++-Runtime-Files",
                 }
             )
         elif microsoft_vendor(target):
             raise ValueError(f"Unapproved Microsoft PE in bundle: {target.relative_to(bundle)}")
+    importers = crt_importers(bundle)
+    names = {item["path"].split("/")[0] + "/" + Path(item["path"]).name.lower() for item in records}
+    if importers.keys() != names:
+        raise ValueError("Bundled CRT filenames do not exactly cover the PE imports")
+    for item in records:
+        key = item["path"].split("/")[0] + "/" + Path(item["path"]).name.lower()
+        item["imported_by"] = importers[key]
     receipt.parent.mkdir(parents=True, exist_ok=True)
     receipt.write_text(json.dumps({"files": records}, indent=2), encoding="utf-8", newline="\n")
-    print(f"Verified {len(records)} app-local CRT copies against VS 2022 VC/redist")
+    print(f"Verified {len(records)} required app-local CRT copies against Owner's pinned VC/redist")

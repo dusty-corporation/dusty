@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from tools import check_licenses, check_pe_imports
+from tools import check_licenses, check_pe_imports, stage_microsoft_runtime
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -42,11 +42,11 @@ def test_platform_pin_contract(tmp_path: Path, monkeypatch, mutation: str) -> No
 
 
 @pytest.fixture
-def crt_evidence(tmp_path: Path):
+def crt_evidence(tmp_path: Path, monkeypatch):
     bundle = tmp_path / "bundle"
     bundle.mkdir()
     redist = tmp_path / "VisualStudio/VC/redist"
-    source = redist / "MSVC/14.44.35211/x64/Microsoft.VC143.CRT/vcruntime140.dll"
+    source = redist / "MSVC/14.44.35112/x64/Microsoft.VC143.CRT/vcruntime140.dll"
     source.parent.mkdir(parents=True)
     shutil.copyfile(Path(sys.base_prefix) / "vcruntime140.dll", source)
     target = bundle / "vcruntime140.dll"
@@ -59,13 +59,25 @@ def crt_evidence(tmp_path: Path):
         "source": str(source),
         "redist": str(redist),
         "sha256": hashlib.sha256(target.read_bytes()).hexdigest(),
+        "version": stage_microsoft_runtime.file_version(target),
+        "imported_by": ["app.exe"],
         "basis": "VS2022-Community-section-4/Visual-C++-Runtime-Files",
     }
+    pinned = {
+        "files": {"vcruntime140.dll": {"sha256": record["sha256"], "version": record["version"]}}
+    }
+    monkeypatch.setattr(check_licenses, "runtime_pins", lambda: pinned)
+    monkeypatch.setattr(
+        check_licenses,
+        "crt_importers",
+        lambda _: {"vcruntime140.dll/vcruntime140.dll": ["app.exe"]},
+    )
     return bundle, {"microsoft_runtime": [record]}
 
 
 @pytest.mark.parametrize(
-    "mutation", ["none", "bytes", "receipt", "debug", "pdf", "terms", "other-ms"]
+    "mutation",
+    ["none", "bytes", "receipt", "debug", "pdf", "terms", "other-ms", "unused", "owner-pin"],
 )
 def test_microsoft_exception_requires_evidence(crt_evidence, mutation: str) -> None:
     bundle, inventory = crt_evidence
@@ -84,6 +96,10 @@ def test_microsoft_exception_requires_evidence(crt_evidence, mutation: str) -> N
         (bundle / "licenses/microsoft/community-2022.pdf").write_bytes(b"changed")
     elif mutation == "terms":
         (bundle / "THIRD_PARTY_NOTICES.md").write_text("terms omitted", encoding="utf-8")
+    elif mutation == "unused":
+        record["imported_by"] = []
+    elif mutation == "owner-pin":
+        record["version"] = "0.0.0.0"
     elif mutation == "other-ms":
         shutil.copyfile(bundle / "vcruntime140.dll", bundle / "unapproved-microsoft.dll")
     actual = {
@@ -102,3 +118,46 @@ def test_runtime_license_and_test_only_docx() -> None:
     assert {"python-docx", "lxml"}.isdisjoint(check_licenses.runtime_packages(lock))
     pins = json.loads(check_pe_imports.PINS.read_text(encoding="utf-8"))
     assert set(pins) == {"python312.dll", "qt6core.dll"}
+
+
+def test_crt_staging_prunes_unused_and_records_replacement(tmp_path: Path, monkeypatch) -> None:
+    redist = tmp_path / "VS/VC/redist"
+    source = redist / "MSVC/14.44.35112/x64/Microsoft.VC143.CRT/vcruntime140.dll"
+    source.parent.mkdir(parents=True)
+    shutil.copyfile(Path(sys.base_prefix) / "vcruntime140.dll", source)
+    bundle = tmp_path / "bundle"
+    folder = bundle / "dusty"
+    folder.mkdir(parents=True)
+    target = folder / source.name
+    shutil.copyfile(source, target)
+    shutil.copyfile(source, folder / "vcruntime140_threads.dll")
+    (folder / "app.exe").write_bytes(b"MZ-test")
+    monkeypatch.setattr(stage_microsoft_runtime, "microsoft_vendor", lambda p: p.suffix == ".dll")
+    monkeypatch.setattr(
+        stage_microsoft_runtime,
+        "imports",
+        lambda p: ({"vcruntime140.dll": []} if p.name == "app.exe" else {}),
+    )
+    pin_sha = stage_microsoft_runtime.sha256(source)
+    monkeypatch.setattr(
+        stage_microsoft_runtime,
+        "runtime_pins",
+        lambda: {
+            "folder": "MSVC/14.44.35112/x64/Microsoft.VC143.CRT",
+            "files": {
+                source.name: {
+                    "sha256": pin_sha,
+                    "version": stage_microsoft_runtime.file_version(source),
+                }
+            },
+        },
+    )
+    receipt = tmp_path / "receipt.json"
+    stage_microsoft_runtime.stage(bundle, redist, receipt)
+    assert not (folder / "vcruntime140_threads.dll").exists()
+    record = json.loads(receipt.read_text())["files"][0]
+    assert record["imported_by"] == ["dusty/app.exe"]
+    assert record["collected_sha256"] == record["sha256"]
+    source.write_bytes(source.read_bytes() + b"changed")
+    with pytest.raises(ValueError, match="Owner's pinned copy"):
+        stage_microsoft_runtime.stage(bundle, redist, receipt)

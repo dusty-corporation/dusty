@@ -11,6 +11,11 @@ from pathlib import Path
 
 import pefile  # type: ignore[import-untyped]
 
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from tools.stage_microsoft_runtime import crt_importers, runtime_pins, valid_source  # noqa: E402
+
 MSVC_LICENSE = "LicenseRef-Microsoft-Visual-Cpp-Runtime"
 ALLOWED = {
     "MIT",
@@ -161,6 +166,8 @@ def check_microsoft(bundle: Path, inventory: dict, actual: dict[str, Path]) -> l
     findings = []
     receipts = {item["path"]: item for item in inventory.get("microsoft_runtime", [])}
     expected = set()
+    pins = runtime_pins()
+    importers = crt_importers(bundle)
     for relative, path in actual.items():
         is_crt = any(
             fnmatch.fnmatchcase(path.name.lower(), pattern)
@@ -188,17 +195,17 @@ def check_microsoft(bundle: Path, inventory: dict, actual: dict[str, Path]) -> l
             findings.append(f"Missing VC/redist provenance: {relative}")
             continue
         source, redist = Path(record["source"]).resolve(), Path(record["redist"]).resolve()
-        parts = [part.lower() for part in source.relative_to(redist).parts]
         valid = (
-            redist.name.lower() == "redist"
-            and redist.parent.name.lower() == "vc"
-            and "x64" in parts
-            and "microsoft.vc143.crt" in parts
-            and "debug_nonredist" not in parts
-            and "onecore" not in parts
+            valid_source(source, redist)
             and source.name.lower() == path.name.lower()
             and record["basis"] == "VS2022-Community-section-4/Visual-C++-Runtime-Files"
         )
+        key = Path(relative).parts[0] + "/" + path.name.lower()
+        if not importers.get(key) or record.get("imported_by") != importers.get(key):
+            findings.append(f"CRT lacks verified importing PEs: {relative}")
+        pin = pins["files"].get(path.name.lower(), {})
+        if record.get("sha256") != pin.get("sha256") or record.get("version") != pin.get("version"):
+            findings.append(f"CRT differs from Owner's pinned hash/version: {relative}")
         with source.open("rb") as stream:
             source_sha = hashlib.file_digest(stream, "sha256").hexdigest()
         with path.open("rb") as stream:
