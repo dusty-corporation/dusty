@@ -22,7 +22,6 @@ OutputBaseFilename=Dusty-@@VERSION@@-draft-unsigned
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern light
-DialogFontSize=10
 WizardSizePercent=150,150
 #ifdef ReviewOnly
 Uninstallable=no
@@ -33,6 +32,9 @@ SetupIconFile=@@BUNDLE@@\resources\icons\dusty.ico
 SignedUninstaller=no
 CloseApplications=yes
 RestartApplications=no
+
+[LangOptions]
+DialogFontSize=10
 
 [Tasks]
 Name: desktopicon; Description: "{cm:DesktopShortcut}"; Flags: unchecked

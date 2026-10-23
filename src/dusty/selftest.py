@@ -15,6 +15,7 @@ def run_selftest(
     """Return a reason code, with no transcript or path in diagnostics."""
     work = paths.user_dir / "work/selftest"
     work.mkdir(parents=True, exist_ok=True)
+    attempted = "cpu"
     try:
         registry = ModelRegistry(
             load_manifest(paths.resources_dir / "models.json"), paths.models_dir
@@ -42,6 +43,7 @@ def run_selftest(
             elif backend == "vulkan":
                 return "GPU_ERROR"
         for selected in backends:
+            attempted = selected
             result = run_whisper(
                 paths.bin_dir / selected / "whisper-cli.exe",
                 model,
@@ -58,11 +60,11 @@ def run_selftest(
             )
             text = " ".join(segment.text.lower() for segment in result.transcript.segments)
             if "fellow americans" not in text or "your country" not in text:
-                return "TEXT_MISMATCH"
+                return "TEXT_MISMATCH_" + attempted.upper() if once else "TEXT_MISMATCH"
         logging.getLogger("dusty").info("status=done")
         return "OK_" + backends[0].upper() if once else "OK"
     except Exception:
         logging.getLogger("dusty").info("status=failed")
-        return "SELFTEST_FAILED"
+        return "SELFTEST_FAILED_" + attempted.upper() if once else "SELFTEST_FAILED"
     finally:
         shutil.rmtree(work)

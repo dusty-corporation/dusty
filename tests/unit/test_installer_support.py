@@ -100,7 +100,10 @@ def test_finish_without_preserves_settings_and_verified_files(tmp_path, monkeypa
 
 
 @pytest.mark.parametrize("gpu,backend", [(True, "auto"), (False, "auto"), (True, "cpu")])
-def test_installer_selftest_runs_selected_backend_exactly_once(tmp_path, monkeypatch, gpu, backend):
+@pytest.mark.parametrize("failed", [False, True])
+def test_installer_selftest_runs_selected_backend_exactly_once(
+    tmp_path, monkeypatch, gpu, backend, failed
+):
     from dusty import selftest
 
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
@@ -122,13 +125,16 @@ def test_installer_selftest_runs_selected_backend_exactly_once(tmp_path, monkeyp
         calls.append(kwargs["backend"])
         return SimpleNamespace(
             transcript=SimpleNamespace(
-                segments=[SimpleNamespace(text="fellow americans your country")]
+                segments=[
+                    SimpleNamespace(text="incorrect" if failed else "fellow americans your country")
+                ]
             )
         )
 
     monkeypatch.setattr(selftest, "run_whisper", whisper)
     expected = "vulkan" if gpu and backend == "auto" else "cpu"
     assert (
-        selftest.run_selftest(paths, "tiny", backend=backend, once=True) == "OK_" + expected.upper()
+        selftest.run_selftest(paths, "tiny", backend=backend, once=True)
+        == ("TEXT_MISMATCH_" if failed else "OK_") + expected.upper()
     )
     assert calls == [expected]

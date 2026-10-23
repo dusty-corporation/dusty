@@ -696,3 +696,15 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Standalone diagnostic passed on desktop with both PowerShell 7 and Windows
   PowerShell 5.1. Production guarded entry returned real_gpu_found=true too.
 - Current native compile/review artifact and PNG captures remain pending CI.
+
+### M5 resumed session: Owner probe and CI repair
+
+- Owner ThinkPad Iris Xe model-free probe PASS on 2026-10-23:
+  `{"real_gpu_found":true,"model_file_opened":false}`. No model file opened.
+- CI 40021423809 failed native compilation: `Unrecognized [Setup] section
+  directive "DialogFontSize"`. Pinned Inno 6.7.3 source lists it under
+  LangOptions; moved the directive there and added a generator regression.
+- Pending self-test correctness fix now identifies the actual attempted backend;
+  Retry on CPU is offered only for a failed Vulkan test, never a failed CPU test.
+- Focused installer support/generation: 24 passed; ruff and mypy pass (73 files).
+  Screenshots and final CI still pending; release pipeline and VM checklist next.

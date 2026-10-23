@@ -575,6 +575,10 @@ INSTALLER.update(
     ),
     DownloadWorking="Downloading %1",
     CheckingModel="Checking %1",
+    GpuSelfTestFailed=(
+        "The graphics transcription test did not pass. Retry, try the processor, "
+        "or finish without choosing a model."
+    ),
     InstallFiles="Installing Dusty",
     InstallFilesHelp="Copying the application files to this computer.",
     DownloadFailed=(
@@ -584,8 +588,7 @@ INSTALLER.update(
     SelfTestWorking="Testing %1 (%2 of %3)",
     CpuTestWorking="Testing %1 on the processor (CPU fallback)",
     SelfTestFailed=(
-        "The transcription test did not finish. You can retry, try the "
-        "processor, or finish without choosing a model."
+        "The transcription test did not pass. Retry, or finish without choosing a model."
     ),
     Retry="Retry",
     RetryCpu="Retry on CPU",
@@ -611,6 +614,6 @@ INSTALLER.update(
     ),
 )
 INSTALLER_TEST_WARNING = (
-    "The installer transcription test did not finish. Choose a "
+    "The installer transcription test did not pass. Choose a "
     "transcription model in Options, or run the self-test again."
 )

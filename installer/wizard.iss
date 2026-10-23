@@ -67,13 +67,19 @@ begin
 end;
 
 procedure Failure(IsTest: Boolean);
+var S: AnsiString; GpuFailed: Boolean;
 begin
   Busy := False;
   TestFailed := TestFailed or IsTest;
-  if IsTest then Phase.Caption := CustomMessage('SelfTestFailed')
+  GpuFailed := False;
+  if IsTest then
+    if LoadStringFromFile(ExpandConstant('{tmp}\test-result.txt'), S) then
+      GpuFailed := Pos('VULKAN', String(S)) > 0;
+  if IsTest and GpuFailed then Phase.Caption := CustomMessage('GpuSelfTestFailed')
+  else if IsTest then Phase.Caption := CustomMessage('SelfTestFailed')
   else Phase.Caption := CustomMessage('DownloadFailed');
   RetryButton.Visible := True;
-  CpuButton.Visible := IsTest;
+  CpuButton.Visible := IsTest and GpuFailed;
   WithoutButton.Visible := True;
   WizardForm.NextButton.Enabled := False;
 end;
@@ -103,6 +109,7 @@ end;
 procedure BeginTest;
 var Id, Name, Backend: String;
 begin
+  DeleteFile(ExpandConstant('{tmp}\test-result.txt'));
   if Stage = 4 then begin
     Id := ModelIds[Smallest]; Name := ModelNames[Smallest]; Backend := 'cpu';
     Phase.Caption := FmtMessage(CustomMessage('CpuTestWorking'), [Name]);
@@ -348,7 +355,9 @@ begin
     if Mode = 'download' then begin Phase.Caption := FmtMessage(CustomMessage('DownloadWorking'), [ModelNames[1]]); Meter.Position := 32; end;
     if Mode = 'test' then begin Phase.Caption := FmtMessage(CustomMessage('SelfTestWorking'), [ModelNames[1], '2', '3']); Meter.Position := 70; end;
     if Mode = 'failure' then Failure(False);
-    if Mode = 'test-failure' then Failure(True);
+    if Mode = 'test-failure' then begin
+      Failure(True); Phase.Caption := CustomMessage('GpuSelfTestFailed'); CpuButton.Visible := True;
+    end;
     if Mode = 'complete' then FinishReady;
     if Mode = 'without' then begin Phase.Caption := CustomMessage('FinishedWithout'); WithoutButton.Visible := False; end;
     if Mode = 'uninstall' then begin

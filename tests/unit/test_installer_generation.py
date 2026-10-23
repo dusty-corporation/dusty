@@ -50,6 +50,8 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     text = script.read_text(encoding="utf-8")
     assert "@@" not in text
     assert "PrivilegesRequired=lowest" in text
+    assert "[LangOptions]\nDialogFontSize=10" in text
+    assert "DialogFontSize" not in text.split("[LangOptions]", 1)[0]
     assert "DownloadTemporaryFile(" not in text
     assert "UninstallDelete" not in text  # No broad recursive deletion of user data.
     assert "--installer-test --backend " in text
