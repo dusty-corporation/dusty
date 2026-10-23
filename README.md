@@ -11,8 +11,9 @@ unchanged. No Python installation is needed for the packaged app.
 **Current status:** prerelease engineering review. M3 is accepted; Model Manager
 and downloader work are on m4-downloader. Packaging and installer acceptance are
 on m5-packaging-spike; these draft user docs are on m6-docs. There is no accepted
-V1 installer yet. Installer static-license review ISSUE-018 and clean-machine
-checks remain open. CI artifacts and draft releases are not published releases.
+V1 installer yet. Installer license reviews are resolved; clean-machine checks
+and Owner acceptance remain open. CI artifacts and draft releases are not
+published releases.
 
 ## Start here
 
@@ -45,8 +46,8 @@ SHA256SUMS.txt. Replace the placeholder with your downloaded file:
 Get-FileHash -LiteralPath '.\Dusty-your-build.exe' -Algorithm SHA256
 ```
 
-Stop if the hashes differ. The Owner controls installer publication; currently
-only reviewed app bundles and installer audit metadata are available.
+Stop if the hashes differ. The Owner controls installer publication. Unsigned
+installer builds are CI review artifacts, not published releases.
 
 ## License
 
