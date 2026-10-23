@@ -39,7 +39,14 @@ def tls(tmp_path, monkeypatch):
         return real_dns(host, *args, **kwargs)
 
     monkeypatch.setattr(socket, "getaddrinfo", loopback_only)
-    state = SimpleNamespace(mode="normal", requests=[], interrupted=False)
+    state = SimpleNamespace(
+        mode="normal",
+        requests=[],
+        interrupted=False,
+        release=threading.Event(),
+        waiting=threading.Event(),
+        finished=threading.Event(),
+    )
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):
@@ -73,12 +80,17 @@ def tls(tmp_path, monkeypatch):
                 content = content[: len(content) // 2]
             try:
                 for start in range(0, len(content), CHUNK):
+                    if state.mode == "hold" and start == 2 * CHUNK:
+                        state.waiting.set()
+                        state.release.wait(timeout=30)
                     self.wfile.write(content[start : start + CHUNK])
                     self.wfile.flush()
                     if state.mode == "slow":
                         time.sleep(0.08)
             except (BrokenPipeError, ConnectionResetError, ssl.SSLError):
                 pass
+            finally:
+                state.finished.set()
 
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -106,6 +118,7 @@ def tls(tmp_path, monkeypatch):
     state.asset = load_asset(state.manifest, "tiny", state.client.policy)
     state.dest = tmp_path / "downloads"
     yield state
+    state.release.set()
     server.shutdown()
     server.server_close()
     thread.join(timeout=2)

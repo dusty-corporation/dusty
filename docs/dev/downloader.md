@@ -83,8 +83,20 @@ Range handling without touching a final file before verification. Ctrl+C and
 cooperative termination close handles and remove the partial. When the GUI
 cancels or closes, it first terminates and joins the child Job Object, then
 removes that manifest-owned partial. The next user attempt starts fresh.
-An abrupt OS crash cannot execute cleanup; an orphan prefix is still never
-published without full size and hash verification.
+A crash or Task Manager forced termination cannot execute Python cleanup. Per
+PM decision (2026-10-23), retain recent crash prefixes and resume them with Range;
+the complete size and SHA-256 still gate publication. GUI startup preparation
+removes regular .part files in the models folder whose last-modified time is
+more than seven days old. Exactly seven days old and recent prefixes are kept.
+Cleanup does not recurse or follow file links/reparse points. Busy files that
+cannot be removed are left for a later startup. Normal Cancel and normal window
+close still delete the active partial immediately after joining the child.
+
+The forced-GUI-termination regression holds a real local HTTPS response mid-body,
+then calls Windows TerminateProcess on the actual GUI interpreter PID. Its
+Job Object must kill the real downloader before the server releases more data:
+no Python cleanup markers, no final model, and a non-growing recent partial.
+A restart retains that prefix, resumes by Range and verifies the final file.
 
 Environment proxies are deliberately not followed: their destinations are not
 part of this allowlist. Explicit proxy support is outside this limited scope.
