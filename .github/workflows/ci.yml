@@ -125,6 +125,8 @@ jobs:
         run: ./tests/offline/test_wfp_events.ps1
       - name: Packaged Tiny download and calibrated WFP self-test
         run: ./tools/test_network_isolation.ps1 -Bundle dist/Dusty
+      - name: Packaged Model Manager download and separate process WFP counts
+        run: ./tools/test_model_download_isolation.ps1 -Bundle dist/Dusty
       - name: Audit every bundled file against the license allowlist
         run: |
           uv run python tools/check_licenses.py --bundle dist/Dusty --inventory build/packaging/audit/inventory.json 2>&1 | Tee-Object -FilePath build/packaging/audit/license-findings.txt
@@ -139,4 +141,6 @@ jobs:
             build/packaging-build.log
             build/pyinstaller/dusty/warn-dusty.txt
             build/offline-*/summary.json
+            build/model-download-*/summary.json
+            build/model-download-*/download-result.json
           if-no-files-found: error

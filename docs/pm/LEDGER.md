@@ -199,3 +199,14 @@ No further implementation or tests were started after the Owner requested this c
 | M5-S9 | M5 | Community redistribution evidence and protective terms | done | Owner exact regular CRT pins f266d98; 11 needed copies/5 names byte-identical locally and in CI, hashes/versions/importers and 3 original PDFs retained, EULA included, future installer checklist updated | ISSUE-013 and ISSUE-016 resolved |
 
 | M5-S10 | M5 | Carry final accepted M3 UI polish | doing | M3 merged locally into spike; GUI smoke profile now declares its explicit synthetic output folder so it tests the main window under the folder-based Welcome rule; final CI pending | - |
+
+### M5 resync with M4, 2026-10-23
+
+- Rebased all 19 packaging commits onto M4 aab3ec6; conflicts were limited to
+  additive workflow jobs and ledger task states. Retained current M4 evidence,
+  accepted M5 issue resolutions, split runtime paths, stdlib DOCX and exact PE/CRT pins.
+- Feature rebase d402a38 pushed with explicit lease; no main changes or PR.
+- Added the packaged Model Manager download WFP scenario to packaging CI and
+  artifact evidence. Full rebased suite running; bundle/PE/license/GUI/WFP results pending.
+- M4 screenshot draft uploaded: m4-screenshots-aab3ec6.zip, 76 PNGs, 3605372 bytes,
+  SHA-256 1d7d30ea6d3e83824502f77dcfd22122f5178be8f2800ebeccdebcb15594e7f6.
