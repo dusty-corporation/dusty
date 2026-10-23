@@ -173,6 +173,7 @@ var
 begin
   Result := False;
   RemoveModels := True;
+#ifndef ReviewOnly
   if UninstallSilent then begin
     if ExpandConstant('{param:REMOVEMODELS|}') = 'yes' then begin
       RemoveModels := True;
@@ -183,6 +184,7 @@ begin
     end;
     Exit;
   end;
+#endif
   Page := CreateCustomForm(ScaleX(480), ScaleY(180), False, False);
   try
     Page.Caption := 'Dusty';
