@@ -461,3 +461,14 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   94.5% strict coverage. Its docs match the new M4 cancellation/deletion policy.
 - Next: push this render correction through M5/M6, final CI and packaged gates,
   regenerate the screenshots for the stronger light disabled ink, update report.
+
+
+### Final screenshot selection contrast
+
+- Visual inspection of the regenerated light 150% manager found three-line
+  cell labels using normal ink on the selected row. Corrected to use Qt's
+  highlighted text role for every selected line and restore normal ink on others.
+- Two light/dark selection regressions pass, requiring >=4.5:1 against the
+  selection background for each row; the corrected 150% light capture is legible.
+- Screenshot upload will use this last product revision, retaining earlier
+  draft assets. Complete final source/packaged CI remains required.

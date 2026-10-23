@@ -7,6 +7,7 @@ import time
 from collections.abc import Callable
 
 from PySide6.QtCore import Qt, QThread, QTimer, Signal, Slot
+from PySide6.QtGui import QPalette
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QDialog,
@@ -309,6 +310,15 @@ class ModelManager(TextDialog):
         key = self.selected_id()
         state = self.statuses[key]
         for row, item in enumerate(self.ids):
+            content = self.table.cellWidget(row, 0)
+            if content is not None:
+                role = (
+                    QPalette.ColorRole.HighlightedText
+                    if row == self.table.currentRow()
+                    else QPalette.ColorRole.WindowText
+                )
+                for label in content.findChildren(QLabel):
+                    label.setForegroundRole(role)
             cell = self.table.item(row, 3)
             assert cell is not None
             cell.setText(M.MODEL_STATUSES[self.statuses[item]])
