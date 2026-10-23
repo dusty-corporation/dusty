@@ -9,7 +9,7 @@ from pathlib import Path
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from tools.check_licenses import allowed_license  # noqa: E402
+from tools.check_licenses import allowed_license, check_bundle  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -60,6 +60,15 @@ def main() -> int:
         findings.append("Installer-wide inventory missing")
     else:
         findings.extend(check_inventory(inventory))
+        record = json.loads(inventory.read_text(encoding="utf-8"))["installer"]
+        image = inventory.parent / "output" / record["name"]
+        with image.open("rb") as stream:
+            sha = hashlib.file_digest(stream, "sha256").hexdigest()
+        if sha != record["sha256"] or image.stat().st_size != record["bytes"]:
+            findings.append("Compiled installer differs from its inventory")
+        findings.extend(
+            check_bundle(ROOT / "dist/Dusty", ROOT / "build/packaging/audit/inventory.json")
+        )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text("\n".join(findings) + "\n", encoding="utf-8", newline="\n")
     print("\n".join(findings) if findings else "Installer license check passed")
