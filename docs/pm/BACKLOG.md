@@ -1,5 +1,7 @@
 # Backlog
 
+- Bundle size: after packaging and licensing decisions, evaluate harmless unused translations and exporter helpers collected by upstream hooks; retain the verified CPU variants and required runtime behavior.
+
 Record optional improvements, optimizations, and work outside V1 here instead of implementing them during the current milestone. Each item has one line of context. Inclusion does not approve a dependency, architecture change, or prohibited feature. Required acceptance work remains in `LEDGER.md`.
 
 ## Optimizations and optional improvements

@@ -47,6 +47,7 @@ def test_model_host_checker_scans_required_inputs_and_exempts_spec_adrs(tmp_path
         tmp_path / ".github" / "workflows" / "ci.yml",
         tmp_path / "native" / "bad.sh",
         tmp_path / "modelpipeline" / "bad.py",
+        tmp_path / "packaging" / "bad.spec",
     ]
     for path in paths:
         path.parent.mkdir(parents=True, exist_ok=True)

@@ -65,6 +65,8 @@ draft notices and measurements are in `build/packaging/audit`. They describe the
 actual collected files with hashes, native member pins and embedded module origins,
 not every installed development distribution. Original available license texts
 are copied into the audit bundle; missing/transitive texts remain findings.
+Separate `warn-gui.txt` and `warn-fetch.txt` preserve both analyses: PyInstaller
+otherwise overwrites the shared spec's warning file with the second analysis.
 
 ## Packaged WFP test
 

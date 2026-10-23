@@ -1,8 +1,12 @@
 # PyInstaller 6.16.0: two onedir executables, one shared COLLECT.
 import json
+import shutil
 from pathlib import Path
 
 root = Path(SPECPATH).parent
+audit = root / 'build/packaging'
+warnings = audit / 'audit'
+warnings.mkdir(parents=True, exist_ok=True)
 qt = root / '.venv/Lib/site-packages/PySide6'
 unused_qt = [
     'PySide6.' + path.stem for path in qt.glob('Qt*.pyd')
@@ -16,10 +20,12 @@ gui = Analysis(
               'PySide6.QtWebEngineQuick'],
     runtime_hooks=[str(root / 'packaging/runtime_guard.py')],
 )
+shutil.copyfile(WARNFILE, warnings / 'warn-gui.txt')
 fetch = Analysis(
     [str(root / 'packaging/fetch_entry.py')], pathex=[str(root / 'src')],
     excludes=['dusty', 'PySide6', 'shiboken6'],
 )
+shutil.copyfile(WARNFILE, warnings / 'warn-fetch.txt')
 # Fail rather than silently choose a different binary at the same destination.
 destinations = {}
 for destination, source, kind in [*gui.binaries, *gui.datas, *fetch.binaries, *fetch.datas]:
@@ -28,7 +34,6 @@ for destination, source, kind in [*gui.binaries, *gui.datas, *fetch.binaries, *f
     if previous and Path(previous).read_bytes() != Path(source).read_bytes():
         raise ValueError('Conflicting shared runtime destination: ' + destination)
     destinations[key] = source
-audit = root / 'build/packaging'
 audit.mkdir(parents=True, exist_ok=True)
 (audit / 'analysis.json').write_text(json.dumps({
     'pure': [*gui.pure, *fetch.pure],
