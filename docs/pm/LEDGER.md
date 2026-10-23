@@ -630,7 +630,7 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 | M5-01C | M5 | Revalidate port source | done | 224 passed/1 expected skip, 94.6%; lint/format 127 files, mypy 70, all source policies pass; CI 40011781091 checks/offline/upload regression green | - |
 | M5-01D | M5 | Model-free Vulkan investigation | done | Pinned engine-v2 API: 1 device/init/4 KiB buffer clear+sync, no model, exit 0 in 0.468 s; docs/dev/m5-model-free-vulkan-check.md | - |
 | M5-01E | M5 | Gap analysis and decision inventory | done | M5-interim-1.md covers all six SPEC tasks/three acceptance items, brief gaps, six recommended decisions, Phase 2 estimate | - |
-| M5-02 | M5 | Finish installer and release acceptance | blocked | Explicit Phase 1 stop; await PM reply to interim-1 before any Phase 2 implementation/test tags | PM decisions |
+| M5-02 | M5 | Finish installer and release acceptance | doing | PM decisions approved; pages implemented/review uploaded, .2 draft green, final true-upgrade receipt run 40041736046 pending; Owner VM and PM page review remain | Manual acceptance |
 
 - Original spike interim-1 retained as M5-packaging-spike-interim-1.md; other
   spike reports remain historical, with no old passing run claimed for this head.
@@ -807,3 +807,27 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   overlap; native uninstall form captured. Review-only folder description's
   name placeholder is corrected in 895e199 and awaits its native artifact.
 - M5 report now records .2 asset hashes/counts and outstanding manual acceptance.
+
+### M5 page delivery and final acceptance receipts
+
+- Step B review delivered: draft m5-screenshots asset
+  m5-installer-pages-step-b-895e199-light-review.zip (7,861,054 bytes),
+  SHA-256 d09b2e4695fca10c5c0409dcee5cac70121bec5da1e8555b34c68aa57ca0578e.
+  Archive gate: 21 native PNGs + README only. Exact scale limitation is disclosed;
+  genuine 100%/150% display acceptance still needs the Owner VM. Interim 2 updated.
+- Local final pre-receipt suite b20470c: 259 passed/1 expected skip in 188.56 s,
+  94.6% coverage, offscreen configuration used in CI. Earlier isolated visible
+  Qt run printed COM diagnostic 0x8001010d but exited 0/1 test passed; this clean
+  full offscreen run did not print it. No application assertion was suppressed.
+- CI 40039950278 failed in the Qt test driver's exists/stat race after a partial
+  was removed. b20470c avoids that timer race; all cleanup/orphan assertions stay.
+- .3 draft CI passed but had two_distinct_versions=false: read-only GitHub tokens
+  cannot list draft releases. It is NOT true-upgrade acceptance evidence.
+- Automatic review rejected broadening validation/packaging to contents:write.
+  That proposal was removed, never committed. Safer cf9904e reads prior successful
+  release-workflow artifacts with contents:read/actions:read, verifies checksum,
+  and removes the token from the child environment. No repository settings changed.
+- Final .6 run 40041736046 must prove a real increasing-version upgrade, current
+  installed payload/PE/WFP, both uninstall choices, unchanged outputs and a fresh
+  CURRENT-installer download/probe audit. Asset staging now rejects missing/false
+  receipts. Focused receipt/upload regressions: 11 passed. No completion claimed.

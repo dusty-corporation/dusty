@@ -17,8 +17,18 @@ probe PASS on 2026-10-23: `{"real_gpu_found":true,"model_file_opened":false}`.
 
 Local full source: 257 passed/1 expected skip, 94.6% measured core-package
 coverage (193.37 s). Ruff/format, mypy and all three policy checks pass.
-CI 40036996425 compiled the font/layout repair; final result and screenshot
-asset are being collected in the continuing overnight session.
+CI 40036996425, 40039096810 and 40040642247 are green for the native review
+builds. [Draft screenshot release](https://github.com/dusty-corporation/dusty/releases/tag/untagged-a1e1f91641e95222b8da):
+`m5-installer-pages-step-b-895e199-light-review.zip`, 7,861,054 bytes,
+SHA-256 `d09b2e4695fca10c5c0409dcee5cac70121bec5da1e8555b34c68aa57ca0578e`.
+The archive gate passes: 21 native PNGs plus README only. Provenance per image
+is in README; no source/metadata profiles are in the ZIP.
+
+Scale limitation: host display is 175% and was not changed. A process-only
+DPI-unaware compatibility launch reports 96 effective DPI (100%), but Windows
+bitmap-scales its captured windows. Images were not resized. This is not native
+100%/150% display acceptance; the Owner's VM checklist must supply those checks.
+The bundle is ready for wording/layout review, with that explicit remaining gap.
 
 ## Pages requested for review
 
@@ -27,6 +37,7 @@ Choose model; low-RAM warning; install folder; shortcuts; ready; file installati
 inline consent; download; per-model test progress; download failure; graphics-test
 failure with CPU retry; successful checks; Finish without acknowledgment;
 normal finish; finish after failed model setup; uninstall model-size checkbox.
+An extra scrolled model-list capture shows Tiny's complete note.
 
 The review executable uses real Inno controls with installation disabled.
 Progress/error/low-memory and uninstall-size examples are synthetic review states,

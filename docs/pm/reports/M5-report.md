@@ -34,7 +34,7 @@ remain outstanding. No PR, merge or published release is authorized or created.
 | Acceptance: draft CI release with artifacts | Done | v0.5.0-m5.2, run 40038534920, all gates and draft creation passed; five assets. |
 | Acceptance: SPEC 11.6 fresh VM | Owner needed | Final M5-checklist.md, standard user, all cases and expected results. |
 | Acceptance: installer size | Done | First successful .2 installer: 34,670,296 bytes (34.67 MB); final .3 size will be recorded separately. |
-| Brief: all pages light 100%/150% | Partial | Native review build and PNG-only archive gate; capture/upload in progress, Owner guest 150% check still needed. |
+| Brief: all pages light 100%/150% | Partial | 21 native light PNGs plus README uploaded; archive gate passes. Effective 96 DPI with host bitmap scaling disclosed; genuine 100%/150% VM display checks remain Owner actions. |
 | Brief: Setup/probe/GUI/fetch WFP | Done | .2 corrected audit: Setup 0, GUI/probe 0, native 0, fetch allowed 4, blocked 0; calibrated control and negative parser pass. |
 
 ## Test results
@@ -89,6 +89,20 @@ release or installer upload. Its tag/history remain unchanged.
    The catalog does not yet show per-file damaged/re-download badges. Confirm
    whether the plain Checking/Downloading phase is sufficient, or request this
    as a page change. Recommendation: show a clear per-model repair status.
+
+## Installer screenshots
+
+[Draft page review](https://github.com/dusty-corporation/dusty/releases/tag/untagged-a1e1f91641e95222b8da):
+`m5-installer-pages-step-b-895e199-light-review.zip`, 7,861,054 bytes,
+SHA-256 `d09b2e4695fca10c5c0409dcee5cac70121bec5da1e8555b34c68aa57ca0578e`.
+21 real native-control PNGs plus README, archive gate passed. License views,
+catalog, folder, shortcut, consent, progress, retry/CPU retry, incomplete setup,
+finish and uninstall states included. Synthetic states are labeled, not treated
+as functional failure-injection results. CI provenance: 40036996425 / 40039096810 /
+40040642247. Process-effective 96 DPI was used on an unchanged 175% desktop;
+Windows bitmap scaling remains visible. Actual 100%/150% display acceptance is
+not claimed and stays on the Owner checklist. No further wording/layout changes
+are planned before the PM reviews M5-interim-2.md.
 
 ## Self-review
 
