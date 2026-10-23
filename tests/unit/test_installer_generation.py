@@ -76,6 +76,8 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     assert without.index("CleanupActivePartial;") < without.index("Stage := 5;")
     cancel = text.split("procedure CancelButtonClick", 1)[1].split("function GetCustom", 1)[0]
     assert cancel.count("CleanupActivePartial;") == 2  # Busy and failed/idle normal close.
+    failure = text.split("procedure Failure", 1)[1].split("function CurrentId", 1)[0]
+    assert "Action.Visible := False" in failure  # Retry controls must not overlap it.
 
 
 def test_installer_rejects_tampered_catalog(tmp_path):

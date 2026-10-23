@@ -70,6 +70,7 @@ procedure Failure(IsTest: Boolean);
 var S: AnsiString; GpuFailed: Boolean;
 begin
   Busy := False;
+  Action.Visible := False;
   TestFailed := TestFailed or IsTest;
   GpuFailed := False;
   if IsTest then
@@ -127,6 +128,7 @@ end;
 procedure FinishReady;
 begin
   Busy := False; InstallationReady := True;
+  Action.Visible := False;
   Phase.Caption := CustomMessage('SetupComplete'); Meter.Position := 100;
   RetryButton.Visible := False; CpuButton.Visible := False; WithoutButton.Visible := False;
   WizardForm.NextButton.Enabled := True;
@@ -227,7 +229,7 @@ begin
   Downloads[GetArrayLength(Selected)] := -1;
   Busy := True; DownloadIndex := 0; Stage := -2;
   Meter.Position := 0; Outcome.Caption := '';
-  Action.Enabled := False; WizardForm.NextButton.Enabled := False;
+  Action.Enabled := False; Action.Visible := False; WizardForm.NextButton.Enabled := False;
   RetryButton.Visible := False; CpuButton.Visible := False; WithoutButton.Visible := False;
   if not StartChild(ExpandConstant('{app}\dusty\dusty.exe'), '--installer-prepare') then Failure(False);
 end;
@@ -272,7 +274,7 @@ begin
     Busy := False; FinishedWithout := True; Phase.Caption := CustomMessage('FinishedWithout');
     WizardForm.NextButton.Enabled := True;
   end;
-  Action.Enabled := False; RetryButton.Visible := False;
+  Action.Enabled := False; Action.Visible := False; RetryButton.Visible := False;
   CpuButton.Visible := False; WithoutButton.Visible := False;
 end;
 
@@ -364,6 +366,7 @@ begin
     Mode := ExpandConstant('{param:REVIEWSTATE|consent}');
     Phase.Caption := CustomMessage('ReviewOnly');
     Action.Enabled := False; WizardForm.NextButton.Enabled := False;
+    if Mode <> 'consent' then Action.Visible := False;
     if Mode = 'download' then begin Phase.Caption := FmtMessage(CustomMessage('DownloadWorking'), [ModelNames[1]]); Meter.Position := 32; end;
     if Mode = 'test' then begin Phase.Caption := FmtMessage(CustomMessage('SelfTestWorking'), [ModelNames[1], '2', '3']); Meter.Position := 70; end;
     if Mode = 'failure' then Failure(False);
