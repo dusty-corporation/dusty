@@ -88,3 +88,40 @@ def test_upgrade_audits_the_new_installed_version():
     final = after.split("# A two-version upgrade", 1)[1]
     assert final.index("Install-App") < final.index("Complete-InstallerAudit")
     assert "current_installer_fresh_download_wfp='passed'" in final
+
+
+def test_final_release_rejects_missing_or_false_upgrade_and_wfp_evidence(tmp_path):
+    source = tmp_path / "input/installer"
+    (source / "output").mkdir(parents=True)
+    for name in ("output/setup.exe", "THIRD_PARTY_NOTICES.md", "installer-jedi-source.zip"):
+        (source / name).write_bytes(b"gated asset")
+    (source / "sbom.cdx.json").write_text('{"bomFormat":"CycloneDX"}')
+    with pytest.raises(ValueError, match="receipts"):
+        stage(tmp_path / "input", tmp_path / "missing", "v0.5.0-m5.6")
+    (source / "acceptance").mkdir()
+    receipt = {
+        "two_distinct_versions": True,
+        "current_installer_fresh_download_wfp": "passed",
+        "installed_wfp": "passed",
+        "upgrade_models_preserved_with_downloader_blocked": "passed",
+        "uninstall_keep_models": "passed",
+        "uninstall_remove_models": "passed",
+        "user_outputs_unchanged": True,
+    }
+    audit = dict(installer=0, gui=0, native=0, fetch_allowed=4, fetch_blocked=0)
+    audit["calibration_blocked_event"] = True
+    summary = source / "acceptance/summary.json"
+    wfp = source / "acceptance/download-wfp.json"
+    summary.write_text(json.dumps(receipt))
+    wfp.write_text(json.dumps(audit))
+    stage(tmp_path / "input", tmp_path / "accepted", "v0.5.0-m5.6")
+    receipt["two_distinct_versions"] = False
+    summary.write_text(json.dumps(receipt))
+    with pytest.raises(ValueError, match="true upgrade"):
+        stage(tmp_path / "input", tmp_path / "same-build", "v0.5.0-m5.6")
+    receipt["two_distinct_versions"] = True
+    summary.write_text(json.dumps(receipt))
+    audit["installer"] = 1
+    wfp.write_text(json.dumps(audit))
+    with pytest.raises(ValueError, match="zero-event"):
+        stage(tmp_path / "input", tmp_path / "network-event", "v0.5.0-m5.6")

@@ -24,6 +24,28 @@ def stage(source: Path, output: Path, tag: str) -> None:
     _, display, _ = versions(tag)
     if output.exists():
         raise ValueError("Release staging destination must be new")
+    if int(tag.rsplit(".", 1)[1]) >= 3:
+        summaries = list(source.rglob("acceptance/summary.json"))
+        audits = list(source.rglob("acceptance/download-wfp.json"))
+        if len(summaries) != 1 or len(audits) != 1:
+            raise ValueError("Release lacks installed upgrade/download acceptance receipts")
+        receipt = json.loads(summaries[0].read_text(encoding="utf-8-sig"))
+        audit = json.loads(audits[0].read_text(encoding="utf-8-sig"))
+        if (
+            receipt.get("two_distinct_versions") is not True
+            or receipt.get("current_installer_fresh_download_wfp") != "passed"
+            or receipt.get("installed_wfp") != "passed"
+            or receipt.get("upgrade_models_preserved_with_downloader_blocked") != "passed"
+            or receipt.get("uninstall_keep_models") != "passed"
+            or receipt.get("uninstall_remove_models") != "passed"
+            or receipt.get("user_outputs_unchanged") is not True
+            or audit.get("calibration_blocked_event") is not True
+            or any(audit.get(key) != 0 for key in ("installer", "gui", "native", "fetch_blocked"))
+            or audit.get("fetch_allowed", 0) < 1
+        ):
+            raise ValueError(
+                "Release requires a true upgrade and current-installer zero-event audit"
+            )
     selected = {}
     for pattern, name in (
         ("*.exe", f"Dusty-{display}-draft-unsigned.exe"),
