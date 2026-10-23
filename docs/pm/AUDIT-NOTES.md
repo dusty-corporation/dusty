@@ -24,3 +24,9 @@ promote an item to an issue if it affects correctness, privacy or licensing.
    on a standard-user VM before treating the draft as installer acceptance.
 
 7. **Installer runtime attribution:** ADR 0023 verification uses pinned upstream source/build selection and exact received runtime hashes, not a recovered linker map or independent reproducible Inno build. Audit the selected units, notice/source archive and the boundary between installer-only exceptions and the processing-app gate.
+
+- M5: the standalone PowerShell/C# hardware diagnostic and production Python
+  probe share the same checked ABI/classification rules but have separate code.
+  Audit future changes for drift; production remains the guarded Python entry.
+- M5: review-only Inno page navigation uses the production controls with synthetic
+  progress/outcomes and never installs; keep it separate from acceptance evidence.

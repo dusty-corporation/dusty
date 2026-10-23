@@ -8,7 +8,8 @@ and the Model Manager formatter. The complete license page includes all notices;
 three buttons expose Apache/NOTICE, third-party notices and Microsoft terms.
 
 Pinned Inno 6.7.3 interfaces verified from its source/help:
-- TNewCheckListBox.ItemSubItem and ItemCaption provide the shared model details.
+- TNewCheckListBox captions wrap with DT_WORDBREAK and explicit line breaks.
+  ItemSubItem is a single-line right column, so it must not contain descriptions.
 - CreateCallback/SetTimer keep operations asynchronous; no busy UI wait loop.
 - CreateProcessW uses a 68-byte Win32 STARTUPINFO and four-DWORD PROCESS_INFORMATION.
   Children start suspended and join a nested kill-on-close Job Object before resume.

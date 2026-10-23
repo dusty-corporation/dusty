@@ -284,7 +284,7 @@ begin
   SetArrayLength(ModelBytes, @@MODEL_COUNT@@);
 @@MODEL_SETUP@@
   ModelsPage.CheckListBox.OnClickCheck := @ModelsClick;
-  ModelsPage.CheckListBox.Height := ModelsPage.SurfaceHeight - ScaleY(150);
+  ModelsPage.CheckListBox.Height := ModelsPage.SurfaceHeight - ModelsPage.CheckListBox.Top - ScaleY(160);
   Notice := NewLabel(ModelsPage.Surface, 0, 40, @@VOICE_DESCRIPTION@@);
   Notice.Top := ModelsPage.CheckListBox.Top + ModelsPage.CheckListBox.Height + ScaleY(4);
   Notice := NewLabel(ModelsPage.Surface, 0, 45, '@@MODEL_REVIEW@@');
