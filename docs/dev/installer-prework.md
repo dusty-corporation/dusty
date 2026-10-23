@@ -34,6 +34,9 @@ is included in the installer terms and installed licenses folder.
 - [CreateInputOptionPage](https://jrsoftware.org/ishelp/topic_isxfunc_createinputoptionpage.htm)
   supplies the model checkboxes. Model IDs, names and sizes come from models.json;
   the manifest is not rewritten. UI wording comes from messages.py.
+- [CreateCustomForm](https://jrsoftware.org/ishelp/topic_isxfunc_createcustomform.htm)
+  requires width, height and both keep-size flags since Inno 6.6. The uninstall
+  model-choice form uses that current constructor, not the old writable-size API.
 - [Exec](https://jrsoftware.org/ishelp/topic_isxfunc_exec.htm) waits for an actual
   process exit code. The split dusty-fetch executable verifies before downloading,
   downloads/resumes through its existing allowlist and hashes, and verifies again.

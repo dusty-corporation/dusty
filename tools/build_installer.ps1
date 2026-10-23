@@ -17,6 +17,9 @@ $process = Start-Process -FilePath $bootstrap -ArgumentList @(
     '/NOICONS', '/TASKS=""', ('/DIR="' + $compilerDir + '"')
 ) -Wait -PassThru -WindowStyle Hidden
 if ($process.ExitCode -ne 0) { throw 'Pinned Inno compiler setup failed' }
+$installedLicense = (Get-Content -LiteralPath (Join-Path $compilerDir 'license.txt') -Raw).Replace("`r`n", "`n").Trim()
+$sourceLicense = (Get-Content -LiteralPath (Join-Path $repo 'packaging/licenses/inno/license.txt') -Raw).Replace("`r`n", "`n").Trim()
+if ($installedLicense -cne $sourceLicense) { throw 'Compiler binary license differs from pinned source terms' }
 $iscc = Join-Path $compilerDir 'ISCC.exe'
 # The pinned ISCC launcher resource is intentionally 0.0.0.0. Its loaded
 # compiler engine supplies the authoritative version in the compilation banner.

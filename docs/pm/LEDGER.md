@@ -272,3 +272,9 @@ No further implementation or tests were started after the Owner requested this c
   and discovery-time filesystem failures return the same redacted failure result.
   Eight focused installer tests pass. Added the stale README introduction to the
   M6 documentation backlog instead of widening this milestone's product scope.
+
+- 39914143568 reached Pascal compilation; line 260 rejected the pre-6.6
+  CreateCustomForm signature. Verified the documented four-argument 6.7.3 API,
+  updated the constructor and removed obsolete writable size properties.
+- Compiler bootstrap now also compares its installed license text with the
+  pinned source terms, in addition to the binary hash and exact engine version.

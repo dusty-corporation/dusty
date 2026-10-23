@@ -228,11 +228,9 @@ begin
   Result := False;
   RemoveModels := True;
   if UninstallSilent then Exit;
-  Page := CreateCustomForm;
+  Page := CreateCustomForm(ScaleX(480), ScaleY(180), False, False);
   try
     Page.Caption := 'Dusty';
-    Page.ClientWidth := ScaleX(480);
-    Page.ClientHeight := ScaleY(180);
     Choice := TNewCheckBox.Create(Page);
     Choice.Parent := Page;
     Choice.SetBounds(ScaleX(20), ScaleY(20), ScaleX(440), ScaleY(24));
