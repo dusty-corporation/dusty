@@ -575,6 +575,8 @@ INSTALLER.update(
     ),
     DownloadWorking="Downloading %1",
     CheckingModel="Checking %1",
+    InstallFiles="Installing Dusty",
+    InstallFilesHelp="Copying the application files to this computer.",
     DownloadFailed=(
         "The download or file check did not finish. Check your internet "
         "connection and free space, then try again."

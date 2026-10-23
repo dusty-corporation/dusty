@@ -37,13 +37,13 @@ RestartApplications=no
 Name: desktopicon; Description: "{cm:DesktopShortcut}"; Flags: unchecked
 
 [Files]
-#ifndef ReviewOnly
-Source: "@@BUNDLE@@\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-#endif
-Source: "@@BUNDLE@@\*"; DestDir: "{tmp}\probe"; Flags: dontcopy recursesubdirs
 Source: "DUSTY-LICENSE.txt"; Flags: dontcopy
 Source: "MICROSOFT-LICENSE.txt"; Flags: dontcopy
 Source: "THIRD_PARTY_NOTICES.md"; Flags: dontcopy
+Source: "@@BUNDLE@@\*"; DestDir: "{tmp}\probe"; Flags: dontcopy recursesubdirs
+#ifndef ReviewOnly
+Source: "@@BUNDLE@@\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+#endif
 Source: "@@INNO_LICENSE@@"; DestDir: "{app}\licenses"; DestName: "inno-setup.txt"; Flags: ignoreversion
 Source: "@@INSTALLER_NOTICES@@"; DestDir: "{app}\licenses"; DestName: "installer-THIRD_PARTY_NOTICES.md"; Flags: ignoreversion
 Source: "@@JEDI_SOURCE@@"; DestDir: "{app}\licenses"; DestName: "installer-jedi-source.zip"; Flags: ignoreversion

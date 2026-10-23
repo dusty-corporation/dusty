@@ -60,6 +60,28 @@ def test_real_entry_point_model_free_probe_is_bounded(tmp_path):
     assert isinstance(json.loads(output.read_text())["real_gpu_found"], bool)
 
 
+def test_hanging_probe_child_is_terminated_by_real_job_deadline(tmp_path, monkeypatch):
+    import time
+
+    from dusty.platform.win_process import run_job_process
+
+    def stalled(command, *, timeout_sec):
+        assert timeout_sec == 5
+        result = run_job_process(
+            [str(Path(sys.executable).resolve()), "-c", "import time; time.sleep(60)"],
+            timeout_sec=0.15,
+        )
+        assert result.cancelled and result.exit_code != 0
+        return result
+
+    monkeypatch.setattr(installer_support, "run_job_process", stalled)
+    began = time.monotonic()
+    output = tmp_path / "result.json"
+    assert not installer_support.probe(resolve_paths(), output)
+    assert time.monotonic() - began < 3
+    assert json.loads(output.read_text())["real_gpu_found"] is False
+
+
 def test_finish_without_preserves_settings_and_verified_files(tmp_path, monkeypatch):
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
     paths = resolve_paths()

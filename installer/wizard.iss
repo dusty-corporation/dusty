@@ -125,6 +125,15 @@ begin
   WizardForm.NextButton.Enabled := True;
 end;
 
+procedure ShowMemoryWarning;
+var Memory: TMemoryStatus;
+begin
+  MemoryNotice.Caption := '';
+  Memory.Length := 64;
+  if WinMemoryStatus(Memory) then
+    if Memory.TotalPhysical < @@MIN_RAM@@ then MemoryNotice.Caption := CustomMessage('LowMemory');
+end;
+
 procedure PollChild(A, B, C, D: LongWord);
 var Code: LongWord; I: Integer; Memory: TMemoryStatus; S: AnsiString;
 begin
@@ -133,7 +142,7 @@ begin
   Exit;
 #endif
   if (Stage = -1) and (Child.Process <> 0) and (Tick - ProbeBegan > 7000) then begin
-    ReleaseChild; Stage := 0; MemoryNotice.Caption := ''; Exit;
+    ReleaseChild; Stage := 0; ShowMemoryWarning; Exit;
   end;
   if (Child.Process = 0) or (WaitChild(Child.Process, 0) <> 0) then Exit;
   Code := 1; ChildExit(Child.Process, Code); ReleaseChild;
@@ -318,7 +327,8 @@ begin
     ProbeStarted := True;
 #ifndef ReviewOnly
     MemoryNotice.Caption := CustomMessage('CheckingGraphics');
-    ExtractTemporaryFiles('{tmp}\probe\*');
+    try ExtractTemporaryFiles('{tmp}\probe\*');
+    except ShowMemoryWarning; Exit; end;
     ProbeRoot := ExpandConstant('{tmp}\probe');
     Stage := -1; ProbeBegan := Tick;
     if not StartChild(ProbeRoot + '\dusty\dusty.exe', '--probe-vulkan --out ' +
@@ -415,11 +425,13 @@ begin
   Wanted := ExpandConstant('{param:REVIEWPAGE|welcome}');
   Page := WizardForm.CurPageID;
   if ((Wanted = 'welcome') and (Page = wpWelcome)) or
-     ((Wanted = 'models') and (Page = ModelsPage.ID)) or
+     (((Wanted = 'models') or (Wanted = 'models-low-memory')) and (Page = ModelsPage.ID)) or
      ((Wanted = 'directory') and (Page = wpSelectDir)) or
      ((Wanted = 'shortcuts') and (Page = wpSelectTasks)) or
      ((Wanted = 'ready') and (Page = wpReady)) then begin
-    ReviewShown := True; WizardForm.NextButton.Enabled := False; Exit;
+    ReviewShown := True;
+    if Wanted = 'models-low-memory' then MemoryNotice.Caption := CustomMessage('LowMemory');
+    WizardForm.NextButton.Enabled := False; Exit;
   end;
   if (Page = wpLicense) and ((Wanted = 'license') or (Wanted = 'notices') or (Wanted = 'microsoft')) then begin
     ReviewShown := True;
@@ -432,6 +444,15 @@ begin
   end;
   if (Page = DownloadPage.ID) and (Wanted <> 'ready') then begin
     ReviewShown := True;
+    if Wanted = 'installing' then begin
+      WizardForm.InnerNotebook.ActivePage := WizardForm.InstallingPage;
+      WizardForm.PageNameLabel.Caption := CustomMessage('InstallFiles');
+      WizardForm.PageDescriptionLabel.Caption := CustomMessage('InstallFilesHelp');
+      WizardForm.StatusLabel.Caption := CustomMessage('InstallFilesHelp');
+      WizardForm.FilenameLabel.Caption := '';
+      WizardForm.ProgressGauge.Position := 45;
+      WizardForm.NextButton.Visible := False; WizardForm.BackButton.Visible := False;
+    end;
     if Wanted = 'finish' then begin
       WizardForm.FinishedLabel.Caption := CustomMessage('SetupComplete');
       WizardForm.OuterNotebook.ActivePage := WizardForm.FinishedPage;
