@@ -154,8 +154,8 @@ begin
       if (Code = 0) and (Memory.TotalPhysical >= @@MIN_RAM@@) and not ModelsTouched then
         for I := 0 to GetArrayLength(ModelIds) - 1 do begin
           ModelsPage.Values[I] := ModelIds[I] = 'large-v3-turbo-q8_0';
-          if ModelsPage.Values[I] then ModelsPage.CheckListBox.ItemCaption[I] := ModelLabels[I] + '@@RECOMMENDED_SUFFIX@@'
-          else ModelsPage.CheckListBox.ItemCaption[I] := ModelLabels[I];
+          if ModelsPage.Values[I] then ModelsPage.CheckListBox.ItemCaption[I] := ModelRecommendedLabels[I] + ModelDetails[I]
+          else ModelsPage.CheckListBox.ItemCaption[I] := ModelLabels[I] + ModelDetails[I];
         end;
     end;
     Stage := 0;
@@ -279,6 +279,7 @@ begin
     CustomMessage('ChooseModelsHelp'), '', False, True);
   SetArrayLength(ModelIds, @@MODEL_COUNT@@); SetArrayLength(ModelNames, @@MODEL_COUNT@@);
   SetArrayLength(ModelFiles, @@MODEL_COUNT@@); SetArrayLength(ModelLabels, @@MODEL_COUNT@@);
+  SetArrayLength(ModelRecommendedLabels, @@MODEL_COUNT@@); SetArrayLength(ModelDetails, @@MODEL_COUNT@@);
   SetArrayLength(ModelBytes, @@MODEL_COUNT@@);
 @@MODEL_SETUP@@
   ModelsPage.CheckListBox.OnClickCheck := @ModelsClick;
@@ -292,7 +293,7 @@ begin
   Requested := ExpandConstant('{param:MODELS|small}');
   for I := 0 to GetArrayLength(ModelIds) - 1 do begin
     ModelsPage.Values[I] := Pos(',' + ModelIds[I] + ',', ',' + Requested + ',') > 0;
-    if ModelIds[I] = 'small' then ModelsPage.CheckListBox.ItemCaption[I] := ModelLabels[I] + '@@RECOMMENDED_SUFFIX@@';
+    if ModelIds[I] = 'small' then ModelsPage.CheckListBox.ItemCaption[I] := ModelRecommendedLabels[I] + ModelDetails[I];
   end;
   ModelsTouched := ExpandConstant('{param:MODELS|}') <> '';
   WizardForm.LicenseMemo.Height := WizardForm.LicenseMemo.Height - ScaleY(40);

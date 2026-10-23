@@ -108,7 +108,7 @@ var
   ModelsPage: TInputOptionWizardPage;
   DownloadPage: TWizardPage;
   ProgressPage: TOutputMarqueeProgressWizardPage;
-  ModelIds, ModelNames, ModelFiles, ModelLabels: TArrayOfString;
+  ModelIds, ModelNames, ModelFiles, ModelLabels, ModelRecommendedLabels, ModelDetails: TArrayOfString;
   Consent, Phase, Outcome, MemoryNotice: TNewStaticText;
   Action, RetryButton, CpuButton, WithoutButton: TNewButton;
   Meter: TNewProgressBar;

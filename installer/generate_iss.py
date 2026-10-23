@@ -58,15 +58,24 @@ def generate(output: Path, bundle: Path) -> Path:
         label = (
             f"{M.MODEL_TECHNICAL[key]}: {M.MODEL_QUALITY[key]} ({format_size(model.size_bytes)})"
         )
-        detail = f"{M.MANAGER_HEADERS[1]}: {M.MODEL_BEST_FOR[key]}. {M.MODEL_NOTE[key]}"
+        detail = (
+            "#13#10 + "
+            + pascal(f"{M.MANAGER_HEADERS[1]}: {M.MODEL_BEST_FOR[key]}")
+            + " + #13#10 + "
+            + pascal(M.MODEL_NOTE[key])
+        )
+        recommended = label.replace(
+            M.MODEL_TECHNICAL[key], M.RECOMMENDED.format(name=M.MODEL_TECHNICAL[key]), 1
+        )
         setup_models += [
             f"  ModelIds[{index}] := {pascal(key)};",
             f"  ModelBytes[{index}] := {model.size_bytes};",
             f"  ModelNames[{index}] := {pascal(M.MODEL_TECHNICAL[key])};",
             f"  ModelFiles[{index}] := {pascal(model.file_name)};",
             f"  ModelLabels[{index}] := {pascal(label)};",
-            f"  ModelsPage.Add({pascal(label)});",
-            f"  ModelsPage.CheckListBox.ItemSubItem[{index}] := {pascal(detail)};",
+            f"  ModelRecommendedLabels[{index}] := {pascal(recommended)};",
+            f"  ModelDetails[{index}] := {detail};",
+            f"  ModelsPage.Add(ModelLabels[{index}] + ModelDetails[{index}]);",
         ]
     template = (ROOT / "installer/dusty.iss.template").read_text(encoding="utf-8")
     template = template.replace(
