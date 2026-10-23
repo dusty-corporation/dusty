@@ -223,7 +223,7 @@ def test_disk_full_before_request_and_during_write(tls, monkeypatch):
     assert not (tls.dest / tls.asset.file_name).exists()
 
 
-def test_ctrl_c_emits_redacted_cancel_and_leaves_resumable_part(tls, monkeypatch, capsys):
+def test_ctrl_c_emits_redacted_cancel_and_removes_part(tls, monkeypatch, capsys):
     from dusty_fetch import __main__ as cli
 
     original = cli.emit
@@ -238,7 +238,7 @@ def test_ctrl_c_emits_redacted_cancel_and_leaves_resumable_part(tls, monkeypatch
     events = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
     assert events[-1] == {"event": "cancelled", "code": "CANCELLED", "pid": os.getpid()}
     assert not (tls.dest / tls.asset.file_name).exists()
-    assert list(tls.dest.glob("*.part"))
+    assert not list(tls.dest.glob("*.part"))
     monkeypatch.setattr(cli, "emit", original)
     assert main(args(tls), client=tls.client) == Exit.OK
 

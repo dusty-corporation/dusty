@@ -185,27 +185,42 @@ class Downloader:
         if final.is_symlink() or part.is_symlink():
             raise FetchError(Exit.IO)
         with download_lock(destination / (asset.file_name + ".lock")):
-            if matches(final, asset):
+            try:
+                if matches(final, asset):
+                    emit(
+                        {
+                            "event": "complete",
+                            "bytes": asset.size,
+                            "total": asset.size,
+                            "cached": True,
+                        }
+                    )
+                    return
+                offset = part.stat().st_size if part.exists() else 0
+                if offset > asset.size:
+                    part.unlink()
+                    raise FetchError(Exit.MISMATCH)
+                if offset < asset.size:
+                    self._transfer(asset, part, offset, emit, cancelled)
+                if cancelled():
+                    raise FetchError(Exit.CANCELLED)
+                emit({"event": "verifying", "bytes": asset.size, "total": asset.size})
+                if not matches(part, asset):
+                    part.unlink(missing_ok=True)
+                    raise FetchError(Exit.MISMATCH)
+                if cancelled():
+                    raise FetchError(Exit.CANCELLED)
+                os.replace(part, final)
                 emit(
-                    {"event": "complete", "bytes": asset.size, "total": asset.size, "cached": True}
+                    {"event": "complete", "bytes": asset.size, "total": asset.size, "cached": False}
                 )
-                return
-            offset = part.stat().st_size if part.exists() else 0
-            if offset > asset.size:
-                part.unlink()
-                raise FetchError(Exit.MISMATCH)
-            if offset < asset.size:
-                self._transfer(asset, part, offset, emit, cancelled)
-            if cancelled():
-                raise FetchError(Exit.CANCELLED)
-            emit({"event": "verifying", "bytes": asset.size, "total": asset.size})
-            if not matches(part, asset):
+            except (KeyboardInterrupt, BrokenPipeError):
                 part.unlink(missing_ok=True)
-                raise FetchError(Exit.MISMATCH)
-            if cancelled():
-                raise FetchError(Exit.CANCELLED)
-            os.replace(part, final)
-            emit({"event": "complete", "bytes": asset.size, "total": asset.size, "cached": False})
+                raise
+            except FetchError as exc:
+                if exc.code == Exit.CANCELLED:
+                    part.unlink(missing_ok=True)
+                raise
 
     def _space(self, destination: Path, required: int) -> None:
         if shutil.disk_usage(destination).free < required + 1024 * 1024:

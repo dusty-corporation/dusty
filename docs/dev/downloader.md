@@ -32,7 +32,7 @@ Progress is monotonic except a legitimate restart when a server ignores Range.
 | 6 | NETWORK | TLS/HTTP/connection/timeout or invalid range response |
 | 7 | IO | Other local filesystem error or unsafe symlink |
 | 8 | BUSY | Another download holds the model's OS lock |
-| 130 | CANCELLED | Ctrl+C/cooperative termination; resumable part retained |
+| 130 | CANCELLED | Ctrl+C/cooperative termination; partial download removed |
 
 A hard OS termination may have an OS-selected exit status and no final event.
 Only a fully verified file can become final; existing finals remain unchanged
@@ -79,8 +79,12 @@ separately. A per-model .lock file uses an OS lock across hash and rename;
 it stays as a tiny harmless file and cannot become a stale PID lock after
 termination. Windows uses [msvcrt.locking](https://docs.python.org/3.12/library/msvcrt.html#msvcrt.locking);
 POSIX uses flock. The subprocess termination test verifies lock release and
-resume without touching a final file before verification. File handles close
-on Ctrl+C; a hard kill can leave a shorter .part that is safe to resume.
+Range handling without touching a final file before verification. Ctrl+C and
+cooperative termination close handles and remove the partial. When the GUI
+cancels or closes, it first terminates and joins the child Job Object, then
+removes that manifest-owned partial. The next user attempt starts fresh.
+An abrupt OS crash cannot execute cleanup; an orphan prefix is still never
+published without full size and hash verification.
 
 Environment proxies are deliberately not followed: their destinations are not
 part of this allowlist. Explicit proxy support is outside this limited scope.
@@ -99,8 +103,12 @@ log. Windows interpreter launchers can have a different PID from the interpreter
 that opens sockets, so the OS create-process PID alone is insufficient. The GUI
 validates event type, counts, manifest total and positive PID; raw stderr is discarded.
 
-Model Manager re-hashes locally, protects selected/last models from deletion,
-and only offers installed models for transcription. Voice detection is listed
+Model Manager re-hashes locally and allows deletion of every model, including
+the selected or last model. Deleting the selected model clears Options without
+choosing a replacement; in-use voice detection requires confirmation too.
+Only installed models are offered for transcription. A newly installed model
+is selected only when Options has no choice. The PM's 2026-10-23 UX decision
+supersedes the brief's earlier deletion protections and cancel/resume behavior. Voice detection is listed
 separately and is included in both consent and total download size when required
 by Skip silent parts. Consent precedes every download request. No host, proxy or
 TLS override was added to the production CLI. Tests inject loopback trust only

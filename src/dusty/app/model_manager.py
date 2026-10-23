@@ -15,6 +15,8 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QTableWidget,
     QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
 
 from dusty.models import ModelCorrupt, ModelMissing, ModelRegistry
@@ -28,7 +30,7 @@ VOICE_ID = "silero-vad"
 
 
 def model_name(model_id: str) -> str:
-    return M.VOICE_MODEL if model_id == VOICE_ID else M.MODEL_NAMES[model_id]
+    return M.VOICE_MODEL if model_id == VOICE_ID else M.MODEL_TECHNICAL[model_id]
 
 
 def model_files(registry: ModelRegistry) -> dict[str, tuple[str, int]]:
@@ -151,7 +153,13 @@ class ModelWorker(QThread):
                         on_stdout=receive,
                         cancel=self.cancelled,
                     )
-                    if process.cancelled:
+                    if process.cancelled or self.cancelled.is_set():
+                        # The Windows job terminates the child. Clean only its
+                        # manifest-owned partial after all child handles close.
+                        part = self.paths.models_dir / (
+                            model_files(self.registry)[key][0] + ".part"
+                        )
+                        part.unlink(missing_ok=True)
                         self.failure = "CANCELLED"
                     elif process.exit_code or "complete" not in events:
                         self.failure = self.failure or "PROTOCOL"
@@ -162,20 +170,6 @@ class ModelWorker(QThread):
                     )
             elif self.action == "delete":
                 key = self.ids[0]
-                current = inspect_models(self.registry)
-                installed = [
-                    key
-                    for key, state in current.items()
-                    if state == "installed" and key != VOICE_ID
-                ]
-                if (
-                    key == self.selected
-                    or key == VOICE_ID
-                    and self.voice_in_use
-                    or key in installed
-                    and len(installed) <= 1
-                ):
-                    raise ValueError("Protected model")
                 path = self.registry.directory / model_files(self.registry)[key][0]
                 if path.is_symlink():
                     raise ValueError("Model symlink")
@@ -201,8 +195,9 @@ class DownloadDialog(TextDialog):
         super().__init__(
             M.DOWNLOAD_TITLE,
             (
-                M.DOWNLOAD_CONTENTS.format(names=", ".join(model_name(key) for key in ids)),
-                M.DOWNLOAD_CONFIRM.format(mb=total / 1_000_000),
+                M.DOWNLOAD_CONFIRM.format(
+                    names=", ".join(model_name(key) for key in ids), mb=total / 1_000_000
+                ),
             ),
             parent,
         )
@@ -227,7 +222,7 @@ class ModelManager(TextDialog):
         track_worker: Callable[[QThread], None] = lambda _: None,
     ):
         super().__init__(M.MODEL_MANAGER, (), parent)
-        self.resize(780, 570)
+        self.resize(940, 680)
         self.registry, self.paths, self.command = registry, paths, command
         self.selected, self.voice_in_use, self.recommended = selected, voice_in_use, recommended
         self.track_worker = track_worker
@@ -235,32 +230,48 @@ class ModelManager(TextDialog):
         self.workers: list[ModelWorker] = []
         self._closing = False
         self.statuses = {key: "not_installed" for key in model_files(registry)}
-        self.table = QTableWidget(len(self.statuses), 3)
+        self.table = QTableWidget(len(self.statuses), 4)
         self.table.setHorizontalHeaderLabels(M.MANAGER_HEADERS)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.setTabKeyNavigation(False)
         self.table.verticalHeader().hide()
-        self.table.verticalHeader().setDefaultSectionSize(74)
+        self.table.verticalHeader().setDefaultSectionSize(88)
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        self.table.setColumnWidth(1, 105)
-        self.table.setColumnWidth(2, 125)
+        self.table.setColumnWidth(1, 125)
+        self.table.setColumnWidth(2, 95)
+        self.table.setColumnWidth(3, 115)
         self.ids = tuple(self.statuses)
         for row, key in enumerate(self.ids):
             label = model_name(key)
             if key == recommended:
                 label = M.RECOMMENDED.format(name=label)
-            detail = M.VOICE_DETAILS if key == VOICE_ID else M.MODEL_DETAILS[key]
-            title = QTableWidgetItem(label + "\n" + M.MODEL_TECHNICAL[key] + "\n" + detail)
+            title = QTableWidgetItem()
             title.setData(Qt.ItemDataRole.UserRole, key)
             self.table.setItem(row, 0, title)
+            cell = QWidget()
+            cell.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+            layout = QVBoxLayout(cell)
+            layout.setContentsMargins(8, 4, 8, 4)
+            layout.setSpacing(1)
+            for index, text in enumerate((label, M.MODEL_QUALITY[key], M.MODEL_NOTE[key])):
+                line = QLabel(text)
+                line.setTextFormat(Qt.TextFormat.PlainText)
+                font = line.font()
+                font.setBold(index == 0)
+                if index == 2:
+                    font.setPointSizeF(max(8, font.pointSizeF() - 1))
+                line.setFont(font)
+                layout.addWidget(line)
+            self.table.setCellWidget(row, 0, cell)
+            self.table.setItem(row, 1, QTableWidgetItem(M.MODEL_BEST_FOR[key]))
             self.table.setItem(
                 row,
-                1,
+                2,
                 QTableWidgetItem(M.MODEL_SIZE.format(mb=model_files(registry)[key][1] / 1_000_000)),
             )
-            self.table.setItem(row, 2, QTableWidgetItem(M.MODEL_STATUSES["not_installed"]))
+            self.table.setItem(row, 3, QTableWidgetItem(M.MODEL_STATUSES["not_installed"]))
         self.body.insertWidget(0, self.table, 1)
         self.free_space = QLabel()
         self.message = QLabel(M.VERIFYING_MODELS)
@@ -274,6 +285,9 @@ class ModelManager(TextDialog):
         self.body.insertWidget(2, self.message)
         self.body.insertWidget(3, self.progress)
         self.body.insertWidget(4, self.progress_text)
+        self.review_notice = QLabel(M.MODEL_REVIEW)
+        self.review_notice.setWordWrap(True)
+        self.body.insertWidget(1, self.review_notice)
         self.download_button = self.button(M.DOWNLOAD, self.download)
         self.cancel_button = self.button(M.CANCEL_DOWNLOAD, self.cancel)
         self.delete_button = self.button(M.DELETE_MODEL, self.delete)
@@ -295,29 +309,14 @@ class ModelManager(TextDialog):
         key = self.selected_id()
         state = self.statuses[key]
         for row, item in enumerate(self.ids):
-            cell = self.table.item(row, 2)
+            cell = self.table.item(row, 3)
             assert cell is not None
             cell.setText(M.MODEL_STATUSES[self.statuses[item]])
         self.download_button.setText(M.DOWNLOAD_AGAIN if state == "damaged" else M.DOWNLOAD)
         self.download_button.setEnabled(not self.busy and state != "installed")
         self.verify_button.setEnabled(not self.busy)
-        self.cancel_button.setVisible(bool(self.worker and self.worker.action == "download"))
-        protected = None
-        installed = [
-            item
-            for item, status in self.statuses.items()
-            if status == "installed" and item != VOICE_ID
-        ]
-        if key == self.selected():
-            protected = M.DELETE_SELECTED
-        elif key in installed and len(installed) <= 1:
-            protected = M.DELETE_LAST
-        elif key == VOICE_ID and self.voice_in_use():
-            protected = M.DELETE_VOICE
-        self.delete_button.setEnabled(
-            not self.busy and state in {"installed", "damaged"} and not protected
-        )
-        self.delete_button.setToolTip(protected or M.EMPTY_CELL)
+        self.cancel_button.setEnabled(bool(self.worker and self.worker.action == "download"))
+        self.delete_button.setEnabled(not self.busy and state in {"installed", "damaged"})
         nearest = self.paths.models_dir
         while not nearest.exists() and nearest.parent != nearest:
             nearest = nearest.parent
@@ -374,7 +373,14 @@ class ModelManager(TextDialog):
         if self.busy or not self.delete_button.isEnabled():
             return
         key = self.selected_id()
-        confirm = TextDialog(M.DELETE_TITLE, (M.DELETE_CONFIRM.format(name=model_name(key)),), self)
+        text = (
+            M.DELETE_SELECTED
+            if key == self.selected()
+            else M.DELETE_VOICE
+            if key == VOICE_ID and self.voice_in_use()
+            else M.DELETE_CONFIRM.format(name=model_name(key))
+        )
+        confirm = TextDialog(M.DELETE_TITLE, (text,), self)
         confirm.button(M.CANCEL, confirm.reject, default=True)
         confirm.button(M.DELETE_MODEL, confirm.accept)
         if confirm.exec() == QDialog.DialogCode.Accepted:

@@ -498,8 +498,8 @@ def test_all_dialogs_have_one_title_and_errors_only_name_reason(window, qtbot) -
 
 def test_model_labels_no_estimates_and_cpu_only_slow_warning(window) -> None:
     assert window.model_choice.accessibleName() == M.MODEL == "Transcription model"
-    assert M.MODEL_NAMES["small"] == "Balanced (all languages)"
-    assert M.MODEL_NAMES["small.en"] == "Balanced (English only)"
+    assert M.MODEL_NAMES["small"] == "Small: Balanced, all languages"
+    assert M.MODEL_NAMES["small.en"] == "Small English: Balanced, English only"
     window.options_dialog.show()
     for vulkan in (False, True):
         window.vulkan_ok = vulkan
@@ -571,7 +571,7 @@ def test_welcome_finishes_before_resume_and_reentrant_startup_is_ignored(
 
 
 def test_start_stays_full_width_and_disabled_text_contrast(window, qtbot, tmp_path):
-    from dusty.app.theme import CONTROL_COLORS, apply_theme, contrast_ratio
+    from dusty.app.theme import DISABLED_COLORS, apply_theme, contrast_ratio
 
     window.model.set_jobs([Job(tmp_path / "one.wav")])
     for running, output in ((False, None), (False, tmp_path / "out"), (True, tmp_path / "out")):
@@ -593,8 +593,10 @@ def test_start_stays_full_width_and_disabled_text_contrast(window, qtbot, tmp_pa
     colors = {
         image.pixelColor(x, y).name() for x in range(image.width()) for y in range(image.height())
     }
-    assert "#23372c" in colors
-    assert contrast_ratio("#23372c", CONTROL_COLORS["dark"]["edge"]) >= 4.5
+    assert DISABLED_COLORS["dark"]["ink"] in colors
+    assert (
+        contrast_ratio(DISABLED_COLORS["dark"]["ink"], DISABLED_COLORS["dark"]["background"]) >= 4.5
+    )
     for model_id in window.installed:
         name = M.RECOMMENDED.format(name=M.MODEL_NAMES[model_id])
         assert name.endswith(", recommended") and "(Recommended)" not in name
