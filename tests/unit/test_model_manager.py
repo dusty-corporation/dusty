@@ -452,3 +452,26 @@ def test_manager_name_quality_note_and_best_for_are_distinct(models, qtbot):
         assert dialog.table.item(row, 1).text() == M.MODEL_BEST_FOR[key]
     assert dialog.review_notice.text() == M.MODEL_REVIEW
     assert dialog.cancel_button.isVisible() and not dialog.cancel_button.isEnabled()
+
+
+def test_missing_voice_button_targets_voice_when_another_model_is_installed(
+    models, qtbot, monkeypatch
+):
+    view = MainWindow(models.paths, interactive=False)
+    qtbot.addWidget(view)
+    view.apply_prepared(
+        Prepared(
+            ("tiny",),
+            False,
+            {"model_id": "tiny", "output_dir": str(models.paths.user_dir)},
+            vad_installed=False,
+        )
+    )
+    view.show()
+    opened = []
+    monkeypatch.setattr(view, "open_model_manager", lambda **kw: opened.append(kw["focus_id"]))
+    assert view._recommendation == "small" and "small" not in view.installed
+    assert view.download_recommended_button.text() == M.DOWNLOAD_VOICE
+    view.download_recommended_button.click()
+    assert opened == [VOICE_ID]
+    assert not view.warning.text().startswith(M.MODEL_NAMES["small"])
