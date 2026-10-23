@@ -344,3 +344,8 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Desktop packaged long-recording Small CPU run is active in an isolated repository profile; no Owner app-data writes. CIM initially needed approved escalation. Turbo Vulkan follows automatically.
 
 - Long-recording harness/provenance checked in: repeated public-domain Swineherd, 7920.1875 s, packaged shared coordinator, CPU Small then Vulkan Turbo, VAD on, isolated profile. The run is still active; no measurements or cleanup success are claimed yet. M5 checklist now distinguishes CI automation from remaining standard-user VM acceptance.
+
+### M6 documentation prework, explicitly authorized by PM
+
+- Added user guides for install/hash/SmartScreen, first run, folders, plain model choices, vocabulary hints, troubleshooting and FAQ with exact SPEC 9.6 HIPAA wording. Refreshed README and CONTRIBUTING; privacy documents actual M4 downloads and local storage/deletion limits. Local links and no-long-dash checks passed. No app code changes on m6-docs.
+- M5 source gates at 285c80d: local 190 passed/1 CI-only skip in 227.92 s, strict coverage 94.5%; lint/format/types/three source policy checks pass. CI 39923879707 checks/offline pass; installer lifecycle has a real failure to inspect, static license gate fails as intended. Continue independent documentation/endurance work.
