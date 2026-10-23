@@ -1,0 +1,93 @@
+{
+  "commit": "4adf37ed7f3fd2bd11c6836ba056e3de170fbabf",
+  "runtime_files": [
+    "Setup.e32",
+    "SetupLdr.e32"
+  ],
+  "excluded": [
+    "SetupCustomStyle.e32",
+    "SetupLdr.e64",
+    "ISCC.exe",
+    "ISCmplr.dll",
+    "ISPP.dll",
+    "islzma.dll",
+    "islzma32.exe",
+    "islzma64.exe",
+    "isunzlib.dll",
+    "isbunzip.dll",
+    "optional external 7-Zip DLL"
+  ],
+  "reviewed_files": [
+    {
+      "path": "README.md",
+      "sha256": "7aee395cf1b159a9f64d74a7664eb823371e980e11361d66bc038ecf6c604078"
+    },
+    {
+      "path": "compile.bat",
+      "sha256": "b928b45935b64af80c24a91f042a76a2b3db1b4f7b98aaff4d2aa72adbbb1865"
+    },
+    {
+      "path": "Projects/Setup.dpr",
+      "sha256": "91a90d11d2b3a6f16fe95cf499c4d9fac4505f1a6c9e47561c217133a1ba78a4"
+    },
+    {
+      "path": "Projects/Setup.dproj",
+      "sha256": "6bdaa06161e0e4af2d3caa78965cffd6a45fa71d38d746fd3740108dd268dabc"
+    },
+    {
+      "path": "Projects/SetupLdr.dpr",
+      "sha256": "441a51f34d0a84eee68ad9e794881ff0212167f652e612e61d993fc494958f38"
+    },
+    {
+      "path": "Projects/Src/Compiler.SetupCompiler.pas",
+      "sha256": "0fe7a4bec1561d623dadc826ada01a5b8bae1021dcc46cdd3573fd4c0ce307ef"
+    },
+    {
+      "path": "Projects/Src/Setup.ScriptRunner.pas",
+      "sha256": "f67bda36a87a9b5905f7b83284e1be949d8925aa7e80deca07f1ce61ca706e36"
+    },
+    {
+      "path": "Projects/Src/Setup.ScriptClasses.pas",
+      "sha256": "bca34c76573a770da4cd73d517ed32d1f6a954806c1747eb4c010c6dc7bd38e8"
+    },
+    {
+      "path": "Projects/Src/Compression.LZMADecompressor.pas",
+      "sha256": "978c4aba25ae81c6540dadf48eeda92095d46084864c2d07f0d5e7dbb6d425dc"
+    },
+    {
+      "path": "Projects/Src/Compression.SevenZipDecoder.pas",
+      "sha256": "78a4ceff13874b091faf63ea94a5733c5272074d0d9f0a85be963b35450aa2f0"
+    },
+    {
+      "path": "Projects/Src/Compression.LZMA1SmallDecompressor.pas",
+      "sha256": "ef631800f21e86f63b5d8e60747278127d82a956c9f67af3f68bdd085d2cfcb1"
+    },
+    {
+      "path": "Components/FolderTreeView.pas",
+      "sha256": "223b0b4dac1ac21f689e8670c5bb4337e6b79e84c99b46d3c825b9372d9c7773"
+    },
+    {
+      "path": "Components/MD5.pas",
+      "sha256": "69946bb420e24ab17898d07f12de2a36e3dc353d3c098a48d773b7c967532e63"
+    },
+    {
+      "path": "Components/SHA1.pas",
+      "sha256": "ea8a5961d0e8a5c88e6185d14aec0c6cee6afbeae5950d6a87bd468b129ebf20"
+    },
+    {
+      "path": "Components/SHA256.pas",
+      "sha256": "5dccbe5cb66750d6870d2551ccea79519bb0f42ff40fa1ff58620825b2eed152"
+    }
+  ],
+  "jedi_sources": [
+    {
+      "path": "Components/NewUxTheme.pas",
+      "sha256": "53a326b5408522fbbb27882bbbbe32126907af7c489dd906a5d2c448ced14081"
+    },
+    {
+      "path": "Components/NewUxTheme.TmSchema.pas",
+      "sha256": "84d1de8482467a694c137b8aba28235f8a984b0e511a65f95141b9b2689b6909"
+    }
+  ],
+  "annotated_tag_object": "c7af86b4b2fd03371185df2b09a1dca8d472ab70"
+}

@@ -1,0 +1,23 @@
+{
+  "runtime-eula.pdf": {
+    "source": "https://visualstudio.microsoft.com/license-terms/vs2022-cruntime/",
+    "retrieved": "2026-10-22",
+    "sha256": "80234896ac3bbeadd05a4445ae38c8018d400fe50bf55cf40164b04cb5fd78ec",
+    "text_sha256": "01badce932f951f44301d28ee9139e66dbdafbc07ca56d1b3acd833013b3a363",
+    "text_normalization": "Extracted UTF-8/LF; en/em dash typography replaced with hyphen. Original PDF unchanged."
+  },
+  "community-2022.pdf": {
+    "source": "https://visualstudio.microsoft.com/license-terms/vs2022-ga-community/",
+    "retrieved": "2026-10-22",
+    "sha256": "ec7bae304de6f0dd3d1513c924ca1f52b9eadb89a50e09d44d2fca4f702c1236",
+    "text_sha256": "fa34330e6be05da1ca5ac0d6eb11b0f64d04bd26a2d4dd4a2eda2826d344157a",
+    "text_normalization": "Extracted UTF-8/LF; en/em dash typography replaced with hyphen. Original PDF unchanged."
+  },
+  "redistribution-2022.pdf": {
+    "source": "https://aka.ms/vs/17/redistribution",
+    "retrieved": "2026-10-22",
+    "sha256": "f85d744f1188631c2039b826d3aeb0c168dbbd2cb65cc3cfc261393d6661fae3",
+    "text_sha256": "82bf0494b6cdf6b7b4bf95f6a301ecb7629ce401e14cf9ae11f665c58fbb1896",
+    "text_normalization": "Extracted UTF-8/LF; en/em dash typography replaced with hyphen. Original PDF unchanged."
+  }
+}

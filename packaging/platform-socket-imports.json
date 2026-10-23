@@ -1,0 +1,10 @@
+{
+  "python312.dll": {
+    "sha256": "e1643b99a6f7b69410bd941f2bcd03614baa8f4d3eaf6fbe9a29929f5a3bf79e",
+    "ws2_32": ["WSAGetLastError", "getsockopt", "send"]
+  },
+  "qt6core.dll": {
+    "sha256": "393833b9d4deef7abd8bf475d38c15126c2f016058b03dd5eb27fa18198cfa75",
+    "ws2_32": ["WSAAsyncSelect", "WSACleanup", "WSAStartup"]
+  }
+}
