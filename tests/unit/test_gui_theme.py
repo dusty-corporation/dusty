@@ -108,6 +108,19 @@ def test_disabled_controls_have_gray_borders_and_legible_text_in_render(qapp, qt
             for y in range(image.height())
         }
         assert colors["edge"] in pixels, type(control).__name__
-        # Antialiasing may blend glyph edges, but their centers retain the ink.
-        assert colors["ink"] in pixels, type(control).__name__
+        # Rasterizers blend thin glyphs differently. Require actual glyph pixels
+        # close to the intended gray AND at least 4.5:1 rendered contrast.
+        # Neither background nor border can satisfy this color-distance bound.
+        ink = tuple(int(colors["ink"][i : i + 2], 16) for i in (1, 3, 5))
+        glyphs = [
+            pixel
+            for pixel in pixels
+            if max(
+                abs(int(pixel[i : i + 2], 16) - channel)
+                for i, channel in zip((1, 3, 5), ink, strict=True)
+            )
+            <= 12
+        ]
+        assert glyphs, type(control).__name__
+        assert max(contrast_ratio(pixel, colors["background"]) for pixel in glyphs) >= 4.5
     apply_theme(qapp, "light")
