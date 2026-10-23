@@ -95,9 +95,9 @@ def test_catalog_statuses_space_and_confirmation_download_progress(models, qtbot
     assert dialog.free_space.text() == M.FREE_SPACE.format(gb=2.5)
     confirm = DownloadDialog(("tiny", VOICE_ID), models.registry, dialog)
     qtbot.addWidget(confirm)
-    assert M.DOWNLOAD_CONFIRM.format(mb=2 * len(DATA) / 1_000_000) in [
-        label.text() for label in confirm.findChildren(QLabel)
-    ]
+    assert M.DOWNLOAD_CONFIRM.format(
+        names="Tiny, Voice detection", mb=2 * len(DATA) / 1_000_000
+    ) in [label.text() for label in confirm.findChildren(QLabel)]
     assert M.VOICE_MODEL in confirm.findChildren(QLabel)[0].text()
     dialog.download()
     worker = dialog.worker
@@ -115,13 +115,12 @@ def test_catalog_statuses_space_and_confirmation_download_progress(models, qtbot
     dialog.table.selectRow(dialog.ids.index("small"))
     dialog.download()
     wait_done(dialog, qtbot)
-    assert view.model_choice.currentData() == "small"
+    assert view.model_choice.currentData() == "tiny"
     dialog.table.selectRow(dialog.ids.index(VOICE_ID))
-    assert not dialog.delete_button.isEnabled()
-    assert dialog.delete_button.toolTip() == M.DELETE_VOICE
+    assert dialog.delete_button.isEnabled()
 
 
-def test_cancel_keeps_part_and_new_dialog_resumes(models, qtbot):
+def test_cancel_removes_part_and_new_dialog_starts_fresh(models, qtbot):
     models.tls.mode = "slow"
     dialog = models.create()
     dialog.download()
@@ -129,8 +128,7 @@ def test_cancel_keeps_part_and_new_dialog_resumes(models, qtbot):
     qtbot.waitUntil(lambda: part.exists() and part.stat().st_size > 0, timeout=10000)
     dialog.cancel()
     wait_done(dialog, qtbot)
-    offset = part.stat().st_size
-    assert 0 < offset < len(DATA) and not models.file.exists()
+    assert not part.exists() and not models.file.exists()
     assert dialog.message.text() == M.DOWNLOAD_PAUSED
     dialog.close()
     models.tls.mode = "normal"
@@ -139,7 +137,7 @@ def test_cancel_keeps_part_and_new_dialog_resumes(models, qtbot):
     resumed.download()
     wait_done(resumed, qtbot)
     assert resumed.statuses["tiny"] == "installed"
-    assert f"bytes={offset}-" in models.tls.requests
+    assert not any(models.tls.requests)
     assert not part.exists()
 
 
@@ -166,8 +164,7 @@ def test_verify_all_rehashes_and_delete_requires_confirmation_and_safe_choice(
     small.write_bytes(DATA)
     choice = ["tiny"]
     dialog = models.create(selected=lambda: choice[0])
-    assert not dialog.delete_button.isEnabled()
-    assert dialog.delete_button.toolTip() == M.DELETE_SELECTED
+    assert dialog.delete_button.isEnabled()
     choice[0] = "small"
     dialog._refresh()
     assert dialog.delete_button.isEnabled()
@@ -180,8 +177,7 @@ def test_verify_all_rehashes_and_delete_requires_confirmation_and_safe_choice(
     assert not models.file.exists() and small.exists()
     choice[0] = None
     dialog.table.selectRow(dialog.ids.index("small"))
-    assert not dialog.delete_button.isEnabled()
-    assert dialog.delete_button.toolTip() == M.DELETE_LAST
+    assert dialog.delete_button.isEnabled()
     original = small.stat()
     small.write_bytes(b"x" * len(DATA))
     os.utime(small, ns=(original.st_atime_ns, original.st_mtime_ns))
@@ -190,14 +186,16 @@ def test_verify_all_rehashes_and_delete_requires_confirmation_and_safe_choice(
     assert dialog.statuses["small"] == "damaged"
 
 
-def test_no_download_without_consent_and_worker_enforces_delete_policy(models, qtbot, monkeypatch):
+def test_no_download_without_consent_and_worker_allows_selected_last_delete(
+    models, qtbot, monkeypatch
+):
     models.file.write_bytes(DATA)
     dialog = models.create()
     worker = ModelWorker(
         models.registry, models.paths, action="delete", ids=("tiny",), selected="tiny"
     )
     worker.run()
-    assert models.file.exists() and worker.failure == "DELETE"
+    assert not models.file.exists() and worker.failure is None
     dialog.table.selectRow(dialog.ids.index("small"))
     monkeypatch.setattr(DownloadDialog, "exec", lambda _: QDialog.DialogCode.Rejected)
     dialog.download()
@@ -251,7 +249,7 @@ def test_fetch_command_separates_source_and_split_packaged_runtime(tmp_path):
     ]
 
 
-def test_closing_manager_cancels_child_and_preserves_resumable_part(models, qtbot):
+def test_closing_manager_cancels_child_and_removes_part(models, qtbot):
     models.tls.mode = "slow"
     dialog = models.create()
     dialog.download()
@@ -259,7 +257,7 @@ def test_closing_manager_cancels_child_and_preserves_resumable_part(models, qtbo
     qtbot.waitUntil(lambda: part.exists() and part.stat().st_size > 0, timeout=10000)
     dialog.done(QDialog.DialogCode.Rejected)
     qtbot.waitUntil(lambda: not dialog.busy and not dialog.isVisible(), timeout=15000)
-    assert part.exists() and not models.file.exists()
+    assert not part.exists() and not models.file.exists()
     assert dialog.workers[-1].cancelled.is_set()
 
 
@@ -316,7 +314,7 @@ def test_main_window_close_cancels_model_child_without_orphan(models, qtbot, mon
     QTimer.singleShot(0, lambda: view.open_model_manager(focus_id="tiny"))
     qtbot.waitUntil(lambda: bool(started) and not view.isVisible(), timeout=15000)
     timer.stop()
-    assert part.exists() and not models.file.exists()
+    assert not part.exists() and not models.file.exists()
     assert not any(worker.isRunning() for worker in view._tasks)
 
 
@@ -361,3 +359,94 @@ def test_guarded_real_gui_download_exercise_with_local_tls(models):
     assert len(evidence["fetch_pids"]) == 2
     assert evidence["gui_pid"] not in evidence["fetch_pids"]
     assert len(models.tls.requests) == 2
+
+
+def test_selected_last_and_voice_deletion_clear_choice_without_replacement(
+    models, qtbot, monkeypatch
+):
+    from dusty.core import Job
+    from dusty.queue.storage import load_settings
+
+    models.file.write_bytes(DATA)
+    small = models.paths.models_dir / models.registry.manifest.models["small"].file_name
+    small.write_bytes(DATA)
+    voice = models.paths.models_dir / models.registry.manifest.vad_file_name
+    voice.write_bytes(DATA)
+    view = MainWindow(models.paths, interactive=False)
+    qtbot.addWidget(view)
+    view.apply_prepared(
+        Prepared(
+            ("tiny", "small"),
+            False,
+            {"model_id": "tiny", "output_dir": str(models.paths.user_dir)},
+            vad_installed=True,
+        )
+    )
+    view.model.set_jobs([Job(Path("sample.wav"))])
+    view._refresh()
+    view.show()
+    dialog = models.create(
+        registry=view.registry, voice=True, selected=lambda: view.model_choice.currentData()
+    )
+    dialog.models_changed.connect(view._models_changed)
+    confirmations = []
+
+    def accept(dialog):
+        confirmations.extend(label.text() for label in dialog.findChildren(QLabel))
+        return QDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(TextDialog, "exec", accept)
+    dialog.delete()
+    wait_done(dialog, qtbot)
+    assert M.DELETE_SELECTED in confirmations
+    assert view.model_choice.currentIndex() == -1 and view.installed == ("small",)
+    assert view.start_hint.text() == M.CHOOSE_MODEL
+    assert view.choose_model_button.isVisible() and not view.start_button.isEnabled()
+    assert view.status.text() != M.READY
+    assert not view.download_recommended_button.isVisible()
+    assert load_settings(view.paths.user_dir / "settings.json")["model_id"] is None
+    reopened = MainWindow(models.paths, interactive=False)
+    qtbot.addWidget(reopened)
+    reopened.apply_prepared(
+        Prepared(
+            ("small",),
+            False,
+            load_settings(view.paths.user_dir / "settings.json"),
+            vad_installed=True,
+        )
+    )
+    assert reopened.model_choice.currentIndex() == -1
+    # Newly downloaded Tiny is selected only because the previous choice is empty.
+    dialog.table.selectRow(dialog.ids.index("tiny"))
+    dialog.download()
+    wait_done(dialog, qtbot)
+    assert view.model_choice.currentData() == "tiny"
+    dialog.table.selectRow(dialog.ids.index(VOICE_ID))
+    dialog.delete()
+    wait_done(dialog, qtbot)
+    assert M.DELETE_VOICE in confirmations
+    assert view.start_hint.text() == M.VAD_MISSING
+    assert not view.start_button.isEnabled()
+    for key in ("small", "tiny"):
+        dialog.table.selectRow(dialog.ids.index(key))
+        dialog.delete()
+        wait_done(dialog, qtbot)
+    assert not view.installed and view.start_hint.text() == M.NO_MODELS
+    assert view.download_recommended_button.isVisible()
+
+
+def test_manager_name_quality_note_and_best_for_are_distinct(models, qtbot):
+    dialog = models.create()
+    assert dialog.table.columnCount() == 4
+    for row, key in enumerate(dialog.ids):
+        labels = dialog.table.cellWidget(row, 0).findChildren(QLabel)
+        assert len(labels) == 3
+        name = M.VOICE_MODEL if key == VOICE_ID else M.MODEL_TECHNICAL[key]
+        assert labels[0].text() == (M.RECOMMENDED.format(name=name) if key == "small" else name)
+        assert labels[0].font().bold()
+        assert labels[1].text() == M.MODEL_QUALITY[key]
+        assert labels[2].text() == M.MODEL_NOTE[key]
+        assert labels[2].font().pointSizeF() < labels[1].font().pointSizeF()
+        assert dialog.table.item(row, 1).text() == M.MODEL_BEST_FOR[key]
+    assert dialog.review_notice.text() == M.MODEL_REVIEW
+    assert dialog.cancel_button.isVisible() and not dialog.cancel_button.isEnabled()

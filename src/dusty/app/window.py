@@ -239,9 +239,10 @@ class MainWindow(QMainWindow):
         output_layout.setContentsMargins(0, 0, 0, 0)
         output_layout.addWidget(self._label(M.OUTPUT))
         self.output_label = self._label(M.NO_OUTPUT)
-        output_layout.addWidget(self.output_label, 1)
+        output_layout.addWidget(self.output_label)
         self.output_button = self._button(M.CHOOSE_FOLDER, self.choose_output)
         output_layout.addWidget(self.output_button)
+        output_layout.addStretch(1)
         layout.addWidget(self.output_row)
         self.format_row = QWidget()
         formats_layout = QHBoxLayout(self.format_row)
@@ -355,6 +356,7 @@ class MainWindow(QMainWindow):
         self.overall.setRange(0, 1000)
         self.overall.setTextVisible(False)
         bottom.addWidget(self.overall, 1)
+        self.choose_model_button = self._button(M.OPTIONS, self.open_options)
         self.start_hint = self._label(M.EMPTY_CELL, warning=True)
         self.start_hint.setStyleSheet("font-size: 16px")
         self.start_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -367,6 +369,7 @@ class MainWindow(QMainWindow):
         self.start_button.setDefault(True)
         layout.addLayout(bottom)
         layout.addWidget(self.start_hint)
+        layout.addWidget(self.choose_model_button)
         layout.addWidget(self.start_button)
         self.setCentralWidget(body)
         for combo in (self.model_choice, self.task_choice, self.language_choice):
@@ -506,7 +509,7 @@ class MainWindow(QMainWindow):
 
     def _set_combo(self, combo: QComboBox, value) -> None:
         index = combo.findData(value)
-        if index >= 0:
+        if index >= 0 or combo is self.model_choice and value is None:
             combo.setCurrentIndex(index)
 
     def _apply_settings(self, settings: dict) -> None:
@@ -553,7 +556,7 @@ class MainWindow(QMainWindow):
             settings.update(
                 {
                     "schema_version": 1,
-                    "model_id": self.model_choice.currentData() or "tiny",
+                    "model_id": self.model_choice.currentData(),
                     "language": self.language_choice.currentData(),
                     "preferred_language": self._previous_language
                     if self._english_forced
@@ -621,6 +624,7 @@ class MainWindow(QMainWindow):
     @Slot(object)
     def _models_changed(self, statuses: dict[str, str]) -> None:
         previous = self.model_choice.currentData()
+        old_installed = self.installed
         self.installed = tuple(
             key for key, state in statuses.items() if state == "installed" and key != VOICE_ID
         )
@@ -629,20 +633,18 @@ class MainWindow(QMainWindow):
         self.model_choice.clear()
         for key in self.installed:
             self.model_choice.addItem(M.MODEL_NAMES[key], key)
-        desired = (
-            previous
-            if self._explicit_model and previous in self.installed
-            else (
+        newly_installed = [key for key in self.installed if key not in old_installed]
+        desired = previous if previous in self.installed else None
+        if previous is None and newly_installed:
+            desired = (
                 self._recommendation
-                if self._recommendation in self.installed
-                else previous
-                if previous in self.installed
-                else next(iter(self.installed), "")
+                if self._recommendation in newly_installed
+                else newly_installed[0]
             )
-        )
         self._set_combo(self.model_choice, desired)
         self.model_choice.blockSignals(False)
         self._refresh()
+        self._save_settings()
 
     def eventFilter(self, watched, event) -> bool:
         if (
@@ -761,7 +763,7 @@ class MainWindow(QMainWindow):
             self.model_choice.setItemText(
                 index, M.RECOMMENDED.format(name=name) if candidate == recommended else name
             )
-        if self.ready and recommended not in self.installed:
+        if self.ready and not self.installed:
             unavailable = M.MISSING_RECOMMENDATION.format(name=M.MODEL_NAMES[recommended])
             warning = unavailable + ("\n" + warning if warning else "")
         self.resume_model_button.setVisible(bool(self._missing_resume_model))
@@ -770,14 +772,19 @@ class MainWindow(QMainWindow):
         )
         self.resume_model_button.setEnabled(bool(model and not invalid and not self.running))
         needs_voice = self.vad.isChecked() and not self.vad_installed
-        if model and needs_voice and recommended in self.installed:
+        if model and needs_voice:
             warning = M.VAD_MISSING
-        prompt = self.ready and (recommended not in self.installed or needs_voice)
+        prompt = self.ready and (not self.installed or needs_voice)
+        self.download_recommended_button.setText(
+            M.DOWNLOAD_RECOMMENDED.format(name=M.MODEL_TECHNICAL[recommended])
+            if not self.installed
+            else M.DOWNLOAD_VOICE
+        )
         self.download_recommended_button.setVisible(bool(prompt) and not self.running)
         self.download_recommended_button.setEnabled(not self.running)
         hint = M.EMPTY_CELL
         if not model and self.ready:
-            hint = M.NO_MODELS
+            hint = M.NO_MODELS if not self.installed else M.CHOOSE_MODEL
         elif needs_voice:
             hint = M.VAD_MISSING
         elif not self.output_dir and not self.same_folder.isChecked():
@@ -791,7 +798,7 @@ class MainWindow(QMainWindow):
                 model=M.MODEL_NAMES.get(self._missing_resume_model, self._missing_resume_model)
             )
         elif not model and self.ready:
-            hint = M.NO_MODELS
+            hint = M.NO_MODELS if not self.installed else M.CHOOSE_MODEL
         elif invalid:
             hint = M.TRANSLATE_DISABLED
         elif not any(box.isChecked() for box in self.formats.values()):
@@ -806,6 +813,8 @@ class MainWindow(QMainWindow):
             hint = M.SELF_TEST_RUNNING
         elif not self.model.jobs and not hint:
             hint = M.ADD_RECORDINGS_FIRST
+        self.choose_model_button.setVisible(bool(self.ready and self.installed and not model))
+        self.choose_model_button.setEnabled(not self.running)
         self.start_hint.setText(hint)
         self.start_hint.setVisible(bool(hint))
         self.warning.setText(warning or M.EMPTY_CELL)
@@ -850,6 +859,10 @@ class MainWindow(QMainWindow):
                 )
             )
         )
+        if not self.start_button.isEnabled() and self.status.text() == M.READY:
+            self.status.clear()
+        elif self.start_button.isEnabled() and not self.status.text():
+            self.status.setText(M.READY)
 
     def _use_medium(self) -> None:
         self._explicit_model = True
