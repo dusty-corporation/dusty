@@ -761,3 +761,22 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   compatibility launch reports effective 96 DPI without changing host settings,
   but Windows bitmap-scales its capture. This limitation must be disclosed;
   native 100%/150% display acceptance remains an Owner VM check.
+
+### M5 native review fixes and documentation preparation
+
+- Native review of green artifact 40036996425 exposed an overlapping hidden
+  download action behind Retry controls; e05d8d9 hides it in production failure,
+  active and finished states. Generator regression passes.
+- The harmless review build's CreateAppDir=no caused the native folder page to
+  be skipped; e3e2d7f exposes its real controls without enabling installation.
+  69222ef separates the uninstall-only silent API from Setup's review form.
+  These capture corrections await their gated CI artifact, not claimed complete.
+- First 18 usable native page captures are retained under ignored build/;
+  wrong folder/uninstall captures are excluded from the review archive.
+- Added prior-draft checksum verification before executing an upgrade input;
+  8 focused release tests pass, including tamper and duplicate checksum rejection.
+- Draft M6 docs are prepared in build/m6-docs-v2-port, not yet on a branch:
+  installer pages/failure outcomes, deletion rules and crash/stale partial policy
+  updated. Prepared local-link and prohibited-dash checks: zero findings.
+- Tracked UTF-8 text scan via git ls-files -z: em/en dash matches: 0. Host scale
+  unchanged; all development changes stay in whisper_app.
