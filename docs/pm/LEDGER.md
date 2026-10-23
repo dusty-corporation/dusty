@@ -508,3 +508,29 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   05387171a91849629a6e755b0511935a2575b0f833d02af0a9c3a4c3bc3295cc.
   Release remains draft, all earlier assets retained. Backend-choice guard does
   not change any rendered state. Next: final packaged acceptance/report.
+
+
+### M4 Owner UX fixes complete, 2026-10-23
+
+- Owner's original six ThinkPad packaged checks: all PASS functionally.
+- All 15 requested UX corrections implemented on m4-downloader and carried by
+  normal forward merges to m5-packaging-spike and m6-docs; no force push used.
+- Final implementation CI: M4 51e6d2a / 39993285087 green (156 passed/2 expected
+  skips, 94.2%); M5 545dac4 / 39993290851 green (204 passed/2 expected skips,
+  94.5%); M6 e0e34e2 / 39993330554 green, all four jobs including packaging.
+- Final split bundle: 216 files, 161,991,287 bytes; 64 PE checks, no findings;
+  license gate and GUI smoke pass. Source/packaged WFP: GUI 0, downloader 4
+  allowed/0 blocked, calibrated. Packaged processing self-test: 0 connections.
+- Installed payload, installer-wide licenses, silent install/download/upgrade,
+  both uninstall options, unchanged user outputs and installed WFP also pass;
+  unsigned installer remains a gated CI artifact only, never a release.
+- Latest screenshot draft asset: m4-screenshots-b884fae.zip (84 PNGs); release
+  remains draft, old assets retained. Exact hash and link are in M4-report.md.
+- Owner review bundle: run 39993330554, artifact 12519212190. Report contains
+  isolated-profile commands and six changed-behavior checks, not another full
+  walkthrough. M6 user/privacy docs match deletion and cancel-cleanup policy.
+- Final report/changelog/ledger update is documentation only. Product code,
+  tests, workflows and license/runtime pins remain identical to the green runs.
+- No PR opened, main merge, release publication, settings change or new work.
+  Stop after pushing this documentation through both later branches; PM review
+  and later clean-VM/Surface checks are Owner actions.
