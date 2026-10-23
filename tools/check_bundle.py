@@ -16,7 +16,31 @@ def check(bundle: Path) -> list[str]:
             findings.append(f"Prohibited Qt DLL: {path.relative_to(bundle).as_posix()}")
         if path.is_file() and path.suffix.lower() == ".bin":
             findings.append("Model weights found in application bundle")
-    for name, subsystem in (("dusty.exe", 2), ("dusty-fetch.exe", 3)):
+        if (
+            path.is_relative_to(bundle / "dusty")
+            and path.is_file()
+            and (
+                name
+                in {
+                    "_socket.pyd",
+                    "_ssl.pyd",
+                    "_overlapped.pyd",
+                    "_multiprocessing.pyd",
+                    "select.pyd",
+                }
+                or name.startswith(("libssl", "libcrypto", "qt6network", "qt6webengine"))
+                or "lxml" in path.parts
+                or "docx" in path.parts
+            )
+        ):
+            findings.append(f"Prohibited offline dependency: {path.relative_to(bundle).as_posix()}")
+        if path.is_file() and (
+            name.startswith("api-ms-win-") or name in {"ucrtbase.dll", "opengl32sw.dll"}
+        ):
+            findings.append(
+                f"Prohibited Windows/Mesa runtime: {path.relative_to(bundle).as_posix()}"
+            )
+    for name, subsystem in (("dusty/dusty.exe", 2), ("dusty-fetch/dusty-fetch.exe", 3)):
         path = bundle / name
         if not path.is_file():
             findings.append(f"Missing executable: {name}")
@@ -59,8 +83,12 @@ def main() -> int:
         for item in analysis["fetch_pure"]
     ):
         findings.append("Downloader unexpectedly embeds the offline GUI package")
-    if any(item[0].startswith("dusty_fetch") for item in analysis["gui_pure"]):
-        findings.append("Offline GUI unexpectedly embeds the downloader package")
+    if any(
+        item[0].split(".")[0]
+        in {"dusty_fetch", "docx", "lxml", "socket", "ssl", "asyncio", "multiprocessing"}
+        for item in analysis["gui_pure"]
+    ):
+        findings.append("Offline GUI unexpectedly embeds a prohibited package")
     if findings:
         print("\n".join(findings))
         return 1

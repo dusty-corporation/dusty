@@ -24,7 +24,7 @@ def main() -> None:
     startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     startup.wShowWindow = 0
     process = subprocess.Popen(
-        [str(args.bundle.resolve() / "dusty.exe")], env=environment, startupinfo=startup
+        [str(args.bundle.resolve() / "dusty/dusty.exe")], env=environment, startupinfo=startup
     )
     api = ctypes.windll.user32
     callback_type = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)

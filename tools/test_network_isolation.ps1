@@ -18,7 +18,7 @@ $nativeRoot = Join-Path $repo 'build/bin'
 if ($Bundle) {
     $Bundle = (Resolve-Path -LiteralPath $Bundle).Path
     $nativeRoot = Join-Path $Bundle 'bin'
-    $programs += (Join-Path $Bundle 'dusty.exe')
+    $programs += (Join-Path $Bundle 'dusty/dusty.exe')
 }
 foreach ($relative in @('cpu/whisper-cli.exe', 'vulkan/whisper-cli.exe', 'ffmpeg/ffmpeg.exe', 'ffmpeg/ffprobe.exe')) {
     $programs += (Resolve-Path -LiteralPath (Join-Path $nativeRoot $relative)).Path
@@ -73,7 +73,7 @@ try {
     if ($Bundle) {
         # Explicit network activity finishes before the audit window begins.
         $fetchArgs = @('download', '--id', 'tiny', '--dest', (Join-Path $env:LOCALAPPDATA 'Dusty/models'), '--manifest', (Join-Path $Bundle 'resources/models.json'))
-        $null = Invoke-TestPython -Executable (Join-Path $Bundle 'dusty-fetch.exe') -Arguments $fetchArgs
+        $null = Invoke-TestPython -Executable (Join-Path $Bundle 'dusty-fetch/dusty-fetch.exe') -Arguments $fetchArgs
     }
     & auditpol /backup "/file:$snapshot" | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Audit policy backup failed' }
@@ -106,7 +106,7 @@ try {
     if ($Bundle) {
         # A windowed executable has no stdout handle. Exit zero means the real
         # hash/decode/transcription/keyword checks passed; also require its log.
-        $null = Invoke-TestPython -Executable (Join-Path $Bundle 'dusty.exe') -Arguments @('--self-test', '--backend', 'auto', '--model', 'tiny')
+        $null = Invoke-TestPython -Executable (Join-Path $Bundle 'dusty/dusty.exe') -Arguments @('--self-test', '--backend', 'auto', '--model', 'tiny')
         $log = Join-Path $env:LOCALAPPDATA 'Dusty/logs/dusty.log'
         if (-not (Select-String -LiteralPath $log -Pattern 'status=done' -Quiet)) { throw 'Packaged self-test success log missing' }
     } else {

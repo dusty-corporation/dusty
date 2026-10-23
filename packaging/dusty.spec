@@ -1,4 +1,4 @@
-# PyInstaller 6.16.0: two onedir executables, one shared COLLECT.
+# PyInstaller 6.16.0: separate onedir runtimes; shared native/resources parent.
 import json
 import shutil
 from pathlib import Path
@@ -15,7 +15,9 @@ unused_qt = [
 gui = Analysis(
     [str(root / 'packaging/dusty_entry.py')], pathex=[str(root / 'src')],
     hookspath=[str(root / 'packaging/hooks')],
-    excludes=['dusty_fetch', *unused_qt, 'PySide6.QtNetwork',
+    excludes=['dusty_fetch', 'docx', 'lxml', 'socket', 'ssl', '_socket', '_ssl', '_hashlib',
+              'select', '_overlapped', '_multiprocessing', 'asyncio', 'multiprocessing',
+              *unused_qt, 'PySide6.QtNetwork',
               'PySide6.QtWebEngineCore', 'PySide6.QtWebEngineWidgets',
               'PySide6.QtWebEngineQuick'],
     runtime_hooks=[str(root / 'packaging/runtime_guard.py')],
@@ -26,19 +28,20 @@ fetch = Analysis(
     excludes=['dusty', 'PySide6', 'shiboken6'],
 )
 shutil.copyfile(WARNFILE, warnings / 'warn-fetch.txt')
-# Fail rather than silently choose a different binary at the same destination.
-destinations = {}
-for destination, source, kind in [*gui.binaries, *gui.datas, *fetch.binaries, *fetch.datas]:
-    key = destination.lower()
-    previous = destinations.get(key)
-    if previous and Path(previous).read_bytes() != Path(source).read_bytes():
-        raise ValueError('Conflicting shared runtime destination: ' + destination)
-    destinations[key] = source
+# UCRT/API-set files are supplied by the supported Windows 10+ platform.
+for analysis in (gui, fetch):
+    analysis.binaries = [item for item in analysis.binaries
+                         if not Path(item[0]).name.lower().startswith('api-ms-win-')
+                         and Path(item[0]).name.lower() != 'ucrtbase.dll']
 audit.mkdir(parents=True, exist_ok=True)
 (audit / 'analysis.json').write_text(json.dumps({
     'pure': [*gui.pure, *fetch.pure],
     'gui_pure': gui.pure,
     'fetch_pure': fetch.pure,
+    'gui_binaries': gui.binaries,
+    'fetch_binaries': fetch.binaries,
+    'gui_datas': gui.datas,
+    'fetch_datas': fetch.datas,
     'binaries': [*gui.binaries, *fetch.binaries],
     'datas': [*gui.datas, *fetch.datas],
     'gui_scripts': gui.scripts,
@@ -49,5 +52,5 @@ app = EXE(PYZ(gui.pure), gui.scripts, [], exclude_binaries=True,
 downloader = EXE(PYZ(fetch.pure), fetch.scripts, [], exclude_binaries=True,
                  name='dusty-fetch', console=True,
                  icon=str(root / 'resources/icons/dusty.ico'))
-COLLECT(app, downloader, gui.binaries, gui.datas, fetch.binaries, fetch.datas,
-        name='Dusty')
+COLLECT(app, gui.binaries, gui.datas, name='dusty')
+COLLECT(downloader, fetch.binaries, fetch.datas, name='dusty-fetch')

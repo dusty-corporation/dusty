@@ -80,6 +80,11 @@ def stage(bundle: Path) -> None:
 def main() -> None:
     if not (ROOT / "resources/icons/dusty.ico").is_file():
         make_icon()
+    destination = (ROOT / "dist/Dusty").resolve()
+    if destination.parent != (ROOT / "dist").resolve() or not destination.is_relative_to(ROOT.resolve()):
+        raise ValueError("Bundle output must stay inside the repository dist folder")
+    if destination.exists():
+        shutil.rmtree(destination)
     subprocess.run(
         [
             sys.executable,
@@ -89,6 +94,8 @@ def main() -> None:
             "--clean",
             "--workpath",
             "build/pyinstaller",
+            "--distpath",
+            "dist/Dusty",
             "packaging/dusty.spec",
         ],
         cwd=ROOT,

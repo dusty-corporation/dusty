@@ -26,8 +26,10 @@ def test_bundle_checks_windowed_and_console_subsystems(tmp_path: Path) -> None:
         struct.pack_into("<H", data, 64 + 24 + 68, subsystem)
         return data
 
-    (tmp_path / "dusty.exe").write_bytes(executable(3))
-    (tmp_path / "dusty-fetch.exe").write_bytes(executable(2))
+    (tmp_path / "dusty").mkdir()
+    (tmp_path / "dusty-fetch").mkdir()
+    (tmp_path / "dusty/dusty.exe").write_bytes(executable(3))
+    (tmp_path / "dusty-fetch/dusty-fetch.exe").write_bytes(executable(2))
     findings = check_bundle.check(tmp_path)
     assert sum("Incorrect windowed/console" in item for item in findings) == 2
 
