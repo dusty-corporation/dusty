@@ -22,6 +22,7 @@ OutputBaseFilename=Dusty-@@VERSION@@-draft-unsigned
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern light
+DialogFontSize=10
 WizardSizePercent=150,150
 #ifdef ReviewOnly
 Uninstallable=no
@@ -44,9 +45,11 @@ Source: "@@BUNDLE@@\*"; DestDir: "{tmp}\probe"; Flags: dontcopy recursesubdirs
 #ifndef ReviewOnly
 Source: "@@BUNDLE@@\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 #endif
+#ifndef ReviewOnly
 Source: "@@INNO_LICENSE@@"; DestDir: "{app}\licenses"; DestName: "inno-setup.txt"; Flags: ignoreversion
 Source: "@@INSTALLER_NOTICES@@"; DestDir: "{app}\licenses"; DestName: "installer-THIRD_PARTY_NOTICES.md"; Flags: ignoreversion
 Source: "@@JEDI_SOURCE@@"; DestDir: "{app}\licenses"; DestName: "installer-jedi-source.zip"; Flags: ignoreversion
+#endif
 
 [Icons]
 #ifndef ReviewOnly
@@ -99,6 +102,10 @@ function TerminateChild(Process, Code: LongWord): Boolean;
   external 'TerminateProcess@kernel32.dll stdcall';
 function Tick: Int64;
   external 'GetTickCount64@kernel32.dll stdcall';
+#ifdef ReviewOnly
+function WindowDpi(Wnd: LongWord): LongWord;
+  external 'GetDpiForWindow@user32.dll stdcall';
+#endif
 function SetTimer(Wnd, Id, Milliseconds, Callback: LongWord): LongWord;
   external 'SetTimer@user32.dll stdcall';
 function KillTimer(Wnd, Id: LongWord): Boolean;

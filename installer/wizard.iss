@@ -219,6 +219,7 @@ begin
   for I := 0 to GetArrayLength(Selected) - 1 do Downloads[I] := Selected[I];
   Downloads[GetArrayLength(Selected)] := -1;
   Busy := True; DownloadIndex := 0; Stage := -2;
+  Meter.Position := 0; Outcome.Caption := '';
   Action.Enabled := False; WizardForm.NextButton.Enabled := False;
   RetryButton.Visible := False; CpuButton.Visible := False; WithoutButton.Visible := False;
   if not StartChild(ExpandConstant('{app}\dusty\dusty.exe'), '--installer-prepare') then Failure(False);
@@ -420,10 +421,13 @@ end;
 
 #ifdef ReviewOnly
 procedure ReviewTick;
-var Wanted: String; Page: Integer; Button: TNewButton;
+var Wanted, Metadata: String; Page: Integer; Button: TNewButton;
 begin
   if ReviewShown then Exit;
   Wanted := ExpandConstant('{param:REVIEWPAGE|welcome}');
+  Metadata := ExpandConstant('{param:REVIEWMETA|}');
+  if Metadata <> '' then SaveStringToFile(Metadata,
+    '{"dpi":' + IntToStr(WindowDpi(WizardForm.Handle)) + '}', False);
   Page := WizardForm.CurPageID;
   if ((Wanted = 'welcome') and (Page = wpWelcome)) or
      (((Wanted = 'models') or (Wanted = 'models-low-memory')) and (Page = ModelsPage.ID)) or
@@ -432,7 +436,7 @@ begin
      ((Wanted = 'ready') and (Page = wpReady)) then begin
     ReviewShown := True;
     if Wanted = 'models-low-memory' then MemoryNotice.Caption := CustomMessage('LowMemory');
-    WizardForm.NextButton.Enabled := False; Exit;
+    WizardForm.NextButton.Enabled := True; Exit;
   end;
   if (Page = wpLicense) and ((Wanted = 'license') or (Wanted = 'notices') or (Wanted = 'microsoft')) then begin
     ReviewShown := True;
@@ -458,13 +462,15 @@ begin
       WizardForm.FinishedLabel.Caption := CustomMessage('SetupComplete');
       WizardForm.OuterNotebook.ActivePage := WizardForm.FinishedPage;
       WizardForm.NextButton.Caption := SetupMessage(msgButtonFinish);
-      WizardForm.NextButton.Enabled := False;
+      WizardForm.NextButton.Enabled := True;
+      WizardForm.BackButton.Visible := False; WizardForm.CancelButton.Visible := False;
     end;
     if Wanted = 'finish-without' then begin
       WizardForm.FinishedLabel.Caption := CustomMessage('FinishedWithout');
       WizardForm.OuterNotebook.ActivePage := WizardForm.FinishedPage;
       WizardForm.NextButton.Caption := SetupMessage(msgButtonFinish);
-      WizardForm.NextButton.Enabled := False;
+      WizardForm.NextButton.Enabled := True;
+      WizardForm.BackButton.Visible := False; WizardForm.CancelButton.Visible := False;
     end;
     if Wanted = 'uninstall' then InitializeUninstall;
     Exit;
