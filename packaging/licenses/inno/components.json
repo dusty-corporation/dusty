@@ -81,12 +81,17 @@
     "source": "https://github.com/jrsoftware/issrc/blob/is-6_7_3/Components/SHA256.pas",
     "source_sha256": "5dccbe5cb66750d6870d2551ccea79519bb0f42ff40fa1ff58620825b2eed152",
     "notice": "hash-utilities.txt",
-    "notice_sha256": "90c696e2dea20c57d785f64081d931c626c4db007b650b4282c44bd3e83b29aa",
+    "notice_sha256": "8cbd1b11a655db6309b5df2d0a29738efd734b6aa57c4383f6aec75286b89634",
     "runtime_context": "unmodified Inno Setup 6.7.3 setup runtime only",
     "units": [
       "MD5",
       "SHA1",
       "SHA256"
+    ],
+    "source_links": [
+      "https://github.com/jrsoftware/issrc/blob/is-6_7_3/Components/MD5.pas",
+      "https://github.com/jrsoftware/issrc/blob/is-6_7_3/Components/SHA1.pas",
+      "https://github.com/jrsoftware/issrc/blob/is-6_7_3/Components/SHA256.pas"
     ]
   },
   {

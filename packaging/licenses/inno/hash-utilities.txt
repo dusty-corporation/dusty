@@ -1,3 +1,48 @@
+MD5.pas
+unit MD5;
+
+{
+  MD5.pas: System.Hash.pas wrapper in the style of the old version of this file:
+
+  MD5.pas: Translated from C to Delphi by Jordan Russell on 2004-03-16.
+  Still in the public domain. The original C code was taken from dpkg.
+}
+
+(*
+ * This code implements the MD5 message-digest algorithm.
+ * The algorithm is due to Ron Rivest.  This code was
+ * written by Colin Plumb in 1993, no copyright is claimed.
+ * This code is in the public domain; do with it what you wish.
+ *
+ * Equivalent code is available from RSA Data Security, Inc.
+ * This code has been tested against that, and is equivalent,
+ * except that you don't need to include two pages of legalese
+ * with every copy.
+ *
+ * To compute the message digest of a chunk of bytes, declare an
+ * MD5Context structure, pass it to MD5Init, call MD5Update as
+ * needed on buffers full of bytes, and then call MD5Final, which
+ * will fill a supplied 16-byte array with the digest.
+ *
+ * Changed so as no longer to depend on Colin Plumb's `usual.h' header
+ * definitions; now uses stuff from dpkg's config.h.
+ *  - Ian Jackson <ian@chiark.greenend.org.uk>.
+ * Still in the public domain.
+ *)
+
+SHA1.pas
+unit SHA1;
+
+{
+  SHA1.pas: System.Hash.pas wrapper in the style of the old version of this file:
+
+  SHA1.pas: SHA-1 hash implementation, based on RFC 3174 and MD5.pas
+  Author: Jordan Russell, 2010-02-24
+  License for SHA1.pas: Public domain, no copyright claimed
+}
+
+
+SHA256.pas
 unit SHA256;
 
 {
@@ -8,18 +53,3 @@ unit SHA256;
 
 interface
 
-uses
-  System.Hash;
-
-type
-  TSHA256Context = record
-    hash: THashSHA2;
-  end;
-  TSHA256Digest = array[0..31] of Byte;
-
-procedure SHA256Init(var ctx: TSHA256Context);
-procedure SHA256Update(var ctx: TSHA256Context; const buffer; len: Cardinal);
-function SHA256Final(var ctx: TSHA256Context): TSHA256Digest;
-
-function SHA256Buf(const Buffer; Len: Cardinal): TSHA256Digest;
-function SHA256DigestsEqual(const A, B: TSHA256Digest): Boolean;

@@ -65,6 +65,18 @@
     {
       "path": "Components/FolderTreeView.pas",
       "sha256": "223b0b4dac1ac21f689e8670c5bb4337e6b79e84c99b46d3c825b9372d9c7773"
+    },
+    {
+      "path": "Components/MD5.pas",
+      "sha256": "69946bb420e24ab17898d07f12de2a36e3dc353d3c098a48d773b7c967532e63"
+    },
+    {
+      "path": "Components/SHA1.pas",
+      "sha256": "ea8a5961d0e8a5c88e6185d14aec0c6cee6afbeae5950d6a87bd468b129ebf20"
+    },
+    {
+      "path": "Components/SHA256.pas",
+      "sha256": "5dccbe5cb66750d6870d2551ccea79519bb0f42ff40fa1ff58620825b2eed152"
     }
   ],
   "jedi_sources": [
