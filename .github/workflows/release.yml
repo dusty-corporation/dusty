@@ -6,12 +6,14 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   validate:
     runs-on: windows-latest
     outputs:
       previous_tag: ${{ steps.version.outputs.previous_tag }}
+      previous_run_id: ${{ steps.version.outputs.previous_run_id }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - name: Reject unapproved tags
@@ -24,16 +26,21 @@ jobs:
           python tools/release_version.py $env:RELEASE_TAG
           if ($LASTEXITCODE -ne 0) { throw 'Unapproved release tag' }
           $number = [int]($env:RELEASE_TAG -replace '^v0.5.0-m5.', '')
-          $drafts = gh release list --repo '${{ github.repository }}' --limit 100 --json tagName,isDraft | ConvertFrom-Json
-          if ($LASTEXITCODE -ne 0) { throw 'Cannot discover prior draft versions' }
-          $prior = @($drafts | Where-Object { $_.isDraft -and $_.tagName -match '^v0\.5\.0-m5\.([1-9][0-9]*)$' } | ForEach-Object { [int]($_.tagName -replace '^v0.5.0-m5.', '') } | Where-Object { $_ -lt $number } | Sort-Object -Descending)
-          if ($prior.Count) { "previous_tag=v0.5.0-m5.$($prior[0])" >> $env:GITHUB_OUTPUT }
+          $runs = gh run list --repo '${{ github.repository }}' --workflow release.yml --status success --limit 100 --json databaseId,headBranch | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot discover prior gated release workflows' }
+          $prior = @($runs | Where-Object { $_.headBranch -match '^v0\.5\.0-m5\.([1-9][0-9]*)$' } | ForEach-Object { @{number=[int]($_.headBranch -replace '^v0.5.0-m5.', '');tag=$_.headBranch;run=$_.databaseId} } | Where-Object { $_.number -lt $number } | Sort-Object -Property number -Descending)
+          if ($prior.Count) {
+            "previous_tag=$($prior[0].tag)" >> $env:GITHUB_OUTPUT
+            "previous_run_id=$($prior[0].run)" >> $env:GITHUB_OUTPUT
+          }
+          elseif ($number -gt 2) { throw 'Expected an earlier gated draft for the two-version upgrade test' }
   gates:
     needs: validate
     uses: ./.github/workflows/ci.yml
     with:
       release_tag: ${{ github.ref_name }}
       previous_tag: ${{ needs.validate.outputs.previous_tag }}
+      previous_run_id: ${{ needs.validate.outputs.previous_run_id }}
   draft:
     needs: [validate, gates]
     runs-on: windows-latest
