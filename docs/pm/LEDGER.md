@@ -630,7 +630,7 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 | M5-01C | M5 | Revalidate port source | done | 224 passed/1 expected skip, 94.6%; lint/format 127 files, mypy 70, all source policies pass; CI 40011781091 checks/offline/upload regression green | - |
 | M5-01D | M5 | Model-free Vulkan investigation | done | Pinned engine-v2 API: 1 device/init/4 KiB buffer clear+sync, no model, exit 0 in 0.468 s; docs/dev/m5-model-free-vulkan-check.md | - |
 | M5-01E | M5 | Gap analysis and decision inventory | done | M5-interim-1.md covers all six SPEC tasks/three acceptance items, brief gaps, six recommended decisions, Phase 2 estimate | - |
-| M5-02 | M5 | Finish installer and release acceptance | blocked | S0 self-review: three transcript-preservation regressions fail; M5-interim-8.md; normal work stopped, active builds requested cancelled, final release/VM acceptance withheld | ISSUE-020 |
+| M5-02 | M5 | Finish installer and release acceptance | blocked | Engineer handoff complete; final .11/.12 CI green (40099284709, 40100326932), all defects resolved, M5-report.md written. Fresh standard-user VM results remain Owner action | Owner VM acceptance |
 
 - Original spike interim-1 retained as M5-packaging-spike-interim-1.md; other
   spike reports remain historical, with no old passing run claimed for this head.
@@ -1177,3 +1177,23 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   It includes 16 additional passing atomic-write regressions (49 total matrix).
 - m6-docs-v2 e6de0aa has source/installer/tools/tests/workflows parity, safety
   fixes and privacy/install updates. Reference branches untouched.
+
+### M5 final handoff (2026-10-24)
+
+- Final drafts v0.5.0-m5.11 and v0.5.0-m5.12: all jobs GREEN, runs
+  40099284709 and 40100326932. Real .11 to .12 confirmed in workflow input
+  and two_distinct_versions receipt. Legacy destination protection passes.
+- Final source: 354 passed/2 expected skips, 315.72 s; separate real network
+  1 passed/1.95 s. Required coverage 94.7% (1012/1069), all packages above 85%.
+  All 49 adversarial cases included. Lint/format/types/policies pass.
+- Full installer WFP Setup/GUI/native 0, fetch 4/0; cancel 0/0/0, fetch 2/0.
+  Packaged/installed PE/license/GUI/WFP, actual legacy protection, true upgrade
+  with fetch blocked, normal cancel/retry, both uninstalls and sentinel pass.
+- Downloaded final assets: all ten API digests/eight checksum entries match.
+  Exact installer sizes/assets/hashes and accepted screenshot links in M5-report.
+- VM checklist uses .11/.12, exact host read-only share commands and guest local
+  hash checks; Guest Additions, DustyTester, clean, 90 minutes, exact sentinels
+  and legacy protection test. No agent write to host bench or Owner app profile.
+- M5-report.md complete with gap table, Owner actions, Questions for PM and
+  Second self-review. All discovered S0/S1 defects resolved; VM/scaling/hardware
+  outcomes remain explicitly unclaimed Owner evidence. No PR/publication/merge.
