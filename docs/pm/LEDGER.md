@@ -1210,3 +1210,17 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   .13/.14 tag identities remain 7f7e036 and 972977a. No draft was changed.
 - Updated the audit map with exact runtime-hook, About/notices, canonical-path and
   registered uninstall functions; changelog records the delivered M6 changes.
+
+### M6 first full candidate native result
+
+- Candidate 40124502580: source 392 passed/2 expected skips, 352.16 s; strict
+  packages 95.8% (1046/1092), each above 85%; separate public network test 1 pass.
+  Source/packaged/installed WFP all have zero processing events. PE, bundle and
+  installer license gates pass. Both ordinary and extended protected-install
+  attempts returned the expected refusal and preserved sentinel/metadata.
+- Native acceptance then failed in the new UI harness: Custom confirmation
+  controls missing. No installer was uploaded. The driver matched a title before
+  validating visible/initialized controls. It now ignores hidden windows and
+  waits within the original deadline for exactly one checkbox and confirmation;
+  checked-default, actual checkbox toggle, generic-dialog rejection and complete
+  uninstall assertions remain. Rerun required; no UI success claimed yet.

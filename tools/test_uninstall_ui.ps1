@@ -24,6 +24,7 @@ public static class DustyUninstallUi {
   [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetClassNameW(IntPtr h, StringBuilder b, int n);
   [DllImport("user32.dll")] public static extern IntPtr SendMessageW(IntPtr h, uint m, IntPtr w, IntPtr l);
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
   public static string Text(IntPtr h) { var b=new StringBuilder(2048); GetWindowTextW(h,b,b.Capacity); return b.ToString(); }
   public static string Class(IntPtr h) { var b=new StringBuilder(128); GetClassNameW(h,b,b.Capacity); return b.ToString(); }
   public static IntPtr[] Windows(IntPtr parent) {
@@ -37,6 +38,7 @@ $p = Start-Process -FilePath $exe -ArgumentList @('/SILENT','/DUSTYCONFIRM=yes',
 $pids = [Collections.Generic.HashSet[int]]::new()
 [void]$pids.Add($p.Id)
 $seen = $false
+$pending = 'no visible confirmation'
 $deadline = [datetime]::UtcNow.AddSeconds(60)
 try {
     while (-not $p.HasExited -and [datetime]::UtcNow -lt $deadline) {
@@ -45,12 +47,17 @@ try {
             [uint32]$ownerId = 0
             [void][DustyUninstallUi]::GetWindowThreadProcessId($handle,[ref]$ownerId)
             if (-not $pids.Contains([int]$ownerId)) { continue }
+            if (-not [DustyUninstallUi]::IsWindowVisible($handle)) { continue }
             if ([DustyUninstallUi]::Class($handle) -eq '#32770') { throw 'Redundant or unexpected native message box appeared' }
             if ([DustyUninstallUi]::Text($handle) -ne $labels.UninstallTitle -or $seen) { continue }
             $children = [DustyUninstallUi]::Windows($handle)
             $choice = @($children | Where-Object { [DustyUninstallUi]::Text($_).StartsWith(($labels.RemoveModels -split '%1')[0]) })
             $confirm = @($children | Where-Object { [DustyUninstallUi]::Text($_) -eq $labels.UninstallAction })
-            if ($choice.Count -ne 1 -or $confirm.Count -ne 1) { throw 'Custom confirmation controls missing' }
+            # Inno creates a hidden form with the same title before the custom
+            # page. A visible page can also be observed while controls are being
+            # created. Wait within the same deadline; never accept absent controls.
+            $pending = 'class=' + [DustyUninstallUi]::Class($handle) + ' choices=' + $choice.Count + ' confirmations=' + $confirm.Count
+            if ($choice.Count -ne 1 -or $confirm.Count -ne 1) { continue }
             [void][DustyUninstallUi]::SetForegroundWindow($handle)
             if ([DustyUninstallUi]::SendMessageW($choice[0],0xF0,[IntPtr]::Zero,[IntPtr]::Zero).ToInt32() -ne 1) { throw 'Remove-model checkbox not checked by default' }
             [void][DustyUninstallUi]::SendMessageW($choice[0],0xF5,[IntPtr]::Zero,[IntPtr]::Zero)
@@ -61,7 +68,7 @@ try {
         [void]$p.WaitForExit(100)
         $p.Refresh()
     }
-    if (-not $p.HasExited -or $p.ExitCode -ne 0 -or -not $seen) { throw 'Interactive uninstall did not complete with one custom confirmation' }
+    if (-not $p.HasExited -or $p.ExitCode -ne 0 -or -not $seen) { throw ('Interactive uninstall did not complete with one custom confirmation; ' + $pending) }
     @{custom_confirmation=1;generic_confirmation=0;keep_models_choice='passed'} | ConvertTo-Json | Set-Content -LiteralPath $Output -Encoding utf8NoBOM
 } finally {
     if (-not $p.HasExited) { $p.Kill($true); $p.WaitForExit() }
