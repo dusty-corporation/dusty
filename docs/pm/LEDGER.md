@@ -1045,3 +1045,19 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   HRESULT as input-synchronous COM reentrancy; the historical producer remains
   unproven. No suppression or false root-cause claim. Continue independent M6
   work and capture native evidence if the diagnostic recurs in full-suite checks.
+
+### M6 native-path correctness finding
+
+- ISSUE-026 S1: real Unicode-profile transcription fails with current engine-v2.
+  Direct ASCII exit 0, Unicode model exit 3, Unicode audio exit 2. CLI main argv
+  uses legacy process code page; console UTF-8 alone is insufficient.
+- Manifest-only experiment on a repo-local copy succeeds with both Unicode paths,
+  expected speech and exit 0. Pinned original unchanged. No Owner data accessed.
+- Candidate UTF-8/long-path build input and enabled native CI regression added;
+  ADR 0024 proposed. PM/Owner activation/new published engine hash pins remain
+  actions, not a reason to stop independent M6 work. No change to frozen M5.
+- Three disk-full pipeline tests pass, including partial rollback/cleanup. Relative
+  output metadata rejects parent, absolute and Windows rooted/drive-relative paths;
+  malformed paths quarantine without output planning escaping the chosen folder.
+- V1 graphics-failure progress bar now represents the completed download bytes,
+  matching its amount line. Generator regression plus 17 queue/installer tests pass.
