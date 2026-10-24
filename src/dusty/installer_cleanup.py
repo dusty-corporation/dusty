@@ -26,7 +26,9 @@ def _cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
         elif isinstance(value, list):
             for item in value:
                 inspect(item, key)
-        elif key in {"output_dir", "outputs", "source"} and isinstance(value, str):
+        elif key in {"output_dir", "outputs", "source", "preserved_paths"} and isinstance(
+            value, str
+        ):
             protected.add(Path(value).resolve())
 
     try:

@@ -104,3 +104,14 @@ operation, then discards the probe files. A hang or crash falls back to Small.
 The post-download transcription tests are separate and can fail even when the
 probe passed. Setup itself does not download: it launches dusty-fetch only after
 the inline model-download consent. Closing or crashing Setup kills its children.
+
+## Interrupted writes and retained destinations
+
+A crash before an atomic write completes may leave a unique .dusty-tmp beside
+its destination. The final file remains the previous complete file or the new
+complete file. Dusty does not sweep transcript folders to remove unfamiliar
+files. These local temporaries are not transmitted.
+
+Legacy destinations recorded in preserved_paths stay protected during uninstall,
+including the whole subtree and its protection metadata. In that case removal
+reports retained data rather than guessing which contents are disposable.

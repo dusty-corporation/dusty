@@ -92,6 +92,17 @@ foreach ($model in $models) {
 }
 Assert-Output
 # Audit the new version after upgrade, not the preceding draft's different bytes.
+# Exercise the sanitized legacy-output protection with the ACTUAL new packaged app.
+# The earlier installer is deliberately not trusted to contain this repair.
+@{schema_version=1;output_dir=$outputs;preserved_paths=@((Join-Path $data 'models'))} | ConvertTo-Json |
+    Set-Content -LiteralPath (Join-Path $data 'settings.json') -Encoding utf8NoBOM
+Invoke-Checked (Join-Path $install 'dusty/dusty.exe') @('--uninstall-data','remove-models') 1
+if (-not (Test-Path -LiteralPath (Join-Path $data 'settings.json'))) { throw 'Legacy protection metadata was removed' }
+foreach ($model in $models) {
+    $file = Get-Item -LiteralPath (Join-Path $data ('models/' + $model.name))
+    if ((Get-FileHash -LiteralPath $file.FullName).Hash -ne $model.hash -or $file.LastWriteTimeUtc.Ticks -ne $model.time) { throw 'Sanitized legacy destination was changed' }
+}
+Save-UserState
 & (Join-Path $repo '.venv/Scripts/python.exe') (Join-Path $PSScriptRoot 'check_installed_payload.py') $install --output (Join-Path $work 'installed-files.json')
 if ($LASTEXITCODE -ne 0) { throw 'Installed file inventory failed' }
 & (Join-Path $PSScriptRoot 'test_network_isolation.ps1') -Bundle $install -InstalledModels
@@ -144,4 +155,4 @@ Save-UserState
 Uninstall-App 'yes'
 Assert-Output
 if ((Test-Path -LiteralPath $data) -or (Test-Path -LiteralPath (Join-Path $install 'dusty/dusty.exe'))) { throw 'Cancelled-install retry cleanup left owned files' }
-@{silent_per_user_install='passed';installer_download_tiny_and_vad='passed';current_installer_fresh_download_wfp='passed';installed_wfp='passed';two_distinct_versions=$twoVersions;upgrade_models_preserved_with_downloader_blocked='passed';uninstall_keep_models='passed';uninstall_remove_models='passed';normal_cancel_removes_partial='passed';user_outputs_unchanged=$true} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $work 'summary.json') -Encoding utf8NoBOM
+@{silent_per_user_install='passed';installer_download_tiny_and_vad='passed';current_installer_fresh_download_wfp='passed';installed_wfp='passed';two_distinct_versions=$twoVersions;upgrade_models_preserved_with_downloader_blocked='passed';uninstall_keep_models='passed';uninstall_remove_models='passed';normal_cancel_removes_partial='passed';preserved_legacy_destination='passed';user_outputs_unchanged=$true} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $work 'summary.json') -Encoding utf8NoBOM

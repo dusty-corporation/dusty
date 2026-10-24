@@ -972,3 +972,14 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   upgrade blocking without advising users to remove unfamiliar files.
 - .9 is draft; final .9 to .10 pair and fresh VM acceptance remain M5 work.
   This branch remains documentation prework, not M6 acceptance or a PR.
+
+### M6 docs v2 second-review safety carry-forward
+
+- Carried explicit M5 files from 791682b: persisted legacy protection fix,
+  interrupted license ownership receipt, required installed acceptance receipt
+  and adversarial matrix. Source/tools/installer/tests/workflows parity verified
+  after staging. Reference branches remain unchanged.
+- Explained protected destinations and interrupted atomic writes in privacy and
+  installation guides. No cleanup sweep of user transcript folders.
+- M5 f9b39f9 full source 339 passed/1 skip, 94.2%; all 49 adversarial cases pass.
+  Final native repaired pair still pending; no M6 acceptance or PR.
