@@ -55,6 +55,9 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     assert "DownloadTemporaryFile(" not in text
     assert "UninstallDelete" not in text  # No broad recursive deletion of user data.
     assert "--installer-test --backend " in text
+    assert "function TestedDefaultId: String;" in text
+    assert "ModelIds[Selected[I]] = RecommendedModel" in text
+    assert text.count("'--installer-pass --model ' + Quoted(TestedDefaultId)") == 2
     assert "Stage := 4" in text  # Smallest model's additional CPU-only check.
     assert "@@" not in text
     assert "{param:ACCEPTTERMS|}" in text
@@ -66,6 +69,11 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     uninstall = text.rsplit("function InitializeUninstall: Boolean;", 1)[1]
     assert uninstall.index("--installer-can-uninstall") < uninstall.index("if UninstallSilent")
     assert uninstall.index("--installer-can-uninstall") < uninstall.index("CreateCustomForm")
+    assert "if UninstallSilent and (ExpandConstant('{param:DUSTYCONFIRM|}') <> 'yes')" in uninstall
+    assert (
+        "'UninstallString', Quoted(ExpandConstant('{uninstallexe}')) + ' /SILENT /DUSTYCONFIRM=yes'"
+        in text
+    )
     code = text.split("[Code]", 1)[1]
     assert not re.search(r"(?m)^\s*\[", code), "Inno parses leading arrays as sections"
     assert not re.search(r"(?m)^\s*#\d", code), "Inno parses leading character codes as directives"

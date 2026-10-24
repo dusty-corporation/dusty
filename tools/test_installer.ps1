@@ -49,7 +49,7 @@ function Uninstall-App([string]$Remove, [int]$ExpectedExit = 0) {
     # than assuming the generated filename across upgrade/reinstall cycles.
     $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{7B3110E8-7983-41AC-A0ED-F6EB13DBB72A}_is1'
     $command = (Get-ItemProperty -LiteralPath $key).UninstallString
-    if ($command -notmatch '^"([^"]+)"$') { throw 'Unexpected registered uninstall command' }
+    if ($command -notmatch '^"([^"]+)" /SILENT /DUSTYCONFIRM=yes$') { throw 'Unexpected registered uninstall command' }
     $uninstaller = [IO.Path]::GetFullPath($Matches[1])
     if ([IO.Path]::GetDirectoryName($uninstaller) -ne $install -or -not (Test-Path -LiteralPath $uninstaller)) { throw 'Registered uninstaller is outside the test install or missing' }
     Write-Host ('acceptance: uninstall remove_models=' + $Remove + ' executable=' + [IO.Path]::GetFileName($uninstaller))
@@ -122,7 +122,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Installed file inventory failed' }
 if ($LASTEXITCODE -ne 0) { throw 'Installed WFP self-test failed' }
 & (Join-Path $repo '.venv/Scripts/python.exe') (Join-Path $PSScriptRoot 'check_pe_imports.py') (Join-Path $install 'dusty') --native (Join-Path $install 'bin') --output (Join-Path $work 'installed-pe.json')
 if ($LASTEXITCODE -ne 0) { throw 'Installed PE import gate failed' }
-Uninstall-App 'no'
+& (Join-Path $PSScriptRoot 'test_uninstall_ui.ps1') -InstallPath $install -Output (Join-Path $work 'uninstall-ui.json')
+if ($LASTEXITCODE -ne 0) { throw 'Interactive uninstall confirmation test failed' }
 Assert-Output
 if (Test-Path -LiteralPath (Join-Path $install 'dusty/dusty.exe')) { throw 'Uninstall left app executable' }
 foreach ($model in $models) { if (-not (Test-Path -LiteralPath (Join-Path $data ('models/' + $model.name)))) { throw 'Keep-models uninstall removed a model' } }

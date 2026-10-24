@@ -65,6 +65,16 @@ begin
   Result := FmtMessage(UnitName, [IntToStr(Tenths div 10) + '.' + IntToStr(Tenths mod 10)]);
 end;
 
+function TestedDefaultId: String;
+var I: Integer;
+begin
+  Result := '';
+  for I := 0 to GetArrayLength(Selected) - 1 do
+    if ModelIds[Selected[I]] = RecommendedModel then Result := RecommendedModel;
+  if (Result = '') and (GetArrayLength(Selected) > 0) then
+    Result := ModelIds[Selected[0]];
+end;
+
 function SuccessText: String;
 begin
   if GetArrayLength(Selected) > 1 then Result := CustomMessage('SetupCompletePlural')
@@ -241,11 +251,14 @@ begin
     if WinMemoryStatus(Memory) then begin
       if Memory.TotalPhysical < @@MIN_RAM@@ then MemoryNotice.Caption := CustomMessage('LowMemory');
       if (Code = 0) and (Memory.TotalPhysical >= @@MIN_RAM@@) then
+      begin
+        RecommendedModel := 'large-v3-turbo-q8_0';
         for I := 0 to GetArrayLength(ModelIds) - 1 do begin
           if not ModelsTouched then ModelsPage.Values[I] := ModelIds[I] = 'large-v3-turbo-q8_0';
           if ModelIds[I] = 'large-v3-turbo-q8_0' then ModelsPage.CheckListBox.ItemCaption[I] := ModelRecommendedLabels[I] + ModelDetails[I]
           else ModelsPage.CheckListBox.ItemCaption[I] := ModelLabels[I] + ModelDetails[I];
         end;
+      end;
     end;
     CheckExistingModels;
     Exit;
@@ -287,7 +300,7 @@ begin
     if Stage = 4 then begin
       Stage := 6;
       if not StartChild(ExpandConstant('{app}\dusty\dusty.exe'),
-        '--installer-pass --model ' + Quoted(ModelIds[Selected[0]])) then Failure(True);
+        '--installer-pass --model ' + Quoted(TestedDefaultId)) then Failure(True);
     end
     else begin
       TestIndex := TestIndex + 1;
@@ -339,7 +352,7 @@ begin
     if not StartChild(ExpandConstant('{app}\dusty\dusty.exe'), '--installer-clear') then Failure(True);
   end else if Stage = 6 then begin
     if not StartChild(ExpandConstant('{app}\dusty\dusty.exe'),
-      '--installer-pass --model ' + Quoted(ModelIds[Selected[0]])) then Failure(True);
+      '--installer-pass --model ' + Quoted(TestedDefaultId)) then Failure(True);
   end else if Stage >= 3 then begin CpuRetry := False; BeginTest; end else DownloadClick(Sender);
 end;
 
@@ -459,6 +472,7 @@ end;
 procedure InitializeWizard;
 var I: Integer; Requested: String; Button: TNewButton;
 begin
+  RecommendedModel := 'small';
   ModelsPage := CreateInputOptionPage(wpLicense, CustomMessage('ChooseModels'),
     CustomMessage('ChooseModelsHelp'), '', False, True);
   SetArrayLength(ModelIds, @@MODEL_COUNT@@); SetArrayLength(ModelNames, @@MODEL_COUNT@@);
@@ -652,6 +666,13 @@ end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
+#ifndef ReviewOnly
+  if CurStep = ssDone then
+    if not RegWriteStringValue(HKCU,
+      'Software\Microsoft\Windows\CurrentVersion\Uninstall\{7B3110E8-7983-41AC-A0ED-F6EB13DBB72A}_is1',
+      'UninstallString', Quoted(ExpandConstant('{uninstallexe}')) + ' /SILENT /DUSTYCONFIRM=yes') then
+      RaiseException(CustomMessage('UninstallRegistrationFailed'));
+#endif
   if (CurStep = ssPostInstall) and WizardSilent then begin
     DownloadClick(nil);
     while Busy do begin Sleep(100); PollChild(0, 0, 0, 0); end;

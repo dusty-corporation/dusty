@@ -142,6 +142,7 @@ var
   Busy, FinishedWithout, TestFailed, ModelsTouched, ProbeStarted: Boolean;
   CpuRetry: Boolean;
   ProbeRoot: String;
+  RecommendedModel: String;
   ProbeBegan: Int64;
   ReviewShown: Boolean;
   ModelBytes: array of Int64;
@@ -198,7 +199,7 @@ begin
     SuppressibleMsgBox(CustomMessage('UninstallProtected'), mbError, MB_OK, IDOK);
     Exit;
   end;
-  if UninstallSilent then begin
+  if UninstallSilent and (ExpandConstant('{param:DUSTYCONFIRM|}') <> 'yes') then begin
     if ExpandConstant('{param:REMOVEMODELS|}') = 'yes' then begin
       RemoveModels := True;
       Result := True;
