@@ -1,5 +1,7 @@
 """Age out abandoned model download prefixes without following links."""
 
+import hashlib
+import json
 import stat
 import time
 from pathlib import Path
@@ -41,6 +43,22 @@ def cleanup_stale_partials(directory: Path, *, now: float | None = None) -> int:
                 or getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
                 or info.st_mtime >= cutoff
             ):
+                continue
+            receipt = path.with_name(path.name.removesuffix(".part") + ".lock")
+            if linked(receipt):
+                continue
+            try:
+                data = json.loads(receipt.read_bytes()[1:])
+                with path.open("rb") as stream:
+                    digest = hashlib.file_digest(stream, "sha256").hexdigest()
+                if data != {
+                    "schema": 1,
+                    "purpose": "model-download",
+                    "file": path.name,
+                    "sha256": digest,
+                }:
+                    continue
+            except (OSError, ValueError):
                 continue
             path.unlink()
             removed += 1

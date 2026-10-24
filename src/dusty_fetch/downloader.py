@@ -139,6 +139,23 @@ def matches(path: Path, asset: Asset) -> bool:
     return digest.hexdigest() == asset.sha256
 
 
+def record_partial(path: Path) -> None:
+    """Retain a hash receipt for age-based cleanup of a completed transfer attempt."""
+    if linked(path) or not path.is_file():
+        return
+    lock = path.with_name(path.name.removesuffix(".part") + ".lock")
+    if linked(lock):
+        return
+    with path.open("rb") as stream:
+        digest = hashlib.file_digest(stream, "sha256").hexdigest()
+    receipt = {"schema": 1, "purpose": "model-download", "file": path.name, "sha256": digest}
+    # Byte zero remains the OS locking byte. Updating the receipt does not unlock.
+    with lock.open("r+b" if lock.exists() else "w+b") as stream:
+        stream.seek(1)
+        stream.write(json.dumps(receipt).encode("ascii"))
+        stream.truncate()
+
+
 @contextmanager
 def download_lock(path: Path):
     """OS-released lock survives cancellation without a stale PID lock protocol."""
@@ -218,7 +235,10 @@ class Downloader:
                     part.unlink()
                     raise FetchError(Exit.MISMATCH)
                 if offset < asset.size:
-                    self._transfer(asset, part, offset, emit, cancelled)
+                    try:
+                        self._transfer(asset, part, offset, emit, cancelled)
+                    finally:
+                        record_partial(part)
                 if cancelled():
                     raise FetchError(Exit.CANCELLED)
                 emit({"event": "verifying", "bytes": asset.size, "total": asset.size})
