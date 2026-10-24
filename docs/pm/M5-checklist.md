@@ -163,7 +163,7 @@ if ($env:USERNAME -ne 'DustyTester') { throw 'Run only inside the test VM' }
 $settingsFile = Join-Path $env:LOCALAPPDATA 'Dusty\settings.json'
 $settings = Get-Content -LiteralPath $settingsFile -Raw | ConvertFrom-Json
 $settings | Add-Member -NotePropertyName output_dir -NotePropertyValue (Join-Path $env:LOCALAPPDATA 'Dusty\models') -Force
-$settings | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $settingsFile -Encoding utf8
+[IO.File]::WriteAllText($settingsFile, ($settings | ConvertTo-Json -Depth 20), [Text.UTF8Encoding]::new($false))
 ```
 
 Launch Dusty. Expected: a one-time choose-another-folder message; the folder
