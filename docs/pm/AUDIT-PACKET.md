@@ -1,7 +1,9 @@
 # Independent audit packet - M6
 
 This packet describes the M6 branch, not an approval to merge or publish. M5
-branch 062d1f1 and drafts .13/.14 remain frozen for the Owner's VM test. The
+code baseline 062d1f1 and drafts .13/.14 remain frozen for the Owner's VM test.
+The only authorized M5 follow-up is docs-only d4ee428 (ThinkPad evidence and
+internet-zone test instructions). The
 candidate native engine and its unactivated pins must be distinguished from
 public engine-v2. Read CURRENT_MILESTONE.md, SPEC and the accepted ADRs first.
 
@@ -46,14 +48,14 @@ publisher. The catalog hash protects models relative to the downloaded app.
 
 | Boundary | Files and functions |
 |---|---|
-| First startup defense | src/dusty/__main__.py module entry; packaging runtime hook; privacy/network_guard.py install_guard, _audit, NetworkBlockedError |
+| First startup defense | src/dusty/__main__.py module entry; packaging/runtime_guard.py; privacy/network_guard.py install_guard, _audit, NetworkBlockedError |
 | Networking and TLS | src/dusty_fetch/downloader.py HostPolicy.validate, CheckedRedirect.redirect_request, load_asset, Downloader.download, _transfer, _space, matches, io_error; __main__.py CLI error/cancel handling |
 | Model integrity/cache | src/dusty/models/registry.py ModelRegistry._verify, _verify_locked, invalidate, model_path, vad_path; models/catalog.py load_manifest |
 | GUI download boundary | src/dusty/app/model_manager.py ModelWorker.run/requestInterruption, ModelManager.download/cancel/done/closeEvent, DownloadDialog; runtime_paths.py resolve_fetch_command |
 | Child isolation | src/dusty/platform/win_process.py run_job_process, suspended CreateProcessW/AssignProcessToJobObject, reader threads, cancellation/timeout and handle cleanup |
 | Native processing | src/dusty/engine/ffmpeg.py probe_audio/transcode_audio; engine/whisper.py run_whisper/parse_whisper_json; engine/backend.py probe_vulkan |
 | Pipeline/cleanup | src/dusty/queue/coordinator.py Coordinator.run_batch/_run_one/_changed, cleanup_orphaned_work |
-| Ownership and races | src/dusty/work_area.py linked, protected_paths, managed_destination, sanitize_output, OwnedWork.record/cleanup, cleanup_owned; platform/work_lease.py acquire/available |
+| Ownership and races | src/dusty/work_area.py canonical, linked, protected_paths, managed_destination, sanitize_output, OwnedWork.record/cleanup, cleanup_owned; platform/work_lease.py acquire/available |
 | Temp/output publication | src/dusty/queue/outputs.py output_targets/write_outputs; storage.py atomic_json/save_batch/load_batch/save_settings/load_settings/clear_history |
 | Partial age/removal | src/dusty/models/partials.py cleanup_stale_partials; dusty_fetch/downloader.py download_lock/record_partial; installer_support.py cancel_partial |
 | Redaction/sync | src/dusty/privacy/logging.py configure_logger/RedactionFilter/RotatingFileHandler; privacy/sync.py sync_roots/is_synced; platform/sync_locations.py |
@@ -61,6 +63,8 @@ publisher. The catalog hash protects models relative to the downloaded app.
 | Upgrade removal | src/dusty/installer_upgrade.py tidy_license_copies; purpose/directory/hash receipt, exact old LICENSE/NOTICE only |
 | Uninstall removal | src/dusty/installer_cleanup.py uninstall_allowed/cleanup/_cleanup; installer/dusty.iss.template InitializeUninstall before every native deletion path |
 | Native wizard | installer/wizard.iss StartChild/ReleaseChild/ShowAmount/Failure, stage transitions, CleanupActivePartial, FinishStopped, CancelButtonClick/SetupCloseQuery; template PE32 ABI records |
+| Uninstall confirmation | installer/wizard.iss CurStepChanged registry command; installer/dusty.iss.template InitializeUninstall; tools/test_uninstall_ui.ps1 registered Settings route, one custom confirmation, no generic prompt |
+| Local About/notices | src/dusty/app/window.py show_about/open_notices; app/dialogs.py AboutDialog/NoticesDialog; selectable plain repository text and read-only bundled notice, no external URL launch |
 | Installer generation | installer/generate_iss.py generate; unmodified catalog, shared messages, retained license texts and current metadata |
 | Bundle/PE boundary | tools/build_bundle.py stage/main; check_bundle.py; check_pe_imports.py; packaging/platform-socket-imports.json; stage_microsoft_runtime.py |
 | Licensing/supply chain | tools/check_licenses.py allowed_license/check_bundle/check_microsoft; inventory_bundle.py generate; inventory_installer.py generate; check_installer_licenses.py check/check_inventory/check_retained_sources |
@@ -153,3 +157,8 @@ producer is not proven by a Python stack or HRESULT name alone. Do not suppress 
 AUDIT-NOTES.md records each disposition, evidence and remaining risk. Unknown
 content, crash temporaries and protected destinations may intentionally remain;
 never sweep user folders to improve a clean-uninstall result.
+
+ISSUE-028 records a normal/extended Windows namespace comparison bypass, found
+with predicates only. M6 canonicalizes protection comparisons without shortening
+actual long-path I/O. The frozen M5 code does not have that repair; PM must decide
+any backport separately. See M6-report.md for the final native gate result.

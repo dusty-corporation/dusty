@@ -1028,10 +1028,10 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 | ID | Milestone | Task | Status | Evidence | Issues |
 |---|---|---|---|---|---|
 | M6-01 | M6 | Branch, frozen M5 baseline and brief archive | done | m6-hardening from m6-docs-v2 47594ec; M5 brief archived byte-for-byte; frozen m5-installer 062d1f1, .13 7f7e036 and .14 972977a | - |
-| M6-02 | M6 | User/developer/privacy documentation and consistency gate | doing | Existing docs prework read; final M4/M5 behavior is baseline | - |
-| M6-03 | M6 | Audit-note disposition and V1 polish | doing | All audit notes inventoried; Qt diagnostic requires real root cause | - |
-| M6-04 | M6 | Automated hardening, packaged canary and CI | todo | Preserve existing gates and add adverse-path acceptance | - |
-| M6-05 | M6 | Manual offline checklist and independent audit packet | todo | Desktop and ThinkPad; Surface deferred to M7 by PM | Owner hardware |
+| M6-02 | M6 | User/developer/privacy documentation and consistency gate | done | User/privacy/developer guides, exact FAQ wording, negative consistency tests; candidate CI 40124502580 source checks pass | - |
+| M6-03 | M6 | Audit-note disposition and V1 polish | blocked | Every note has a disposition; V1 progress-meter polish fixed; Qt native producer unproven | ISSUE-027 |
+| M6-04 | M6 | Automated hardening, packaged canary and CI | doing | 40124502580 source, offline and packaged WFP/canary gates pass; installed gates running; production engine activation still pending | ISSUE-026, ISSUE-028 |
+| M6-05 | M6 | Manual offline checklist and independent audit packet | done | docs/pm/M6-checklist.md and AUDIT-PACKET.md; actual Owner offline sign-off pending; Surface M7 | Owner hardware |
 | M6-06 | M6 | Final report and acceptance | todo | No PR/publication; Owner results will remain explicit gaps | Owner sign-off |
 
 ### M6 registry audit checkpoint
@@ -1196,3 +1196,17 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - M5 code and .13/.14 remain frozen as instructed. PM must separately decide any
   M5 backport. Synthetic VM testing only; no private use of affected namespace
   aliases. Source fix implements already-approved protection, no new exception.
+
+### M6 resumed gate checkpoint
+
+- Clean m6-hardening at 8818032 on resume; candidate 40124502580 has passed
+  source checks/coverage, policy gates, source offline WFP, PE gate, packaged GUI,
+  packaged WFP/canary and packaged Model Manager audit. Installer compilation
+  and installed acceptance remain running; no completed result is claimed.
+- Source Model Manager receipt: GUI 0, fetch allowed 4, fetch blocked 0, verified
+  true, blocked-event calibration true. Superseded 40123796192 is cancelled.
+- Documentation consistency and three policy checks pass locally. Forbidden-dash
+  search returns exit 1 with no output. M5 code diff from 062d1f1 is empty; frozen
+  .13/.14 tag identities remain 7f7e036 and 972977a. No draft was changed.
+- Updated the audit map with exact runtime-hook, About/notices, canonical-path and
+  registered uninstall functions; changelog records the delivered M6 changes.

@@ -6,6 +6,11 @@ All notable changes to Dusty will be documented here. This project follows Keep 
 
 ### Added
 
+- M6 user/privacy/developer guides, documentation consistency gate, manual
+  offline checklist and independent-audit packet with explicit evidence gaps.
+- Forced-GUI-death recovery, Unicode and long-path processing, disk-exhaustion
+  and packaged sensitive-log canary regressions.
+
 - Packaging spike with separate offline GUI and TLS downloader folders, actual
   file inventory, CycloneDX SBOM, runtime notices and calibrated packaged WFP CI.
 
@@ -27,6 +32,14 @@ All notable changes to Dusty will be documented here. This project follows Keep 
   screenshot matrix covering light/dark appearance at two display scales.
 
 ### Fixed
+
+- Windows namespace aliases now share managed-folder protection comparisons;
+  active work leases prevent another instance's startup cleanup removing it.
+- Successful Setup preserves a valid model choice or selects its tested default;
+  About opens local notices, and the registered uninstall route confirms once.
+- Decoder disk-full classification and partial-removal failure reporting avoid
+  misleading damaged-recording or successful-cleanup messages.
+- Graphics-test failure progress reflects the completed download amount.
 
 - Standard-library DOCX export removes runtime lxml; exact platform PE pins,
   Owner-sourced Visual C++ runtime copies and license evidence gate the bundle.
