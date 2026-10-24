@@ -268,13 +268,13 @@ begin
 end;
 
 procedure CleanupActivePartial;
-var File: String;
+var Code: Integer; Success: Boolean;
 begin
   if (Stage < -2) or (Stage > 2) or
      (DownloadIndex < 0) or (DownloadIndex >= GetArrayLength(Downloads)) then Exit;
-  if Downloads[DownloadIndex] < 0 then File := '@@VAD_FILE@@'
-  else File := ModelFiles[Downloads[DownloadIndex]];
-  DeleteFile(ExpandConstant('{localappdata}\Dusty\models\') + File + '.part');
+  Success := Exec(ExpandConstant('{app}\dusty\dusty.exe'),
+    '--installer-cancel-part --model ' + Quoted(CurrentId),
+    ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, Code);
 end;
 
 procedure WithoutClick(Sender: TObject);

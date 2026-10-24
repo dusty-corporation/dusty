@@ -152,3 +152,28 @@ def test_installer_reports_damaged_model_without_removing_it(tmp_path):
     paths = RuntimePaths(tmp_path / "install/bin", models, ROOT / "resources", tmp_path / "user")
     assert model_status(paths)["tiny"] == "damaged"
     assert damaged.read_bytes() == b"damaged synthetic model"
+
+
+@pytest.mark.parametrize("kind", ["junction", "symlink"])
+def test_downloader_refuses_linked_destination_before_any_transfer(tmp_path, kind):
+    import subprocess
+
+    from dusty_fetch.downloader import Asset, Downloader, Exit, FetchError
+
+    outside = tmp_path / "outside-models"
+    outside.mkdir()
+    sentinel = outside / "ggml-tiny.bin.part"
+    sentinel.write_bytes(b"not disposable")
+    link = tmp_path / "model-link"
+    if kind == "junction":
+        subprocess.run(
+            ["cmd", "/c", "mklink", "/J", str(link), str(outside)], check=True, capture_output=True
+        )
+    else:
+        link.symlink_to(outside, target_is_directory=True)
+    asset = Asset("tiny", "ggml-tiny.bin", "https://github.com/example/model", 3, "0" * 64)
+    with pytest.raises(FetchError) as caught:
+        Downloader().download(asset, link, lambda _: None)
+    assert caught.value.code == Exit.IO
+    assert sentinel.read_bytes() == b"not disposable"
+    link.rmdir() if kind == "junction" else link.unlink()

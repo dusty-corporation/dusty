@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import ssl
+import stat
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -112,8 +113,22 @@ def load_asset(manifest: Path, model_id: str, policy: HostPolicy) -> Asset:
         raise FetchError(Exit.INVALID) from exc
 
 
+def linked(path: Path) -> bool:
+    """Reject all reparse-point ancestors before reading, writing or removing."""
+    for item in (path, *path.parents):
+        try:
+            info = item.lstat()
+        except FileNotFoundError:
+            continue
+        if stat.S_ISLNK(info.st_mode) or (
+            getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+        ):
+            return True
+    return False
+
+
 def matches(path: Path, asset: Asset) -> bool:
-    if path.is_symlink():
+    if linked(path):
         raise FetchError(Exit.IO)
     if not path.is_file() or path.stat().st_size != asset.size:
         return False
@@ -127,7 +142,7 @@ def matches(path: Path, asset: Asset) -> bool:
 @contextmanager
 def download_lock(path: Path):
     """OS-released lock survives cancellation without a stale PID lock protocol."""
-    if path.is_symlink():
+    if linked(path):
         raise FetchError(Exit.IO)
     with path.open("a+b") as handle:
         if handle.tell() == 0:
@@ -179,10 +194,12 @@ class Downloader:
         cancelled: Callable[[], bool] = lambda: False,
     ) -> None:
         self.policy.validate(asset.url)
+        if linked(destination):
+            raise FetchError(Exit.IO)
         destination.mkdir(parents=True, exist_ok=True)
         final = destination / asset.file_name
         part = destination / (asset.file_name + ".part")
-        if final.is_symlink() or part.is_symlink():
+        if linked(final) or linked(part):
             raise FetchError(Exit.IO)
         with download_lock(destination / (asset.file_name + ".lock")):
             try:

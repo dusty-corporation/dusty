@@ -6,7 +6,7 @@ from pathlib import Path
 
 from dusty.platform.win_process import run_job_process
 from dusty.runtime_paths import RuntimePaths
-from dusty.work_area import OwnedWork
+from dusty.work_area import OwnedWork, linked, protected_paths
 
 
 def probe(paths: RuntimePaths, output: Path) -> bool:
@@ -88,3 +88,23 @@ def model_status(paths: RuntimePaths) -> dict[str, str]:
         except (ModelCorrupt, OSError, ValueError):
             statuses[model_id] = "damaged"
     return statuses
+
+
+def cancel_partial(paths: RuntimePaths, model_id: str) -> None:
+    from dusty.models import load_manifest
+
+    manifest = load_manifest(paths.resources_dir / "models.json")
+    name = (
+        manifest.vad_file_name if model_id == "silero-vad" else manifest.models[model_id].file_name
+    )
+    part = paths.models_dir / (name + ".part")
+    protected = protected_paths(paths.user_dir)
+    if (
+        linked(part)
+        or protected is None
+        or any(
+            part.resolve().is_relative_to(p) or p.is_relative_to(part.resolve()) for p in protected
+        )
+    ):
+        return
+    part.unlink(missing_ok=True)
