@@ -1081,3 +1081,16 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   full M6 acceptance or Owner sign-off claimed.
 - Native candidate CI 40110881732 CPU and Vulkan GREEN, including enabled Unicode
   profile regression in the CPU build. Production engine-v2 is still unchanged.
+
+### M6 exact candidate validation checkpoint
+
+- Native run 40110881732 completed both CPU/Vulkan builds with all existing CPU
+  dispatch and VAD checks plus the Unicode-profile regression. Exact candidate
+  member and deterministic archive hashes recorded in native/m6-engine-candidate.json.
+- Added opt-in manual candidate validation to CI: verify successful native run and
+  exact source SHA, check every member/hash, stage both packages only after both
+  validate, and alter pins only in the disposable M6 validation checkout. Default
+  branch CI still uses public engine-v2 and honestly exposes ISSUE-026.
+- Candidate preparation negative tests reject tampered CPU/Vulkan bytes and
+  unexpected members before staging or changing pins. Five tests pass; lint and
+  mypy 80 sources pass. CLI refuses non-CI use. No release/publication or M5 change.
