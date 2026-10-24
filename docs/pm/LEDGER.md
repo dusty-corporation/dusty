@@ -1391,3 +1391,16 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Register the shared fixture explicitly on the test module, matching normal
   fixture reuse rather than plugin loading. Both absent-root assertions remain.
   Full candidate rerun required; no certificate/installer success claimed yet.
+
+### M6 diagnostic ownership/cleanup correction
+
+- Final review found the new diagnostic filename was not part of owned uninstall
+  data. Added an exclusive owned-header record and fixed-schema validator; cleanup
+  removes only that bounded recognized diagnostic, preserving unfamiliar or
+  protected content. No filename-only sweep. Capture remains passive/continue-search.
+- 23 observer/cleanup tests pass, 1.32 s, including owned removal, unknown preservation
+  and protected preservation. Synthetic exceptions still reach ctypes/faulthandler;
+  their expected diagnostic text is not a recurrence of the Qt defect.
+- Packaged fixture skips the ownership header when parsing event records and
+  still requires module/context capture with no canary contents. Full final
+  candidate validation rerun required after this app-code correction.

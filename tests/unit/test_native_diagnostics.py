@@ -28,7 +28,7 @@ def test_real_native_capture_is_bounded_redacted_and_preserves_dispatch(tmp_path
         raise_event()
         path = tmp_path / "logs/native-diagnostic.jsonl"
         first = path.read_text(encoding="ascii")
-        event = json.loads(first)
+        event = json.loads(first.splitlines()[-1])
         assert event["exception"] == "0x8001010d"
         assert event["instruction"]["module"].lower() in {"kernelbase.dll", "kernel32.dll"}
         assert event["instruction"]["offset"].startswith("0x")
@@ -50,7 +50,7 @@ def test_real_native_capture_is_bounded_redacted_and_preserves_dispatch(tmp_path
         assert not N.is_installed()
         assert N.install_capture(tmp_path)  # Previous validated records survive restart.
         raise_event()
-        assert len(path.read_text(encoding="ascii").splitlines()) == 2
+        assert len(path.read_text(encoding="ascii").splitlines()) == 3
     finally:
         N.close_capture()
 
@@ -74,6 +74,7 @@ def test_capture_preserves_unsafe_or_unavailable_storage(tmp_path, monkeypatch, 
                 "thread": 1,
             }
         ).encode()
+        content = N.HEADER + content + b"\n"
     elif mode == "protected":
         (tmp_path / "settings.json").write_text(
             json.dumps({"schema_version": 1, "preserved_paths": [str(path.parent)]}),
@@ -82,7 +83,7 @@ def test_capture_preserves_unsafe_or_unavailable_storage(tmp_path, monkeypatch, 
     elif mode == "link":
         monkeypatch.setattr("dusty.work_area.linked", lambda p: True)
     elif mode == "denied":
-        content = b""
+        content = N.HEADER
 
         def denied(*args):
             raise OSError("unwritable")

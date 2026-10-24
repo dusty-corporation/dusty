@@ -64,6 +64,11 @@ def _cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
         candidates += [
             p for p in (root / "logs").glob("*") if re.fullmatch(r"dusty\.log(?:\.[1-5])?", p.name)
         ]
+        from dusty.privacy.native_diagnostics import valid_capture
+
+        diagnostic = root / "logs/native-diagnostic.jsonl"
+        if not linked(diagnostic) and valid_capture(diagnostic):
+            candidates.append(diagnostic)
         ownership_protection = protected_paths(root)
         for directory in (root / "work").glob("*"):
             if directory.is_dir():

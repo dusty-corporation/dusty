@@ -93,7 +93,11 @@ def run(output: Path) -> int:
         captured = capture.read_text(encoding="ascii")
         logs += captured
 
-        captured_events = [json.loads(line) for line in captured.splitlines()]
+        captured_events = [
+            event
+            for line in captured.splitlines()
+            if (event := json.loads(line)).get("exception") == "0x8001010d"
+        ]
         capture_ok = any(
             event["phase"] == "ci-fixture"
             and event["instruction"]["module"] != "unknown"

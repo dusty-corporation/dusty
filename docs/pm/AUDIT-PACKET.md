@@ -203,3 +203,9 @@ first real-use build M7 from main after M6. .13/.14 notes now state test-only.
 ADR 0024 is accepted; engine-v3 stays DRAFT, pins isolated on 299fea3. The official
 uninstall route is Settings > Apps; both registered command variants and all
 created shortcuts are audited. No bare internal-uninstaller entry is supported.
+
+Native diagnostic ownership: an exclusive header identifies app-generated data;
+valid_capture checks the bounded fixed event schema. installer_cleanup includes
+only that recognized file in removal; unknown/protected/linked content remains.
+Tests explicitly cover all three cases. Cleanup entry never holds a capture
+handle open; real installed uninstall remains a mandatory native gate.

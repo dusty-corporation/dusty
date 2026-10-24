@@ -13,6 +13,7 @@ from ctypes import wintypes as W
 from pathlib import Path
 
 LIMIT = 128 * 1024
+HEADER = b'{"schema":1,"purpose":"native-diagnostic"}\n'
 EVENT = 0x8001010D
 CONTEXTS = {"startup", "qt-startup", "event-loop", "self-test", "batch", "gui-check", "ci-fixture"}
 _active = None
@@ -54,6 +55,9 @@ class Capture:
         kernel.GetModuleFileNameW.argtypes = [W.HMODULE, W.LPWSTR, W.DWORD]
         kernel.GetModuleFileNameW.restype = W.DWORD
         kernel.GetCurrentThreadId.restype = W.DWORD
+        if not path.exists():
+            with path.open("xb") as stream:
+                stream.write(HEADER)
         self.stream = path.open("ab", buffering=0)
         self.size = self.stream.tell()
         self.callback = callback_type(self._observe)  # Retain for the full registration lifetime.
@@ -127,6 +131,35 @@ def set_context(phase: str) -> None:
         _active.phase = phase
 
 
+def valid_capture(path: Path) -> bool:
+    """Recognize only the owned header and bounded, fixed-schema diagnostic data."""
+    try:
+        if path.stat().st_size > LIMIT:
+            return False
+        data = path.read_bytes()
+        if not data.startswith(HEADER):
+            return False
+        for line in data[len(HEADER) :].splitlines():
+            value = json.loads(line)
+            if set(value) != {"exception", "instruction", "frames", "thread", "phase"}:
+                return False
+            if value["exception"] != "0x8001010d" or value["phase"] not in CONTEXTS:
+                return False
+            frames = [value["instruction"], *value["frames"]]
+            if len(frames) > 33 or type(value["thread"]) is not int:
+                return False
+            for frame in frames:
+                if set(frame) != {"module", "offset"}:
+                    return False
+                if not re.fullmatch(r"[A-Za-z0-9_.-]{1,100}", frame["module"]):
+                    return False
+                if not re.fullmatch(r"0x[0-9a-f]+", frame["offset"]):
+                    return False
+        return True
+    except (OSError, ValueError, TypeError, KeyError):
+        return False
+
+
 def install_capture(user_dir: Path) -> bool:
     """Best effort, before Qt loads; retain protected/unfamiliar files unchanged."""
     global _active
@@ -150,15 +183,8 @@ def install_capture(user_dir: Path) -> bool:
         ):
             return False
         if target.exists():
-            if target.stat().st_size >= LIMIT:
+            if target.stat().st_size >= LIMIT or not valid_capture(target):
                 return False
-            # Do not append to an unfamiliar file under a familiar filename.
-            for line in target.read_text(encoding="ascii").splitlines():
-                value = json.loads(line)
-                if set(value) != {"exception", "instruction", "frames", "thread", "phase"}:
-                    return False
-                if value["exception"] != "0x8001010d" or value["phase"] not in CONTEXTS:
-                    return False
         logs.mkdir(parents=True, exist_ok=True)
         _active = Capture(target)
         return True
