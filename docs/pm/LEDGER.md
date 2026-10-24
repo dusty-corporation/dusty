@@ -630,7 +630,7 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 | M5-01C | M5 | Revalidate port source | done | 224 passed/1 expected skip, 94.6%; lint/format 127 files, mypy 70, all source policies pass; CI 40011781091 checks/offline/upload regression green | - |
 | M5-01D | M5 | Model-free Vulkan investigation | done | Pinned engine-v2 API: 1 device/init/4 KiB buffer clear+sync, no model, exit 0 in 0.468 s; docs/dev/m5-model-free-vulkan-check.md | - |
 | M5-01E | M5 | Gap analysis and decision inventory | done | M5-interim-1.md covers all six SPEC tasks/three acceptance items, brief gaps, six recommended decisions, Phase 2 estimate | - |
-| M5-02 | M5 | Finish installer and release acceptance | blocked | Engineer handoff complete; final .11/.12 CI green (40099284709, 40100326932), all defects resolved, M5-report.md written. Fresh standard-user VM results remain Owner action | Owner VM acceptance |
+| M5-02 | M5 | Finish installer and release acceptance | blocked | Engineering complete; final repaired .13/.14 all jobs green (40104236818, 40105275700), true upgrade and protected native uninstall pass. M5-report.md and exact 90-minute VM checklist complete. Fresh standard-user VM results remain Owner action | Owner VM acceptance |
 
 - Original spike interim-1 retained as M5-packaging-spike-interim-1.md; other
   spike reports remain historical, with no old passing run claimed for this head.
@@ -1232,3 +1232,34 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   40105275700, true upgrade from .13; final pair evidence pending completion.
 - Checklist's six PowerShell blocks syntax-checked without executing host or
   guest instructions. New native-boundary test is restricted to DustyTester VM.
+
+
+### M5 final repaired handoff, 2026-10-24
+
+- Final safe draft pair: v0.5.0-m5.13 / 40104236818 and v0.5.0-m5.14 /
+  40105275700, every job GREEN. .14 workflow input explicitly names .13 and
+  two_distinct_versions=true; model hashes/write times preserved with fetch blocked.
+- Final source: 355 passed/2 expected skips, 309.22 s; separate real network
+  1 passed/1.74 s. Required coverage 94.7% (1012/1069), all packages above 85%.
+  Local lint/format 140 files, mypy 77 sources, three source policies pass.
+- Final calibrated full-download WFP Setup/GUI/native 0, fetch allowed 4/blocked 0;
+  cancellation 0/0/0, fetch 2/0. Packaged/installed PE/license/GUI/WFP, actual
+  legacy and registered-installation protection, cancel/retry and both ordinary
+  uninstalls pass. Mandatory protection receipt blocks staging when false/missing.
+- ISSUE-023/024/025 resolved with original regressions retained; all 49 real-OS
+  adversarial cases are included. Unknown/changed files remain conservative.
+  Non-urgent items stay in AUDIT-NOTES; failure progress-bar polish stays backlog.
+- Downloaded all final assets without executing installers locally. Ten API digests
+  and eight SHA256SUMS entries match. Installers: .13 34,696,202 bytes;
+  .14 34,689,908 bytes. All remain DRAFT; .1 through .12 superseded, untouched.
+- Checklist final: .13/.14 exact hashes, Guest Additions, read-only auto-mounted
+  host share, guest local copy, DustyTester/clean, 90 minutes and exact managed
+  sentinel/legacy/native-boundary commands. Six PowerShell blocks syntax-checked.
+- PM accepted pages 7b8d28b and output row a75f1cf. Existing accepted screenshot
+  assets retained. No Owner profile/output/synced folder was read or changed.
+- M5-report has final gap table, Page review round, final asset hashes/sizes,
+  Second self-review, Owner actions and Questions for PM. M6 continuation has
+  code/test parity and safety guidance; final evidence is carried forward.
+- Search for both forbidden dash characters: no matches. Brief hash unchanged;
+  m5-packaging-spike and m6-docs references unchanged. No PR, merge, publication
+  or deletion of branch/tag/release/run. Stop pending Owner VM and PM acceptance.

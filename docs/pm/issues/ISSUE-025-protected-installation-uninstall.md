@@ -40,3 +40,8 @@ protected_install_destination=passed is present in the acceptance receipt and
 mandatory in release staging; a false/missing receipt fails the gate.
 Source: 355 passed, 2 expected skips; separate network test 1 passed; required
 coverage 94.7%. Draft only. The .13/.14 true-upgrade pair is the final handoff.
+
+The second build, .14 / CI 40105275700, also passed every job, the same native
+protection receipt, and the actual .13 to .14 upgrade with model hashes and
+write times unchanged. Both final draft assets were downloaded and verified;
+the checklist names their exact hashes. No Owner VM acceptance is claimed.
