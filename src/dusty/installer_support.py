@@ -6,7 +6,7 @@ from pathlib import Path
 
 from dusty.platform.win_process import run_job_process
 from dusty.runtime_paths import RuntimePaths
-from dusty.work_area import OwnedWork, linked, protected_paths
+from dusty.work_area import OwnedWork, canonical, linked, protected_paths
 
 
 def probe(paths: RuntimePaths, output: Path) -> bool:
@@ -113,7 +113,8 @@ def cancel_partial(paths: RuntimePaths, model_id: str) -> bool:
         linked(part)
         or protected is None
         or any(
-            part.resolve().is_relative_to(p) or p.is_relative_to(part.resolve()) for p in protected
+            canonical(part).is_relative_to(p) or p.is_relative_to(canonical(part))
+            for p in protected
         )
     ):
         return False

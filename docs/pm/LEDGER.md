@@ -1178,3 +1178,21 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   branch, with original hashes/limits. This is not fresh M6/laptop evidence.
 - Release docs include executable internet-zone commands and explicit candidate
   validation provenance. No new image sources or screenshots were generated.
+
+### M6 path-boundary repair (ISSUE-028)
+
+- Predicate-only check found extended Windows namespace aliases bypassing normal
+  managed-root equality/containment. No file deletion was attempted and no Owner
+  data was touched. Recorded as an S0/NN-7 boundary risk; paused unrelated work.
+- Existing ownership policy now uses canonical namespace comparisons for managed
+  roots, saved protection metadata, uninstall, obsolete-license/partial cleanup
+  and source/output collision checks. Actual long-path I/O spelling is preserved.
+- 94 boundary/ownership/cleanup/upgrade/adversarial tests pass (6.71 s); mypy,
+  lint/format 152 files and source/docs policies pass. Native regression repeats
+  the real protected installed-payload case with normal and extended metadata.
+- Superseded candidate run 40123796192 was still packaging, after source/offline
+  checks passed. Requested cancellation to prevent an affected app artifact upload;
+  run/evidence retained, nothing deleted. Repaired head gets a new validation run.
+- M5 code and .13/.14 remain frozen as instructed. PM must separately decide any
+  M5 backport. Synthetic VM testing only; no private use of affected namespace
+  aliases. Source fix implements already-approved protection, no new exception.

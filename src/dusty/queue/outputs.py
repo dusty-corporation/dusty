@@ -7,7 +7,7 @@ from pathlib import Path
 
 from dusty.core import BatchOptions, Job, Transcript
 from dusty.export import render_docx, render_json, render_srt, render_txt, render_vtt
-from dusty.work_area import linked
+from dusty.work_area import canonical, linked
 
 RENDERERS = {
     "txt": render_txt,
@@ -41,7 +41,7 @@ def output_targets(job: Job, options: BatchOptions) -> list[Path]:
             targets = candidate(number)
     elif options.collision != "overwrite" and any(path.exists() for path in targets):
         raise OutputExistsError("Output exists")
-    if any(path.resolve() == job.source.resolve() for path in targets):
+    if any(canonical(path) == canonical(job.source) for path in targets):
         raise OutputExistsError("Output would replace source")
     return targets
 

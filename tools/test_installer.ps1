@@ -107,13 +107,15 @@ Save-UserState
 $installedManifest = Join-Path $install 'resources/models.json'
 $manifestBytes = [IO.File]::ReadAllBytes($installedManifest)
 $privateSentinel = '{"private":"synthetic protected transcript"}'
-@{schema_version=1;preserved_paths=@((Join-Path $install 'resources'))} | ConvertTo-Json |
-    Set-Content -LiteralPath (Join-Path $data 'settings.json') -Encoding utf8NoBOM
-[IO.File]::WriteAllText($installedManifest, $privateSentinel)
-Uninstall-App 'yes' 1
-if (-not (Test-Path -LiteralPath (Join-Path $install 'dusty/dusty.exe')) -or
-    -not (Test-Path -LiteralPath (Join-Path $data 'settings.json')) -or
-    [IO.File]::ReadAllText($installedManifest) -ne $privateSentinel) { throw 'Protected installed payload was removed or changed' }
+foreach ($protectedFolder in @((Join-Path $install 'resources'), ('\\?\' + (Join-Path $install 'resources')))) {
+    @{schema_version=1;preserved_paths=@($protectedFolder)} | ConvertTo-Json |
+        Set-Content -LiteralPath (Join-Path $data 'settings.json') -Encoding utf8NoBOM
+    [IO.File]::WriteAllText($installedManifest, $privateSentinel)
+    Uninstall-App 'yes' 1
+    if (-not (Test-Path -LiteralPath (Join-Path $install 'dusty/dusty.exe')) -or
+        -not (Test-Path -LiteralPath (Join-Path $data 'settings.json')) -or
+        [IO.File]::ReadAllText($installedManifest) -ne $privateSentinel) { throw 'Protected installed payload was removed or changed' }
+}
 [IO.File]::WriteAllBytes($installedManifest, $manifestBytes)
 Save-UserState
 & (Join-Path $repo '.venv/Scripts/python.exe') (Join-Path $PSScriptRoot 'check_installed_payload.py') $install --output (Join-Path $work 'installed-files.json')

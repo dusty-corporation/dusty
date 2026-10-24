@@ -3,6 +3,7 @@
 import hashlib
 import json
 import logging
+import os
 import stat
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -13,6 +14,21 @@ from dusty.runtime_paths import RuntimePaths
 MARKER = ".dusty-owned.json"
 LEASE = ".dusty-active.lock"
 _LOG = logging.getLogger("dusty")
+
+
+def canonical(path: Path) -> Path:
+    """Use one Windows namespace for comparisons, without changing I/O paths."""
+    resolved = path.resolve()
+    text = str(resolved)
+    if os.name == "nt":
+        if text.upper().startswith("\\\\?\\UNC\\"):
+            text = "\\\\" + text[8:]
+        elif text.startswith(("\\\\?\\", "\\\\.\\")):
+            text = text[4:]
+            if len(text) < 3 or text[1:3] != ":\\":
+                raise ValueError("Unsupported Windows path namespace")
+        return Path(text)
+    return resolved
 
 
 def linked(path: Path) -> bool:
@@ -41,8 +57,11 @@ def managed_roots(paths: RuntimePaths) -> tuple[Path, ...]:
 
 
 def managed_destination(path: Path, paths: RuntimePaths) -> bool:
-    candidate = path.resolve()
-    return any(candidate.is_relative_to(root.resolve()) for root in managed_roots(paths))
+    try:
+        candidate = canonical(path)
+        return any(candidate.is_relative_to(canonical(root)) for root in managed_roots(paths))
+    except (OSError, ValueError):
+        return True
 
 
 def protected_paths(user_dir: Path) -> set[Path] | None:
@@ -59,7 +78,7 @@ def protected_paths(user_dir: Path) -> set[Path] | None:
         elif key in {"output_dir", "outputs", "source", "preserved_paths"} and isinstance(
             value, str
         ):
-            protected.add(Path(value).resolve())
+            protected.add(canonical(Path(value)))
 
     try:
         files = [user_dir / "settings.json", user_dir / "state/queue.json"]
@@ -90,7 +109,8 @@ def cleanup_owned(directory: Path, *, protected: set[Path] | None) -> bool:
             protected is None
             or linked(directory)
             or any(
-                p.is_relative_to(directory.resolve()) or directory.resolve().is_relative_to(p)
+                canonical(p).is_relative_to(canonical(directory))
+                or canonical(directory).is_relative_to(canonical(p))
                 for p in protected
             )
         ):
