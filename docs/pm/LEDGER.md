@@ -941,3 +941,11 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   export 98.6%, models 96.6%, queue 91.8%, privacy 96.6%; total 94.2%.
 - m6-docs-v2 511b0b6 has the repair plus updated preservation/privacy guides;
   implementation parity with m5-installer was checked before this syntax fix.
+
+### ISSUE-020 marker continuity regression
+
+- Further repair review: final output bookkeeping must not recreate a missing
+  or changed marker. OwnedWork now compares it to the exact creation/last-write
+  bytes before every inventory update and permanently preserves that invocation
+  after any mismatch/read/write error. Two enabled regressions cover marker
+  removal and mutation before bookkeeping. No Owner data was touched.

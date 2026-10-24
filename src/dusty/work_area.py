@@ -142,35 +142,45 @@ class OwnedWork:
         self.path.mkdir()
         self.purpose = purpose
         self.files: dict[str, str] = {}
-        self._write_marker()
+        self.valid = True
+        self._marker_bytes = self._data()
+        with (self.path / MARKER).open("xb") as stream:
+            stream.write(self._marker_bytes)
 
-    def _write_marker(self) -> None:
-        marker = self.path / MARKER
-        if linked(marker):
-            raise ValueError("Unsafe work marker")
-        marker.write_text(
-            json.dumps(
-                {
-                    "schema": 1,
-                    "directory": self.path.name,
-                    "purpose": self.purpose,
-                    "files": self.files,
-                }
-            ),
-            encoding="utf-8",
-        )
+    def _data(self) -> bytes:
+        return json.dumps(
+            {
+                "schema": 1,
+                "directory": self.path.name,
+                "purpose": self.purpose,
+                "files": self.files,
+            }
+        ).encode("utf-8")
 
     def record(self, *names: str) -> None:
         """Record only explicitly named outputs of the operation just performed."""
-        for name in names:
-            if Path(name).name != name:
-                raise ValueError("Work inventory must be flat")
-            file = self.path / name
-            if file.exists() and not linked(file) and file.is_file():
-                self.files[name] = _fingerprint(file)
-        self._write_marker()
+        try:
+            marker = self.path / MARKER
+            if not self.valid or linked(marker) or marker.read_bytes() != self._marker_bytes:
+                raise ValueError("Work ownership changed")
+            for name in names:
+                if Path(name).name != name:
+                    raise ValueError("Work inventory must be flat")
+                file = self.path / name
+                if file.exists() and not linked(file) and file.is_file():
+                    self.files[name] = _fingerprint(file)
+            data = self._data()
+            with marker.open("wb") as stream:
+                stream.write(data)
+            self._marker_bytes = data
+        except (OSError, ValueError):
+            self.valid = False
+            _LOG.info("work_cleanup=preserved")
 
     def cleanup(self, user_dir: Path) -> bool:
+        if not self.valid:
+            _LOG.info("work_cleanup=preserved")
+            return False
         return cleanup_owned(self.path, protected=protected_paths(user_dir))
 
 
