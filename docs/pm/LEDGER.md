@@ -1022,3 +1022,14 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Remaining Owner actions: 90-minute fresh Dusty-M5 VM checklist with standard
   DustyTester, native scaling/SmartScreen/interactive failure outcomes. No new
   PM policy decision requested. Stop here.
+
+## M6 hardening start, 2026-10-24
+
+| ID | Milestone | Task | Status | Evidence | Issues |
+|---|---|---|---|---|---|
+| M6-01 | M6 | Branch, frozen M5 baseline and brief archive | done | m6-hardening from m6-docs-v2 47594ec; M5 brief archived byte-for-byte; frozen m5-installer 062d1f1, .13 7f7e036 and .14 972977a | - |
+| M6-02 | M6 | User/developer/privacy documentation and consistency gate | doing | Existing docs prework read; final M4/M5 behavior is baseline | - |
+| M6-03 | M6 | Audit-note disposition and V1 polish | doing | All audit notes inventoried; Qt diagnostic requires real root cause | - |
+| M6-04 | M6 | Automated hardening, packaged canary and CI | todo | Preserve existing gates and add adverse-path acceptance | - |
+| M6-05 | M6 | Manual offline checklist and independent audit packet | todo | Desktop and ThinkPad; Surface deferred to M7 by PM | Owner hardware |
+| M6-06 | M6 | Final report and acceptance | todo | No PR/publication; Owner results will remain explicit gaps | Owner sign-off |
