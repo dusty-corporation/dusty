@@ -630,7 +630,7 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 | M5-01C | M5 | Revalidate port source | done | 224 passed/1 expected skip, 94.6%; lint/format 127 files, mypy 70, all source policies pass; CI 40011781091 checks/offline/upload regression green | - |
 | M5-01D | M5 | Model-free Vulkan investigation | done | Pinned engine-v2 API: 1 device/init/4 KiB buffer clear+sync, no model, exit 0 in 0.468 s; docs/dev/m5-model-free-vulkan-check.md | - |
 | M5-01E | M5 | Gap analysis and decision inventory | done | M5-interim-1.md covers all six SPEC tasks/three acceptance items, brief gaps, six recommended decisions, Phase 2 estimate | - |
-| M5-02 | M5 | Finish installer and release acceptance | doing | PM decisions approved; pages implemented/review uploaded, .2 draft green, final true-upgrade receipt run 40041736046 pending; Owner VM and PM page review remain | Manual acceptance |
+| M5-02 | M5 | Finish installer and release acceptance | blocked | S0 self-review: three transcript-preservation regressions fail; M5-interim-8.md; normal work stopped, active builds requested cancelled, final release/VM acceptance withheld | ISSUE-020 |
 
 - Original spike interim-1 retained as M5-packaging-spike-interim-1.md; other
   spike reports remain historical, with no old passing run claimed for this head.
@@ -846,3 +846,20 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   pyproject.toml uv.lock` is empty. User docs differ; reference branches unchanged.
 - Non-urgent independent-audit notes added for explicit external license-browser
   links and partial-deletion failure reporting. No new application work started.
+
+### S0 STOP - ISSUE-020, transcript preservation
+
+- Stopped normal M5/M6 work under AGENTS rule 2 / SPEC NN-7. Startup and installer
+  self-test recursively delete named work directories even when settings record
+  them as the chosen transcript destination. GUI folder selection does not reject
+  those destinations. The existing uninstaller's protection does not cover them.
+- Exact isolated command: uv run pytest tests/unit/test_work_output_ownership.py
+  -q --basetemp=build/issue020-repro. Result: 3 failed in 0.38 s. Synthetic public
+  sentinels only; no real Owner profile, recording or transcript was touched.
+- Enabled failing regressions retained; no xfail/skip or safety fix without the
+  PM's S0 decision. ISSUE-020 and M5-interim-8.md contain root cause and proposal.
+  M5-report.md now starts with the release-blocking finding and morning actions.
+- Cancellation requested for own active runs 40043241355, 40042984627,
+  40042648483, 40042645271 and 40042365579. No run/artifact/tag/release was deleted.
+- Screenshots and M6 docs prework are pushed, but neither is acceptance for the
+  affected code. Keep all M5 drafts unpublished and postpone VM installation.

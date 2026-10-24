@@ -1,16 +1,32 @@
 # M5 report - Packaging, installer and draft release pipeline
 
+## S0 STOP: ISSUE-020
+
+**M5 is blocked and must not be released or installed for acceptance.** Final
+self-review confirmed that startup/installer self-test cleanup can recursively
+delete a saved transcript destination inside app-managed work areas. Three
+repository-local synthetic preservation tests failed in 0.38 s; no Owner files
+were read or changed. See [ISSUE-020](../issues/ISSUE-020-work-cleanup-deletes-transcripts.md)
+and [M5-interim-8.md](M5-interim-8.md) for evidence and the proposed repair.
+Milestone implementation stopped under AGENTS rule 2 / SPEC NN-7. Active builds
+were requested cancelled; enabled failing regressions block downstream packaging.
+Historical green evidence below does not supersede this data-loss failure.
+
 ## Summary
 
 M5 implementation is on m5-installer; m5-packaging-spike and m6-docs remain
 untouched references, and updated guides are pushed on m6-docs-v2. The first
 successful draft release and calibrated Setup/probe/download audit passed;
 the second-version upgrade and final native page evidence are being collected.
-M5 is not accepted: PM page review and fresh standard-user VM evidence
+M5 is not accepted: ISSUE-020 repair, PM page review and fresh standard-user VM evidence
 remain outstanding. No PR, merge or published release is authorized or created.
 
 ## Owner actions for the morning
 
+0. PM: approve the focused cleanup-ownership repair in M5-interim-8.md. Keep M5
+   drafts unpublished and postpone the installer/VM checklist. If any real files
+   are under Dusty's app-managed work folders, back them up manually before
+   launching/updating affected builds; the agent has not inspected the real profile.
 1. PM: review M5-interim-2.md and its draft screenshot bundle before requesting
    any further installer wording/layout changes.
 2. Owner: enable AMD SVM, set up the Windows 11 VM, and return each numbered
@@ -22,6 +38,10 @@ remain outstanding. No PR, merge or published release is authorized or created.
    releases draft. No portable bundle is part of the approved release assets.
 
 ## Final gap table (updated as evidence arrives)
+
+Every item is release-blocked by ISSUE-020. Done below refers only to historical
+implementation/gate evidence, not milestone acceptance. The new NN-7 regression
+is **not met**, and the final receipt-based release run was stopped.
 
 | SPEC M5 item | Status | Evidence / remaining work |
 |---|---|---|
@@ -83,6 +103,11 @@ release or installer upload. Its tag/history remain unchanged.
 
 ## Questions for the PM
 
+0. Approve the S0 repair across startup, probe, self-test and coordinator cleanup.
+   Recommendation: unique owned work areas, saved output/source protection,
+   conservative handling of unknown content/metadata, and rejection of new
+   destinations inside app-managed work areas. Preserve already-saved destinations
+   before any startup cleanup; never silently move/delete existing files.
 1. Approve or annotate the installer page bundle. Recommendation: review the
    complete native flow, including failed GPU test versus failed CPU test.
 2. Upgrade reuses verified models; hash failures are detected before download.
@@ -105,6 +130,13 @@ not claimed and stays on the Owner checklist. No further wording/layout changes
 are planned before the PM reviews M5-interim-2.md.
 
 ## Self-review
+
+**Blocking finding: ISSUE-020, NN-7.** Named work directories are treated as
+exclusive app property despite being selectable/saved transcript destinations.
+The new startup cases (probe/selftest) and installer self-test preservation case
+all fail. Existing uninstall protection does not cover these paths. No repair
+was implemented after the mandatory S0 stop; further source/packaged/installed
+and uninstall acceptance must follow the PM's decision.
 
 Reviewed new paths against SPEC 2/9/10/11.6 and accepted ADR exceptions. No new
 network-capable application imports or dependencies were introduced; downloads
