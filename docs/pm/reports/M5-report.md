@@ -2,6 +2,12 @@
 
 ## Summary
 
+Final boundary review found ISSUE-025: Inno registered-file deletion also needs
+legacy installation-destination protection. The approved-policy preflight and
+71 focused tests pass; .13/.14 native gates are pending. .11/.12 below are now
+historical, not final candidates. No Owner data was touched. See interim 11.
+
+
 M5 engineering work is complete on m5-installer; fresh standard-user VM
 acceptance is still pending. Final repaired drafts are **v0.5.0-m5.11** and
 **v0.5.0-m5.12**, with every release job green and a real .11 to .12 upgrade.

@@ -44,7 +44,7 @@ function Install-App {
     if (-not (Test-Path -LiteralPath (Join-Path $install 'dusty/dusty.exe'))) { throw 'Installed app missing' }
     Invoke-Checked (Join-Path $install 'dusty-fetch/dusty-fetch.exe') @('verify','--id','tiny','--dest',(Join-Path $data 'models'),'--manifest',(Join-Path $install 'resources/models.json'))
 }
-function Uninstall-App([string]$Remove) {
+function Uninstall-App([string]$Remove, [int]$ExpectedExit = 0) {
     # Inno may choose unins001 etc. Use its own per-user registration rather
     # than assuming the generated filename across upgrade/reinstall cycles.
     $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{7B3110E8-7983-41AC-A0ED-F6EB13DBB72A}_is1'
@@ -53,7 +53,7 @@ function Uninstall-App([string]$Remove) {
     $uninstaller = [IO.Path]::GetFullPath($Matches[1])
     if ([IO.Path]::GetDirectoryName($uninstaller) -ne $install -or -not (Test-Path -LiteralPath $uninstaller)) { throw 'Registered uninstaller is outside the test install or missing' }
     Write-Host ('acceptance: uninstall remove_models=' + $Remove + ' executable=' + [IO.Path]::GetFileName($uninstaller))
-    Invoke-Checked $uninstaller @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',('/REMOVEMODELS='+$Remove))
+    Invoke-Checked $uninstaller @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',('/REMOVEMODELS='+$Remove)) $ExpectedExit
 }
 function Assert-Output {
     if ((Get-FileHash -LiteralPath $sentinel).Hash -ne $sentinelHash) { throw 'User output changed' }
@@ -102,6 +102,19 @@ foreach ($model in $models) {
     $file = Get-Item -LiteralPath (Join-Path $data ('models/' + $model.name))
     if ((Get-FileHash -LiteralPath $file.FullName).Hash -ne $model.hash -or $file.LastWriteTimeUtc.Ticks -ne $model.time) { throw 'Sanitized legacy destination was changed' }
 }
+Save-UserState
+# Inno's registered payload must also survive a protected installation destination.
+$installedManifest = Join-Path $install 'resources/models.json'
+$manifestBytes = [IO.File]::ReadAllBytes($installedManifest)
+$privateSentinel = '{"private":"synthetic protected transcript"}'
+@{schema_version=1;preserved_paths=@((Join-Path $install 'resources'))} | ConvertTo-Json |
+    Set-Content -LiteralPath (Join-Path $data 'settings.json') -Encoding utf8NoBOM
+[IO.File]::WriteAllText($installedManifest, $privateSentinel)
+Uninstall-App 'yes' 1
+if (-not (Test-Path -LiteralPath (Join-Path $install 'dusty/dusty.exe')) -or
+    -not (Test-Path -LiteralPath (Join-Path $data 'settings.json')) -or
+    [IO.File]::ReadAllText($installedManifest) -ne $privateSentinel) { throw 'Protected installed payload was removed or changed' }
+[IO.File]::WriteAllBytes($installedManifest, $manifestBytes)
 Save-UserState
 & (Join-Path $repo '.venv/Scripts/python.exe') (Join-Path $PSScriptRoot 'check_installed_payload.py') $install --output (Join-Path $work 'installed-files.json')
 if ($LASTEXITCODE -ne 0) { throw 'Installed file inventory failed' }
@@ -155,4 +168,4 @@ Save-UserState
 Uninstall-App 'yes'
 Assert-Output
 if ((Test-Path -LiteralPath $data) -or (Test-Path -LiteralPath (Join-Path $install 'dusty/dusty.exe'))) { throw 'Cancelled-install retry cleanup left owned files' }
-@{silent_per_user_install='passed';installer_download_tiny_and_vad='passed';current_installer_fresh_download_wfp='passed';installed_wfp='passed';two_distinct_versions=$twoVersions;upgrade_models_preserved_with_downloader_blocked='passed';uninstall_keep_models='passed';uninstall_remove_models='passed';normal_cancel_removes_partial='passed';preserved_legacy_destination='passed';user_outputs_unchanged=$true} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $work 'summary.json') -Encoding utf8NoBOM
+@{silent_per_user_install='passed';installer_download_tiny_and_vad='passed';current_installer_fresh_download_wfp='passed';installed_wfp='passed';two_distinct_versions=$twoVersions;upgrade_models_preserved_with_downloader_blocked='passed';uninstall_keep_models='passed';uninstall_remove_models='passed';normal_cancel_removes_partial='passed';preserved_legacy_destination='passed';protected_install_destination='passed';user_outputs_unchanged=$true} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $work 'summary.json') -Encoding utf8NoBOM

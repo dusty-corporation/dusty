@@ -40,6 +40,7 @@ def stage(source: Path, output: Path, tag: str) -> None:
             or receipt.get("uninstall_remove_models") != "passed"
             or receipt.get("normal_cancel_removes_partial") != "passed"
             or receipt.get("preserved_legacy_destination") != "passed"
+            or receipt.get("protected_install_destination") != "passed"
             or receipt.get("user_outputs_unchanged") is not True
             or audit.get("calibration_blocked_event") is not True
             or any(audit.get(key) != 0 for key in ("installer", "gui", "native", "fetch_blocked"))

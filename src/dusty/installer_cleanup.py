@@ -9,6 +9,22 @@ from dusty.runtime_paths import RuntimePaths
 from dusty.work_area import cleanup_owned, linked, protected_paths
 
 
+def uninstall_allowed(paths: RuntimePaths) -> bool:
+    """Inno must not remove registered payload inside a protected destination."""
+    try:
+        protected = protected_paths(paths.user_dir)
+        if protected is None:
+            return False
+        if paths.install_dir is None:
+            return True
+        install = paths.install_dir.resolve()
+        return not linked(paths.install_dir) and not any(
+            p.is_relative_to(install) or install.is_relative_to(p) for p in protected
+        )
+    except (OSError, ValueError):
+        return False
+
+
 def _cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
     """Return False if uncertain data was preserved; emit no paths or content."""
     root = paths.user_dir
@@ -99,6 +115,8 @@ def _cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
 def cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
     """Contain filesystem failures even during initial metadata discovery."""
     try:
+        if not uninstall_allowed(paths):
+            return False
         return _cleanup(paths, remove_models=remove_models)
     except (OSError, ValueError, TypeError):
         return False

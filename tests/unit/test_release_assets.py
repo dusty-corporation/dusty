@@ -108,6 +108,7 @@ def test_final_release_rejects_missing_or_false_upgrade_and_wfp_evidence(tmp_pat
         "uninstall_remove_models": "passed",
         "normal_cancel_removes_partial": "passed",
         "preserved_legacy_destination": "passed",
+        "protected_install_destination": "passed",
         "user_outputs_unchanged": True,
     }
     audit = dict(installer=0, gui=0, native=0, fetch_allowed=4, fetch_blocked=0)
@@ -132,6 +133,11 @@ def test_final_release_rejects_missing_or_false_upgrade_and_wfp_evidence(tmp_pat
     with pytest.raises(ValueError):
         stage(tmp_path / "input", tmp_path / "legacy-destination-failed", "v0.5.0-m5.6")
     receipt["preserved_legacy_destination"] = "passed"
+    receipt["protected_install_destination"] = "failed"
+    summary.write_text(json.dumps(receipt))
+    with pytest.raises(ValueError):
+        stage(tmp_path / "input", tmp_path / "protected-install-failed", "v0.5.0-m5.6")
+    receipt["protected_install_destination"] = "passed"
     summary.write_text(json.dumps(receipt))
     audit["installer"] = 1
     wfp.write_text(json.dumps(audit))

@@ -1197,3 +1197,19 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - M5-report.md complete with gap table, Owner actions, Questions for PM and
   Second self-review. All discovered S0/S1 defects resolved; VM/scaling/hardware
   outcomes remain explicitly unclaimed Owner evidence. No PR/publication/merge.
+
+### M5 second review registered-payload boundary (ISSUE-025)
+
+- Isolated test failed: a protected install/resources destination did not retain
+  its metadata. Inno's independent registered-file removal could bypass the
+  app-data helper and erase a private replacement at a registered filename.
+  No Owner data touched; .11/.12 now superseded final candidates.
+- Existing PM ownership decision covers installation folders too. Added guarded
+  read-only uninstall preflight before all native deletion/silent/dialog paths;
+  protected or uncertain metadata aborts with shared plain wording.
+- 71 focused tests pass. Native acceptance substitutes synthetic private bytes
+  at registered models.json, expects uninstall exit 1 and intact app/metadata/
+  bytes, restores exact manifest then runs ordinary gates. Release staging
+  requires its receipt; false/missing protection rejects release.
+- Filed ISSUE-025 (S0) and interim 11. New .13/.14 pair follows all gates, with
+  no new policy exception, publication or deleted release/tag/run/branch.
