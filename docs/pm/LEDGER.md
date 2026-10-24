@@ -1275,3 +1275,10 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - PM assigned model-selection handoff, About/notices and redundant uninstall
   confirmation fixes to M6 only. This M5 update is documentation only. .13/.14
   tags/releases/binaries unchanged; no PR/publication.
+
+### PM distribution restriction, 2026-10-24
+
+No M5 code backport. .13/.14 remain frozen Owner VM test drafts, not for
+distribution. After VM pass, M5 merges first and M6 immediately afterwards;
+no M5-only build is distributed. First real-use build is M7 from main after M6.
+Only report/ledger documentation changed here.
