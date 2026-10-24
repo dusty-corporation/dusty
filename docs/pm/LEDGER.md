@@ -1355,3 +1355,16 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   pending. Earlier native run 40128744173 failed shortcut audit comparison; normalize
   mixed slash install path before comparing actual Shell targets, retain counts
   in receipt before assertion. No installer uploaded by that failed run.
+
+### ThinkPad endurance preparation checkpoint
+
+- Added standalone PowerShell/.NET helper for the INSTALLED app, Turbo Vulkan
+  then Small CPU; no Python/repo clone required. It validates the exact public
+  MP3, rebuilds canonical PCM WAV by repeating decoded frames 12 times, checks
+  desktop SHA-256, and records time/RTF/sampled tree RAM/work bytes/actual backend,
+  app hash/status/threads and empty work area. Refuses pre-existing app queue,
+  unrelated state and existing result folders; no output/settings deletion.
+- Repository-only PrepareOnly execution passed: 7920.1875 seconds, WAV SHA-256
+  8455996fe6970d43828600d976712ab4b37c40b22863d4fa0031f4bc47921de3.
+  This proves reproducible input, not a ThinkPad performance result. No installed
+  Owner app was launched and no real profile changed. Exact Owner steps follow.
