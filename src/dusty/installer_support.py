@@ -71,3 +71,20 @@ def model_size(paths: RuntimePaths) -> str:
             ):
                 total += file.stat().st_size
     return f"{total / 1_000_000_000:.1f}"
+
+
+def model_status(paths: RuntimePaths) -> dict[str, str]:
+    """Verify existing catalog files before Setup describes their upgrade state."""
+    from dusty.models import ModelCorrupt, ModelMissing, ModelRegistry, load_manifest
+
+    registry = ModelRegistry(load_manifest(paths.resources_dir / "models.json"), paths.models_dir)
+    statuses = {}
+    for model_id in registry.manifest.models:
+        try:
+            registry.model_path(model_id)
+            statuses[model_id] = "installed"
+        except ModelMissing:
+            statuses[model_id] = "missing"
+        except (ModelCorrupt, OSError, ValueError):
+            statuses[model_id] = "damaged"
+    return statuses
