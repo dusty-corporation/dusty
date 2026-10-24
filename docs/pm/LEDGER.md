@@ -998,3 +998,7 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Carried 7f7e036 uninstall preflight and its source, native acceptance and release receipt regressions from m5-installer.
 - Protected installation destinations now stop native uninstall before any registered payload is removed. Source gates passed on release run 40104236818; native gates pending.
 - Updated installation and privacy guidance. Existing m6-docs reference branch remains untouched.
+
+## M5 native uninstall boundary resolution carried, 2026-10-24
+- ISSUE-025 resolved in .13 CI 40104236818, all jobs green. Actual native uninstall stopped before deleting protected registered payload; app, metadata and synthetic private bytes survived. Both ordinary uninstall paths still pass.
+- Carried the exact disposable-VM boundary check and resolution evidence. .14 run 40105275700 is testing the final .13 to .14 upgrade; final handoff metadata will be mirrored after it finishes.

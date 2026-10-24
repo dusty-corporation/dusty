@@ -2,7 +2,7 @@
 
 - Severity: S0 / NN-7, isolated regression; no Owner profile touched
 - Milestone: M5
-- Status: Repair implemented under existing ownership policy; native gates pending
+- Status: Resolved; source and native protection gates passed
 
 ## Root cause
 
@@ -28,3 +28,15 @@ protected_install_destination=passed and rejects a false/missing receipt.
 
 .11/.12 remain draft and superseded as final candidates. A new repaired .13/.14
 pair follows all gates. No release/tag/run/branch is deleted or published.
+
+## Resolution, 2026-10-24
+
+Commit 7f7e036 / v0.5.0-m5.13 / CI 40104236818 passed every job,
+including the actual native uninstaller invocation with expected exit 1.
+The registered models.json replacement, app executable and protection metadata
+survived unchanged; the original manifest was then restored before the ordinary
+exact installed payload, PE, WFP and both uninstall gates passed.
+protected_install_destination=passed is present in the acceptance receipt and
+mandatory in release staging; a false/missing receipt fails the gate.
+Source: 355 passed, 2 expected skips; separate network test 1 passed; required
+coverage 94.7%. Draft only. The .13/.14 true-upgrade pair is the final handoff.
