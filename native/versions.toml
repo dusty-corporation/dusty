@@ -26,12 +26,12 @@ tag = "v6.2.3"
 commit = "5cd7945676eb32225748052e2e6a0580e4686a08"
 
 [engine_release]
-tag = "engine-v2"
-source_commit = "c560048bbf0ec7d01fcc3074c61957982fc255dd"
-native_run_id = 39804070663
+tag = "engine-v3"
+source_commit = "d0abc304942255a1d30d741fff0ca98c2c1cdf45"
+native_run_id = 40110881732
 ffmpeg_run_id = 39718973892
-whisper_cpu_zip_sha256 = "a8c0630616b70a00e40b9534f594cd525885cd10ef45e492aa82378ea9a325b6"
-whisper_vulkan_zip_sha256 = "2a4aeae6789391c7cc2fa8bbe01648e0d36c499ca1233cbdcf58d127c47fc6a0"
+whisper_cpu_zip_sha256 = "b47ec54df7ecb09b341bb7abc5f0f461f746f4bfe72b4873d5843340b9cef910"
+whisper_vulkan_zip_sha256 = "0e8f26c55c4abd7b708af1106027c2d75ed2d4592f103e10263f08e0c8d523c7"
 minimal_ffmpeg_zip_sha256 = "d687eb1e7403b6ab9c444118c055ac99521ea34782f52538787690d1e53da40c"
 
 [models_release]
