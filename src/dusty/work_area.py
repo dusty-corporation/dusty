@@ -32,7 +32,9 @@ def managed_roots(paths: RuntimePaths) -> tuple[Path, ...]:
         paths.user_dir,
         *(paths.user_dir / name for name in ("work", "models", "state", "logs")),
         paths.models_dir,
-        paths.bin_dir.parent,
+        paths.bin_dir,
+        paths.resources_dir,
+        *((paths.install_dir,) if paths.install_dir else ()),
     )
 
 

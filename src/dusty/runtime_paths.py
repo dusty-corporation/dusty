@@ -12,6 +12,7 @@ class RuntimePaths:
     models_dir: Path
     resources_dir: Path
     user_dir: Path
+    install_dir: Path | None = None
 
 
 def resolve_paths(
@@ -30,7 +31,9 @@ def resolve_paths(
     user_dir = local_appdata / "Dusty"
     if installed:
         app_dir = app_executable.parent.parent
-        return RuntimePaths(app_dir / "bin", user_dir / "models", app_dir / "resources", user_dir)
+        return RuntimePaths(
+            app_dir / "bin", user_dir / "models", app_dir / "resources", user_dir, app_dir
+        )
     bin_dir = Path(env["DUSTY_BIN_DIR"]) if env.get("DUSTY_BIN_DIR") else root / "build/bin"
     models_dir = (
         Path(env["DUSTY_MODELS_DIR"]) if env.get("DUSTY_MODELS_DIR") else root / "build/models"

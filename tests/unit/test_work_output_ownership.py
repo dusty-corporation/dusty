@@ -98,7 +98,9 @@ def test_legacy_destination_cleared_once_but_preserved_across_restarts(tmp_path)
     from dusty.queue.storage import load_settings
 
     root, transcript = saved_output(tmp_path, "selftest")
-    paths = RuntimePaths(tmp_path / "install/bin", root / "models", ROOT / "resources", root)
+    paths = RuntimePaths(
+        tmp_path / "install/bin", root / "models", ROOT / "resources", root, tmp_path / "install"
+    )
     assert sanitize_output(paths)
     settings = load_settings(root / "settings.json")
     assert "output_dir" not in settings
@@ -112,7 +114,9 @@ def test_legacy_destination_cleared_once_but_preserved_across_restarts(tmp_path)
 @pytest.mark.parametrize("area", ["work", "models", "state", "logs", "install"])
 def test_managed_destinations_and_aliases_rejected(tmp_path, area):
     root = tmp_path / "user"
-    paths = RuntimePaths(tmp_path / "install/bin", root / "models", ROOT / "resources", root)
+    paths = RuntimePaths(
+        tmp_path / "install/bin", root / "models", ROOT / "resources", root, tmp_path / "install"
+    )
     base = tmp_path / "install" if area == "install" else root / area
     base.mkdir(parents=True)
     assert managed_destination(base / "nested/clip.wav", paths)
@@ -191,3 +195,19 @@ def test_legacy_logs_output_folder_is_untouched_even_by_logging(tmp_path):
     before = {p.name: p.read_bytes() for p in logs.iterdir()}
     configure_logger(root).info("status=done")
     assert {p.name: p.read_bytes() for p in logs.iterdir()} == before
+
+
+def test_development_outputs_can_be_siblings_of_native_staging(tmp_path):
+    from dusty.runtime_paths import resolve_paths
+
+    paths = resolve_paths(
+        repo_root=tmp_path, frozen=False, environment={"LOCALAPPDATA": str(tmp_path / "local")}
+    )
+    assert not managed_destination(tmp_path / "build/offline-run/outputs", paths)
+    assert managed_destination(tmp_path / "build/bin/cpu", paths)
+    installed = resolve_paths(
+        frozen=True,
+        executable=tmp_path / "app/dusty/dusty.exe",
+        environment={"LOCALAPPDATA": str(tmp_path / "local")},
+    )
+    assert managed_destination(tmp_path / "app/anywhere", installed)
