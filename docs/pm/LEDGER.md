@@ -965,3 +965,22 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - ISSUE-020 closed with PM decision, root cause, retained original regressions,
   marker continuity/link tests and the deletion sweep in M5-interim-9.md.
 - m6-docs-v2 8c199b0 implementation parity verified. Part 2 page work now starts.
+
+### M5 page review round implementation (2026-10-24)
+
+- Part 1 gates passed before these changes began. Shared PM wording, persistent
+  download heading, Next=Download, byte counter, processor retry, success plural,
+  Finish-without explanation, default shortcuts and compact uninstall controls
+  implemented. Sizes share the Model Manager formatter, including real uninstall
+  MB/GB units. Wizard artwork replacement parked in BACKLOG.md.
+- Pinned Inno 6.7.3 GetPreviousPageID stops at wpInstalling. Added an opt-in
+  post-copy model-return page using the same controls, so Back can change models
+  before download without copying app files again. It is skipped otherwise.
+- Open Dusty now is checked and runasoriginaluser. At the final Finish callback,
+  after all workers end, Setup drops only its completed outer job's kill-on-close
+  flag so the requested GUI can outlive it. Download/test job protection remains
+  active until that point. Failure disables launch and explains Start menu use.
+- Automatic review rejected skipping the old VAD wording assertion. Replaced it
+  with a complete assertion of the PM-required VAD sentence and catalog size;
+  every transcription row remains covered. No test is skipped or disabled.
+- Generator/source tests and native CI compilation/acceptance pending.

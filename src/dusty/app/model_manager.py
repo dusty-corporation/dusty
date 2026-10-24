@@ -37,11 +37,7 @@ def model_name(model_id: str) -> str:
 
 def format_size(size_bytes: int) -> str:
     """Decimal download units; never wrap a number away from its unit."""
-    large = round(size_bytes / 1_000_000, 1) >= 1000
-    return M.MODEL_SIZE.format(
-        value=size_bytes / (1_000_000_000 if large else 1_000_000),
-        unit=M.GIGABYTES if large else M.MEGABYTES,
-    )
+    return M.format_size(size_bytes)
 
 
 def model_files(registry: ModelRegistry) -> dict[str, tuple[str, int]]:

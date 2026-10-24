@@ -40,3 +40,4 @@ Record optional improvements, optimizations, and work outside V1 here instead of
 - Automatic updates or update checks: conflicts with NN-4; retain explicit manual updates.
 
 - Refresh pinned GitHub Actions for Node 24 after review; current pinned actions pass but CI warns that Node 20 actions are forced onto Node 24.
+- M5: replace Inno's default wizard images with Dusty artwork before public release.

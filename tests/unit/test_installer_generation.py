@@ -67,7 +67,15 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     for key in ("MODEL_BEST_FOR", "MODEL_NOTE"):
         from dusty.app import messages as M
 
-        for value in getattr(M, key).values():
+        expected = dict(getattr(M, key))
+        # PM replaced the VAD row with an exact sentence including catalog size.
+        # Validate that complete replacement, as well as every transcription row.
+        manifest_data = json.loads(manifest.read_text())
+        voice = M.INSTALLER["VoiceIncluded"].replace(
+            "%1", M.format_size(manifest_data["vad"][0]["size_bytes"])
+        )
+        expected["silero-vad"] = voice
+        for value in expected.values():
             assert value.replace("'", "''") in text
     assert "Finish without a model" in text
     assert "GraphicsCandidate" not in text
@@ -79,7 +87,25 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     cancel = text.split("procedure CancelButtonClick", 1)[1].split("function GetCustom", 1)[0]
     assert cancel.count("CleanupActivePartial;") == 2  # Busy and failed/idle normal close.
     failure = text.split("procedure Failure", 1)[1].split("function CurrentId", 1)[0]
-    assert "Action.Visible := False" in failure  # Retry controls must not overlap it.
+    assert "RetryButton.Visible := True" in failure
+    assert "WizardForm.NextButton.Enabled := False" in failure
+    assert "Action := NewButton" not in text
+    assert "BackButtonClick" in text and "ReturnModelsRequested := Result" in text
+    assert "FileSize64" in text and "Amount.Caption" in text
+    assert "runasoriginaluser" in text and "skipifsilent" in text
+    assert "(CurPageID = wpFinished) and not Busy" in text
+    assert "Cancel.Default := True" in text
+    assert "Flags: unchecked" not in text.split("[Tasks]", 1)[1].split("[Messages]", 1)[0]
+    assert "close all other applications" not in text
+    for key in (
+        "GpuSelfTestFailed",
+        "SetupComplete",
+        "SetupCompletePlural",
+        "FinishedWithout",
+        "RemoveModelsHelp",
+        "OpenDustyNow",
+    ):
+        assert M.INSTALLER[key] in text
 
 
 def test_installer_rejects_tampered_catalog(tmp_path):

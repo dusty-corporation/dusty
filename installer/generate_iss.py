@@ -84,6 +84,7 @@ def generate(output: Path, bundle: Path) -> Path:
         "@@WIZARD_CODE@@", (ROOT / "installer/wizard.iss").read_text(encoding="utf-8")
     )
     consent_cases = []
+    download_cases = []
     for mask in range(1, 1 << len(manifest.models)):
         chosen = [
             (key, item) for i, (key, item) in enumerate(manifest.models.items()) if mask & (1 << i)
@@ -94,6 +95,12 @@ def generate(output: Path, bundle: Path) -> Path:
             names=M.DOWNLOAD_NAMES_JOIN.join(names), size=format_size(total)
         )
         consent_cases.append(f"    {mask}: Result := {pascal(consent)};")
+        heading = (
+            M.INSTALLER["DownloadHeading"]
+            .replace("%1", M.DOWNLOAD_NAMES_JOIN.join(names))
+            .replace("%2", format_size(total))
+        )
+        download_cases.append(f"    {mask}: Result := {pascal(heading)};")
     release_tag = os.environ.get("DUSTY_RELEASE_TAG", "")
     if release_tag:
         package, display_version, numeric_version = versions(release_tag)
@@ -111,15 +118,16 @@ def generate(output: Path, bundle: Path) -> Path:
         "VAD_FILE": raw["vad"][0]["file_name"],
         "VOICE_NAME": M.VOICE_MODEL,
         "VOICE_DESCRIPTION": pascal(
-            f"{M.VOICE_MODEL} ({format_size(raw['vad'][0]['size_bytes'])}): "
-            f"{M.MODEL_QUALITY['silero-vad']}. "
-            f"{M.MANAGER_HEADERS[1]}: {M.MODEL_BEST_FOR['silero-vad']}. "
-            f"{M.MODEL_NOTE['silero-vad']}"
+            M.INSTALLER["VoiceIncluded"].replace("%1", format_size(raw["vad"][0]["size_bytes"]))
         ),
+        "WELCOME_DESCRIPTION": M.INSTALLER["WelcomeDescription"],
+        "REVIEW_MODELS_SIZE": format_size(1_400_000_000),
+        "ZERO_SIZE": format_size(0),
         "RECOMMENDED_SUFFIX": M.RECOMMENDED.format(name=""),
         "MODEL_REVIEW": M.MODEL_REVIEW,
         "MIN_RAM": str(raw["models"][0]["recommended_min_ram_gb"] * 1_000_000_000),
         "CONSENT_CASES": "\n".join(consent_cases),
+        "DOWNLOAD_CASES": "\n".join(download_cases),
         "MESSAGES": "\n".join(f"{key}={value}" for key, value in M.INSTALLER.items()),
         "INNO_LICENSE": str(ROOT / "packaging/licenses/inno/license.txt"),
         "INSTALLER_NOTICES": str((output / "THIRD_PARTY_NOTICES.md").resolve()),
