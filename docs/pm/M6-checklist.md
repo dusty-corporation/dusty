@@ -50,3 +50,81 @@ Send numbered PASS/FAIL, build/hash and the two profile-character flags. Do not
 send the full profile path or private recordings. If Windows normalized away
 either character class, mark actual-profile coverage partial. Synthetic M6
 source/install-path tests do not replace this account-level evidence.
+
+
+## ThinkPad installed-app endurance: two cases
+
+PM approved the ThinkPad proxy; the Surface run belongs to M7. Use an approved
+installed M6 build, not an M5-only build for real use. Input preparation can run
+now. Download/test Small, Large v3 Turbo and Voice detection in Manage models
+first. Plug in power, prevent sleep for this test, finish any real work, select
+Tools > Clear history, and close Dusty. This removes its saved list, not recordings
+or transcripts. Allow 5 GB free on both the benchmark and app-data drives.
+
+Use PowerShell 7, already used for the earlier bench kit. No Python or clone is
+needed. These explicit preparation downloads are outside the processing app.
+Choose a fresh folder; commands refuse an existing one:
+
+```powershell
+$bench = 'C:\bench\m6-endurance'
+if (Test-Path -LiteralPath $bench) { throw 'Choose a new benchmark folder' }
+New-Item -ItemType Directory -Path $bench | Out-Null
+$revision = '95351993067875df3ff3b00d55324b321d3165b5'
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/dusty-corporation/dusty/$revision/tools/bench/thinkpad-endurance.ps1" -OutFile "$bench\thinkpad-endurance.ps1"
+if ((Get-FileHash "$bench\thinkpad-endurance.ps1" -Algorithm SHA256).Hash.ToLowerInvariant() -ne 'da6edabd4c03076b5e00595fdf20bf6aff318835fb1d1b1c030081abb9642322') { throw 'Script hash mismatch' }
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/dusty-corporation/dusty/$revision/tests/fixtures/audio/bench/swineherd.mp3" -OutFile "$bench\swineherd.mp3"
+if ((Get-FileHash "$bench\swineherd.mp3" -Algorithm SHA256).Hash.ToLowerInvariant() -ne '17d68d8940e92907f13e6e2bedc5f997fa1b41fa9fca9e0aefd89760f97175b6') { throw 'Source audio hash mismatch' }
+$install = Join-Path $env:LOCALAPPDATA 'Programs\Dusty'
+& "$bench\thinkpad-endurance.ps1" -SourceMp3 "$bench\swineherd.mp3" -Work "$bench\run" -InstallRoot $install -PrepareOnly
+Get-FileHash "$bench\run\long.wav" -Algorithm SHA256
+```
+
+Expected long.wav hash:
+`8455996fe6970d43828600d976712ab4b37c40b22863d4fa0031f4bc47921de3`.
+It is exactly the desktop input: 12 copies of the public-domain LibriVox
+Swineherd fixture, decoded with the installed pinned FFmpeg to mono 16 kHz s16le,
+written with a canonical 44-byte WAV header. Duration **7920.1875 seconds**
+(2 hours 12 minutes). Source URL and public-domain provenance are in
+`tests/fixtures/AUDIO_SOURCES.md`; this is repeated content, not an accuracy test.
+The hash was independently reproduced by this PowerShell helper on the desktop.
+If the hash differs, stop; do not run a different input and call it comparable.
+
+Run both installed-app cases (same PowerShell session, or reassign bench/install):
+
+```powershell
+$bench = 'C:\bench\m6-endurance'
+$install = Join-Path $env:LOCALAPPDATA 'Programs\Dusty'
+& "$bench\thinkpad-endurance.ps1" -SourceMp3 "$bench\swineherd.mp3" -Work "$bench\run" -InstallRoot $install
+Get-Content "$bench\run\vulkan\summary.json"
+Get-Content "$bench\run\cpu\summary.json"
+Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Dusty\work') -Force
+```
+
+The helper launches **the installed dusty.exe**, using its shared headless
+coordinator, first Turbo q8_0 on Vulkan and then Small on CPU, VAD on, automatic
+language, TXT export, normal hardware-derived thread default (recorded in JSON).
+It uses installed models without copying them or changing settings. It refuses
+pre-existing saved jobs and unrelated state; its second case may replace only
+its own first completed public job. Separate fresh output folders prevent
+transcript replacement. No files are deleted by the helper.
+
+Leave the app closed and do not start other transcription while measuring.
+The two cases may take a substantial part of the afternoon; they are separate
+from the 20-minute offline checklist. No unmeasured completion time is promised.
+Keep the generated recording/transcripts local. Send only the two summary
+objects plus ThinkPad/Windows/app build identity and whether AC power/sleep
+prevention was used. Required results:
+
+- Each case exit 0, status done, actual backend matches Vulkan or CPU requested.
+- Wall seconds and RTF = wall seconds / 7920.1875.
+- Sampled peak process-tree working-set bytes and temporary-work bytes. About
+  one sample/second plus CIM overhead; not GPU VRAM, may miss shorter peaks or
+  double-count shared pages. Comparable method to desktop, not exact peak RAM.
+- Work folder has zero entries afterwards, TXT exists and opens, source unchanged.
+- Installed executable SHA-256 and actual threads (both recorded automatically).
+
+A fallback, failure or retained work is a FAIL with its actual summary, not a
+Vulkan success. Preserve evidence; do not delete uncertain work manually. If you
+must abort, terminate the public-test Dusty process in Task Manager; its native
+children must die. Do not reuse result folders or report an interrupted run as
+complete. No ThinkPad endurance result is claimed until the Owner sends it.

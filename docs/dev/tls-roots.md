@@ -35,7 +35,7 @@ were instead copied exactly from pre-existing trusted Windows ROOT entries,
 with their official CA reference URLs recorded, without altering that store.
 ISRG roots were downloaded from its official HTTPS URLs with certificate checks.
 No claim is made that USERTrust bytes were downloaded from the reference URL.
-This safer acquisition was approved. No rejected transport was worked around.
+Automatic approval review accepted this safer local-store/HTTPS acquisition. No rejected transport was worked around.
 
 ## Runtime and canary
 

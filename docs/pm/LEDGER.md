@@ -1368,3 +1368,16 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   8455996fe6970d43828600d976712ab4b37c40b22863d4fa0031f4bc47921de3.
   This proves reproducible input, not a ThinkPad performance result. No installed
   Owner app was launched and no real profile changed. Exact Owner steps follow.
+
+### M6 draft and isolated production pins ready
+
+- Engine-v3 DRAFT, prerelease flag true, 12 uploaded assets independently
+  downloaded and SHA256SUMS verified. Draft URL ends untagged-6e484bbe817284177f7f.
+  engine-v2 assets/digests unchanged. Owner publication command is documented;
+  no publication was performed.
+- m6-engine-v3-pins 299fea3 based on 9535199 changes ONLY native/versions.toml: tag,
+  exact native source/run and CPU/Vulkan hashes. FFmpeg unchanged. Pushed but
+  not merged; M6 active pins remain engine-v2. PM publication confirmation required.
+- M6-checklist now has pinned script/audio download commands and hashes, installed
+  Turbo Vulkan/Small CPU measurement, actual backend/time/RTF/sample peaks/work
+  cleanup protocol. Surface M7. No laptop result invented.
