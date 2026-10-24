@@ -4,14 +4,14 @@
 
 Second adversarial review reproduced ISSUE-023 (NN-7): sanitized legacy
 preserved_paths were omitted by uninstall's initial inspector. Only a synthetic
-fixture was affected. The approved ownership fix is implemented and tested;
-.9/.10 are superseded final candidates. New .11/.12 gates follow. ISSUE-024
-interrupted-license recovery is also fixed. No Owner data was accessed.
+fixture was affected. The approved ownership fix and ISSUE-024 interrupted-license recovery passed
+every gate in .11 / CI 40099284709. .9/.10 are superseded candidates; final
+.11 to .12 run 40100326932 is running. No Owner data was accessed.
 
 
 Implementation is on `m5-installer`. ISSUE-020 is resolved with green ownership,
-packaged, installed WFP and uninstall evidence. The PM page round and Owner's
-output-row change are implemented. The first repaired tagged upgrade passed; the .9 to .10 pair is running;
+packaged, installed WFP and uninstall evidence. The PM accepted the installer page round (7b8d28b) and output row (a75f1cf).
+The first second-review candidate passed; the final .11 to .12 pair is running;
 M5 acceptance remains pending the Owner's fresh standard-user VM results.
 No PR, merge or published release has been created.
 
@@ -190,16 +190,16 @@ AUDIT-NOTES.md. No hardware/VM/failure result is fabricated.
 
 ## Questions for the PM
 
-- Review the new page bundles. No new correctness, privacy or licensing decision
-  is currently requested; the accepted decisions are implemented.
+- No new policy decision requested. The PM accepted both page/output-row bundles;
+  the graphics failure progress mismatch is in BACKLOG.md as requested.
 - M5 acceptance must await the fresh standard-user VM results. Native scale and
   physical GPU checks are explicit remaining evidence, not inferred from CI.
 
 ## Branches and limitations
 
 `m5-installer` holds implementation/evidence. `m6-docs-v2` carries the ISSUE-020
-repair through `7ec6c59`, with installer/output-row behavior guides updated. The new ISSUE-022
-helper will be carried after its gates.
+repair through `e6de0aa`, with second-review safety fixes and matching guides.
+Implementation parity is verified; final reports/checklist evidence follow M5.
 Reference `m5-packaging-spike` (`95dd90b`) and `m6-docs` (`c855b52`) stay untouched.
 No M6 acceptance, PR, publication, merge or repository setting change is claimed.
 
@@ -207,7 +207,7 @@ No M6 acceptance, PR, publication, merge or repository setting change is claimed
 
 Ownership repair and verifying Inno's post-copy navigation/cancellation required
 more work than page rendering. Safe previews, real lifecycle tests and VM
-acceptance are kept separate. Final tagged evidence remains in progress.
+acceptance are kept separate. Final .11 to .12 tagged evidence remains in progress.
 
 ## Second self-review
 
@@ -228,7 +228,8 @@ ISSUE-023 failed before repair and passes after preserving preserved_paths
 before all uninstall deletion. The installed lifecycle now exercises that exact
 state through the new packaged exe, and release staging rejects a false/missing
 preservation receipt. Focused matrix and existing safety/release tests: 85 pass.
-Full source and new paired native release gates pending. Original regressions
+Full source: 339 passed/1 expected skip, 94.2%; .11 native gates pass.
+Final .11 to .12 run includes the 16 additional atomic cases and is pending. Original regressions
 remain enabled; no inventory/license/network exception or skipped test added.
 
 Non-urgent handle-relative traversal and older-version uninstall after an

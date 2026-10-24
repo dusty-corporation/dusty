@@ -1163,3 +1163,17 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   recovery, not automatically deleted from transcript folders.
 - VM checklist now has exact legacy-setting commands and expected preserved_paths
   retention, separate from normal clean-uninstall checks and reset to clean.
+
+### M5 second-review native acceptance
+
+- f9b39f9 / v0.5.0-m5.11 / CI 40099284709 all jobs GREEN; draft only.
+  Actual installed preservation receipt passes; model hashes/times and metadata
+  survive the legacy protected destination. Mandatory release receipt enforced.
+  ISSUE-023 and ISSUE-024 resolved with full native/source acceptance evidence.
+- Complete calibrated Setup/GUI/native 0; fetch allowed 4/blocked 0. Normal-cancel
+  audit 0/0/0, fetch 2/0. Exact installed/PE/license, true upgrade, both normal
+  uninstalls and output sentinel pass. All five downloaded asset digests match.
+- Final paired v0.5.0-m5.12 pushed at 791682b, run 40100326932; .11 upgrade input.
+  It includes 16 additional passing atomic-write regressions (49 total matrix).
+- m6-docs-v2 e6de0aa has source/installer/tools/tests/workflows parity, safety
+  fixes and privacy/install updates. Reference branches untouched.
