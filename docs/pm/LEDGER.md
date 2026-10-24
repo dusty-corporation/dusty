@@ -1454,3 +1454,25 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   list, incremental/all-installed counts, explicit folder lifecycle, model
   handoff and the actually-unchecked keep-models confirmation test.
 - Candidate CI 40132812499 at 019a16f is running; final gates not yet claimed.
+
+### M6 final source validation and rebase preview
+
+- 40132812499 at 019a16f: source 420 pass / 2 expected skips, 491.88 s;
+  strict 1192/1246 = 95.7% (all five packages >85%). Explicit Tiny integration
+  1 pass / 1.57 s. Both live bundled-only default chains pass; GitHub RSA/ECC
+  pass, release-assets RSA passes and optional ECC is not served. Static gates pass.
+- Source WFP GUI 0 / fetch allowed 4 / blocked 0 with calibration and verification.
+  Packaged/installed lifecycle is still running, not claimed green yet.
+- Local with loopback escalation: complete suite 420 pass / 1 skip / 1 failure,
+  214.36 s. Sole failure is the unchanged production engine-v2 Unicode case,
+  ISSUE-026. Focused Model Manager 39 pass / 52.50 s, including forced GUI death,
+  no further partial bytes, and the complete explicit-folder sequence.
+- M5 code diff against frozen 062d1f1 is empty. .13/.14 remain drafts with five
+  unchanged assets each. PR #6 remains DRAFT/open; engine-v3 remains DRAFT.
+- Rebase preparation: code/config/native/resources at M6 prework base 47594ecd
+  equals current M5 exactly; histories share 20cce6b. Non-mutating merge-tree
+  preview reports 25 historical overlap conflicts, including installer/app code
+  and docs. This is NOT a clean actual rebase. Preserve the pushed M6 snapshot
+  (already contains frozen M5 plus all repairs/prework docs), use it to resolve
+  these known overlaps after the Owner merges M5, preserve unrelated main edits,
+  then require tree comparison and all gates. No branch/history rewrite performed.

@@ -81,7 +81,7 @@ within SPEC 9.1, not a new NN exception or a substitute for PM acceptance.
 | 3. Prepared VAD default | Fixed: omitted state is false; real preparer computes it explicitly. | 2f12720; positive fixtures now declare VAD; missing-flag regression and 67 GUI/manager tests. |
 | 4. Completed QThreads | Acceptable for V1 with a known retention cost: wrappers are retained through the window lifetime to avoid destroying a running thread. One BatchWorker serves a whole run, not every recording. Models/audio are in native children and not stored in these wrappers. | Real cancel/close/forced-death/resume and 200 ms event-loop tests; repeated-action memory is not claimed bounded. Independent audit should inspect very long interactive sessions. |
 | 5. Cleanup ownership/leftovers | Fixed boundaries plus conservative V1 behavior: unknown/changed/linked/protected content stays. Guessing ownership would violate NN-7. | All original ISSUE-020/023/025 regressions and 49 OS adversarial cases retained; native installed preflight/receipts; ISSUE-028 normal/extended namespace equality repaired at 8818032 and both native refusals passed in 40124502580. |
-| 6. PE32 installer ABI | Acceptable pinned ABI, not a guess: compiler/architecture gate plus sized Job records, suspended assignment and cancellation tests. | M5 source/build verification; actual ThinkPad .14 no-UAC, graphics/CPU self-tests and uninstall pass. Fresh standard-user VM still pending. |
+| 6. PE32 installer ABI | Acceptable pinned ABI, not a guess: compiler/architecture gate plus sized Job records, suspended assignment and cancellation tests. | M5 source/build verification; actual ThinkPad .14 no-UAC, graphics/CPU self-tests and uninstall pass. Owner standard-user VM results are in M5-report.md; cold-root repair and actual keep-models recheck remain on M6. |
 | 7. Installer attribution | Acceptable under PM-approved ADR 0023: exact runtime hashes, reviewed upstream build selection and notices/source retention. It is not a recovered linker-map claim. | Unchanged installer-wide allowlist and license gate; new compiler/hash/unit selection requires PM review. |
 | Standalone/production probe drift | Same verified physical-device rules and ABI; standalone is diagnostics only, never bundled or called by app. | Existing classification fixtures and real ThinkPad model-free PASS; a change must update both. Source parity remains an independent-audit check. |
 | Review-only navigation | Acceptable separate evidence tool: compile-time ReviewOnly disables installation and uses synthetic states. | Generator tests and archive PNG/README gate; accepted M5 images are not failure-injection acceptance. |
@@ -98,5 +98,6 @@ within SPEC 9.1, not a new NN exception or a substitute for PM acceptance.
 
 No decision here permits new dependencies, broad network/PE/license exceptions,
 source-recording deletion or automatic output-folder sweeps. The unresolved
-native engine activation (ISSUE-026) and Qt producer (ISSUE-027), plus Owner
-hardware/VM sign-off, remain explicit report gaps.
+native engine activation (ISSUE-026), PM-accepted open S2 Qt producer
+(ISSUE-027) with passive capture, and Owner hardware/VM rechecks remain explicit
+report gaps.
