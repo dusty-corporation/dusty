@@ -1030,9 +1030,9 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 | M6-01 | M6 | Branch, frozen M5 baseline and brief archive | done | m6-hardening from m6-docs-v2 47594ec; M5 brief archived byte-for-byte; frozen m5-installer 062d1f1, .13 7f7e036 and .14 972977a | - |
 | M6-02 | M6 | User/developer/privacy documentation and consistency gate | done | User/privacy/developer guides, exact FAQ wording, negative consistency tests; candidate CI 40124502580 source checks pass | - |
 | M6-03 | M6 | Audit-note disposition and V1 polish | blocked | Every note has a disposition; V1 progress-meter polish fixed; Qt native producer unproven | ISSUE-027 |
-| M6-04 | M6 | Automated hardening, packaged canary and CI | doing | 40124502580 source, offline and packaged WFP/canary gates pass; installed gates running; production engine activation still pending | ISSUE-026, ISSUE-028 |
+| M6-04 | M6 | Automated hardening, packaged canary and CI | blocked | Final candidate 40125892713 all gates pass; production-pin CI fails until new engine activation; ISSUE-028 resolved on M6 | ISSUE-026 |
 | M6-05 | M6 | Manual offline checklist and independent audit packet | done | docs/pm/M6-checklist.md and AUDIT-PACKET.md; actual Owner offline sign-off pending; Surface M7 | Owner hardware |
-| M6-06 | M6 | Final report and acceptance | todo | No PR/publication; Owner results will remain explicit gaps | Owner sign-off |
+| M6-06 | M6 | Final report and acceptance | blocked | docs/pm/reports/M6-report.md written; acceptance not met: engine activation, Qt producer and Owner checklists pending; no PR/publication | ISSUE-026, ISSUE-027, Owner sign-off |
 
 ### M6 registry audit checkpoint
 
@@ -1259,3 +1259,26 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Added a separate fresh-standard-account path protocol after frozen M5 testing,
   without confusing synthetic Unicode paths with an actual Windows profile.
   M6 offline reboot checks remain about 20 minutes per machine and pending.
+
+### M6 final report and stop checkpoint
+
+- Final code fc2c6e5: CI 40125892713 passed EVERY job. Later commits are docs only.
+  Source 392 pass/2 expected skips, 286.62 s; separate real-network 1 pass, 1.67 s;
+  strict coverage 95.8%. Source and packaged Manager: GUI 0, fetch allowed 4,
+  blocked 0. Packaged and installed processing/probe/canary: connection events 0.
+- Native Setup download/probe: installer/GUI/native 0, fetch allowed 4, blocked 0;
+  cancellation allowed 2, blocked 0. Calibration true. Both native protection
+  spellings preserve bytes/metadata. 221 installed files; 64 PE checks at both
+  stages; licenses pass. One actual custom uninstall confirmation, zero generic;
+  keep/remove choices, cancel/retry and output sentinels pass. Same-version
+  reinstall only, not a new true-upgrade claim.
+- Gated CI-only installer independently downloaded/hash-verified: 34,707,674 B,
+  SHA-256 6976d416eb02ae842bcbe691f80f134e9d2fda5a50e8fdc76eda48861f5ecae8.
+  No release/tag created or published. Comparison candidate 40125713083 also
+  passed after visible-window correction; final adds documented bounded reads.
+- M6-report.md written with SPEC/brief acceptance table, Owner actions and PM
+  questions. M6 is NOT accepted: ISSUE-026 activation, ISSUE-027 real native
+  producer, offline/reboot and actual-profile/laptop evidence remain explicit.
+- M5 code diff from 062d1f1 empty; only authorized M5 docs d4ee428. .13/.14
+  identities unchanged. SPEC, lockfile, catalog and metadata unchanged on M6.
+  No PR/merge, publication or deletion of branches/tags/releases/runs. Stop.

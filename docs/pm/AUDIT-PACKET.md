@@ -162,3 +162,13 @@ ISSUE-028 records a normal/extended Windows namespace comparison bypass, found
 with predicates only. M6 canonicalizes protection comparisons without shortening
 actual long-path I/O. The frozen M5 code does not have that repair; PM must decide
 any backport separately. See M6-report.md for the final native gate result.
+
+## Final M6 candidate evidence
+
+CI 40125892713 at fc2c6e5 passed all source, packaged and installed gates;
+M6-report.md records counts, exact installer hash and native candidate provenance.
+Registered uninstall receipt: one custom confirmation, zero generic, actual
+keep-model checkbox action passed. ISSUE-028 normal/extended protection cases
+both passed with synthetic bytes/metadata intact. Later commits are docs only.
+This is explicit candidate mode, not production activation: ISSUE-026 remains
+S1 and normal engine-v2 CI still fails. No M5 code or frozen draft was changed.

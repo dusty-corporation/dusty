@@ -41,3 +41,13 @@ engine-v2. No skip, xfail, test weakening or ASCII-path workaround.
 test_unicode_profile_models_and_synced_documents_output in
 tests/integration/test_m6_hardening.py. Real GUI, Unicode profile/model/audio,
 sync warning, TXT/DOCX, original recording unchanged and work cleanup.
+
+## Full candidate validation
+
+Native run 40110881732 produced both exact packages pinned in
+native/m6-engine-candidate.json. Candidate app CI 40125892713 at fc2c6e5 passed
+all jobs: 392 source tests, strict coverage, packaged/installed canary and WFP,
+PE and license gates, protected destinations and complete uninstall lifecycle.
+This does not activate engine-v2 replacements. Ordinary production-pin CI
+40124502543 still fails the enabled Unicode case. ADR 0024 approval, reviewed
+new engine release preparation/publication and production-pin rerun remain.

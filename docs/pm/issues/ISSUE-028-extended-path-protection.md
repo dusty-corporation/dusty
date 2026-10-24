@@ -53,3 +53,8 @@ Replacement candidate 40125713083 reruns the entire lifecycle.
 
 This closes the M6 protection defect, not a claim that frozen M5 is repaired or
 that M6 has been published. The M5 backport remains an explicit PM decision.
+
+Final candidate 40125892713 (fc2c6e5) passed every job, both installed-protection
+spellings, the actual one-confirmation UI, installed inventory/PE/WFP/canary,
+both uninstall choices, cancellation/retry and unchanged output sentinels.
+The complete native lifecycle now has a passing receipt; M5 remains frozen.
