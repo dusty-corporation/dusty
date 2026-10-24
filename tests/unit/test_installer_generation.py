@@ -61,6 +61,8 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     assert "{param:ALLOWDOWNLOAD|}" in text
     assert "{param:REMOVEMODELS|}" in text
     assert "CurStep = ssPostInstall" in text
+    assert "function PrepareToInstall" in text
+    assert "--installer-upgrade-root " in text
     code = text.split("[Code]", 1)[1]
     assert not re.search(r"(?m)^\s*\[", code), "Inno parses leading arrays as sections"
     assert not re.search(r"(?m)^\s*#\d", code), "Inno parses leading character codes as directives"

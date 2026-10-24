@@ -1060,3 +1060,25 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Replaced stale open-S0/frozen-page notes in M5-report.md with current resolved
   repair and explicit pending final cancellation/release/VM evidence. No false
   milestone acceptance, previous-unsafe-draft recommendation or PR.
+
+### M5 native acceptance and true-upgrade repair
+
+- 7b8d28b CI 40065869279 all jobs green: source/package/installed WFP, PE,
+  license, GUI, normal-cancel, retry and both uninstalls pass. Cancel audit
+  Setup/GUI/native 0, fetch allowed 2/blocked 0; full download 0/0/0, fetch 4/0.
+  ISSUE-021 resolved with this evidence; actual native controls remain VM checks.
+- Full local source with approved escalation: 297 passed/1 expected skip in
+  209.36 s; measured coverage 94.2%, all required packages above 85%. Lint,
+  format, mypy and policy checks pass. The Owner brief hash remains unchanged.
+- New native review asset m5-installer-pages-pm-round-7b8d28b-light.zip uploaded
+  to confirmed draft m5-screenshots: 21 PNGs plus README, 7,725,089 bytes,
+  SHA-256 27a3731c91478669cc5f13778b8ef432624c404cb2fb2adaf0fccb2905dbe1b0.
+  Actual native controls, explicit synthetic states and scaling limitation.
+  Verified own preview process closed; no Owner app profile or OS settings touched.
+- v0.5.0-m5.8 run 40066137913 failed exact installed inventory after true .4
+  upgrade: obsolete versioned own LICENSE/NOTICE remained. No draft/upload.
+  ISSUE-022 S1 filed. Guarded pre-copy cleanup of only byte-identical obsolete
+  own-license pairs implemented; changed/unknown/linked/protected files preserve
+  and block. Strict installed gate unchanged. Focused regressions: 18 passed.
+- m6-docs-v2 7ec6c59 has implementation parity through d90d706 and updated guides.
+  Reference m6-docs/c855b52 and m5-packaging-spike/95dd90b remain unchanged.

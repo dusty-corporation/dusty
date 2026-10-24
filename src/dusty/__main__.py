@@ -21,6 +21,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--backend", choices=("auto", "cpu", "vulkan"), default="auto")
     parser.add_argument("--headless-batch", nargs="+", metavar="FILE")
     parser.add_argument("--out")
+    parser.add_argument("--installer-upgrade-root", help=argparse.SUPPRESS)
     parser.add_argument("--check-model-download", action="store_true", help=argparse.SUPPRESS)
     for flag in (
         "probe-vulkan",
@@ -38,6 +39,19 @@ def main(argv: list[str] | None = None) -> int:
         "--uninstall-data", choices=("keep-models", "remove-models"), help=argparse.SUPPRESS
     )
     args = parser.parse_args(argv)
+
+    if args.installer_upgrade_root:
+        from pathlib import Path
+
+        from dusty.installer_upgrade import tidy_license_copies
+        from dusty.runtime_paths import resolve_paths
+
+        try:
+            return (
+                0 if tidy_license_copies(resolve_paths(), Path(args.installer_upgrade_root)) else 1
+            )
+        except (OSError, ValueError):
+            return 1
 
     if args.probe_vulkan_child or args.probe_vulkan:
         from pathlib import Path

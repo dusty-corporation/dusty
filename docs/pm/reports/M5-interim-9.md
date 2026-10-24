@@ -67,6 +67,7 @@ Command: rg -n '(rmtree|\.unlink\(|\.rmdir\(|DeleteFile|DelTree|Remove-Item)' sr
 | src/dusty/app/model_manager.py: part.unlink | Only the active manifest partial, after the downloader child exits on explicit normal cancellation, with reparse checks. |
 | src/dusty/app/model_manager.py: path.unlink | Explicit user-confirmed deletion of the selected manifest model; linked model folders/files rejected. |
 | src/dusty/installer_support.py: part.unlink | Normal installer cancellation of the current catalog model only; protection metadata and all reparse ancestors checked. |
+| src/dusty/installer_upgrade.py: file.unlink, texts.rmdir, texts.parent.rmdir | Upgrade-only obsolete own-license copies. Strict versioned namespace, exact LICENSE/NOTICE inventory, hashes match current bundled texts, protected/reparse checks, preflight all folders and recheck before unlink; empty directories only. Unknown/changed content blocks upgrade and is preserved. |
 | src/dusty/queue/outputs.py: temporary.unlink (two sites) | Exclusive random output temporary created by this invocation, never a deterministic pre-existing filename; linked output parent rejected. |
 | src/dusty/queue/outputs.py: target.unlink | Rollback only for outputs newly published by this operation, never overwrite mode; compare rendered-content hash and reject links before removal. |
 | src/dusty/queue/storage.py: temporary.unlink | Exclusive random atomic-write temporary; linked state paths rejected before writing. |

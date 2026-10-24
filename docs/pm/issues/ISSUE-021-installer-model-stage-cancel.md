@@ -2,7 +2,7 @@
 
 - Severity: S1
 - Milestone: M5
-- Status: In progress, fix implemented; native CI acceptance pending
+- Status: Resolved, automated native acceptance passed; actual controls remain VM acceptance
 - Environment: pinned Inno Setup 6.7.3, post-install custom model page
 
 ## Root cause
@@ -33,3 +33,14 @@ model verifies, WFP processing/Setup counts remain zero, retry succeeds and
 uninstall leaves no owned data or changed transcript sentinel. Final release
 staging requires its passing receipt. Actual button/X behavior remains in the
 Owner's standard-user VM checklist; it is not claimed from synthetic screenshots.
+
+## Resolution (2026-10-24)
+
+CI 40065869279 on 7b8d28b is fully green. Real-prefix normal stop exits 130,
+removes the active partial, retries successfully and leaves output sentinel
+unchanged through uninstall. Calibrated cancellation WFP: Setup 0, GUI 0,
+native 0, fetch allowed 2, blocked 0. Complete-download WFP: 0/0/0, fetch 4/0.
+Packaged/installed PE, license, GUI and WFP gates and both uninstall variants pass.
+The first compiler attempt 40064929172 failed an unnecessary saved-event
+Assigned check; pinned WizardForm has no original OnCloseQuery handler, so the
+check was removed, preserving native OnClose outside the custom model pages.

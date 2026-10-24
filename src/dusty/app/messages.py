@@ -529,6 +529,11 @@ FETCH_ERRORS = {
 
 # Inno Setup custom messages are generated from this same plain-language source.
 INSTALLER = {
+    "UpgradeFilesBlocked": (
+        "Some files from the earlier installation could not be updated. Close Dusty and "
+        "try again, or choose another installation folder. Your models and transcripts "
+        "have not been removed."
+    ),
     "ChooseModels": "Choose transcription models",
     "ChooseModelsHelp": "Choose at least one. Voice detection is included automatically.",
     "ChooseModelsDetails": (
