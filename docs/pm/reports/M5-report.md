@@ -1,15 +1,32 @@
 # M5 report - Packaging, installer and draft release pipeline
 
+## S0 STOP: ISSUE-020
+
+**M5 is blocked and must not be released or installed for acceptance.** Final
+self-review confirmed that startup/installer self-test cleanup can recursively
+delete a saved transcript destination inside app-managed work areas. Three
+repository-local synthetic preservation tests failed in 0.38 s; no Owner files
+were read or changed. See [ISSUE-020](../issues/ISSUE-020-work-cleanup-deletes-transcripts.md)
+and [M5-interim-8.md](M5-interim-8.md) for evidence and the proposed repair.
+Milestone implementation stopped under AGENTS rule 2 / SPEC NN-7. Active builds
+were requested cancelled; enabled failing regressions block downstream packaging.
+Historical green evidence below does not supersede this data-loss failure.
+
 ## Summary
 
 M5 implementation is on m5-installer; m5-packaging-spike and m6-docs remain
-untouched references. Source checks pass, the ThinkPad model-free GPU probe
-passed, and native page/release/WFP evidence is being completed in this autonomous
-session. M5 is not accepted: PM page review and fresh standard-user VM evidence
+untouched references, and updated guides are pushed on m6-docs-v2. The first
+successful draft release and calibrated Setup/probe/download audit passed;
+the second-version upgrade and final native page evidence are being collected.
+M5 is not accepted: ISSUE-020 repair, PM page review and fresh standard-user VM evidence
 remain outstanding. No PR, merge or published release is authorized or created.
 
 ## Owner actions for the morning
 
+0. PM: approve the focused cleanup-ownership repair in M5-interim-8.md. Keep M5
+   drafts unpublished and postpone the installer/VM checklist. If any real files
+   are under Dusty's app-managed work folders, back them up manually before
+   launching/updating affected builds; the agent has not inspected the real profile.
 1. PM: review M5-interim-2.md and its draft screenshot bundle before requesting
    any further installer wording/layout changes.
 2. Owner: enable AMD SVM, set up the Windows 11 VM, and return each numbered
@@ -22,6 +39,10 @@ remain outstanding. No PR, merge or published release is authorized or created.
 
 ## Final gap table (updated as evidence arrives)
 
+Every item is release-blocked by ISSUE-020. Done below refers only to historical
+implementation/gate evidence, not milestone acceptance. The new NN-7 regression
+is **not met**, and the final receipt-based release run was stopped.
+
 | SPEC M5 item | Status | Evidence / remaining work |
 |---|---|---|
 | Task 1: split onedir packaging, bin/resources | Done | Existing approved split payload, exact PE pins, runtime provenance, license gates and packaged GUI/WFP tests retained. |
@@ -30,11 +51,11 @@ remain outstanding. No PR, merge or published release is authorized or created.
 | Task 4: uninstall and model-size choice | Partial | Known owned files only, explicit retain/remove choice, protected transcript sentinel and source regressions; fresh VM both variants pending. |
 | Task 5: gated tag draft release and assets | Partial | release.yml reuses all CI gates; approved tag validation/version map and exact asset closure tested. Two draft tag runs pending. |
 | Task 6: SmartScreen README | Done | README gives unsigned explanation, More info/Run anyway, Get-FileHash and full checksum comparison. |
-| Acceptance: draft CI release with artifacts | Pending | First authorized tag v0.5.0-m5.1, run 40037642063; not yet claimed successful. |
+| Acceptance: draft CI release with artifacts | Done | v0.5.0-m5.2, run 40038534920, all gates and draft creation passed; five assets. |
 | Acceptance: SPEC 11.6 fresh VM | Owner needed | Final M5-checklist.md, standard user, all cases and expected results. |
-| Acceptance: installer size | Pending | Must use final successful release inventory, not review executable size. |
-| Brief: all pages light 100%/150% | Partial | Native review build and PNG-only archive gate; capture/upload in progress, Owner guest 150% check still needed. |
-| Brief: Setup/probe/GUI/fetch WFP | Partial | Calibrated harness and negative parser cases added; final corrected audit counts pending. |
+| Acceptance: installer size | Done | First successful .2 installer: 34,670,296 bytes (34.67 MB); final .3 size will be recorded separately. |
+| Brief: all pages light 100%/150% | Partial | 21 native light PNGs plus README uploaded; archive gate passes. Effective 96 DPI with host bitmap scaling disclosed; genuine 100%/150% VM display checks remain Owner actions. |
+| Brief: Setup/probe/GUI/fetch WFP | Done | .2 corrected audit: Setup 0, GUI/probe 0, native 0, fetch allowed 4, blocked 0; calibrated control and negative parser pass. |
 
 ## Test results
 
@@ -59,13 +80,34 @@ low RAM is a warning, never an installation block.
 
 ## Release assets and WFP counts
 
-Pending final gated run. Approved closure: unsigned installer,
-THIRD_PARTY_NOTICES.md, versioned CycloneDX SBOM, installer-jedi-source.zip,
-SHA256SUMS.txt. No portable release. The first test tag predates the corrected
-Setup image matcher and is not final Setup-isolation acceptance evidence.
+[Draft v0.5.0-m5.2](https://github.com/dusty-corporation/dusty/releases/tag/untagged-717061651366b4239b75),
+[CI 40038534920](https://github.com/dusty-corporation/dusty/actions/runs/40038534920):
+all gates passed. Installer 34,670,296 bytes. No portable release asset.
+
+| Asset | SHA-256 |
+|---|---|
+| Dusty-0.5.0-m5.2-draft-unsigned.exe | eb4c1efe73e4d11ddad09d6aa3ab887cc678ef7f45a1793214aa6fe57e08d8bb |
+| THIRD_PARTY_NOTICES.md | 29dc09e94eb1a43c0f6e4b2bf2cfaf754fbd557034808823eab1ce0cd4ab251e |
+| dusty-0.5.0-m5.2-sbom.json | 86b4bb27abbf8745dee8cc81bab8dad040fabbb9d58207dea2e6557ee9c40b1a |
+| installer-jedi-source.zip | 4dac842302518887fd2e8692da73ca1f2adcac9092c32cb634e4f7143f4ae217 |
+| SHA256SUMS.txt | 3484ed0475b5f46bd950253d389a7e970464630c87d3618ce01d3723d173b766 |
+
+The .2 installer audit is calibrated: Setup 0, GUI/probe 0, native 0, fetch
+allowed 4, blocked 0. Installed processing-only audit and both uninstall choices
+passed; transcript sentinel unchanged. Its upgrade reused the same build and is
+not two-version evidence. The corrected test tag .4 runs a true .2-to-.4 upgrade,
+including prior-installer checksum verification and downloader blocking.
+CI .2 source: 256 passed, 2 skipped, 94.6% coverage; separate real-network
+download test 1 passed. The failed .1 source golden/version attempt produced no
+release or installer upload. Its tag/history remain unchanged.
 
 ## Questions for the PM
 
+0. Approve the S0 repair across startup, probe, self-test and coordinator cleanup.
+   Recommendation: unique owned work areas, saved output/source protection,
+   conservative handling of unknown content/metadata, and rejection of new
+   destinations inside app-managed work areas. Preserve already-saved destinations
+   before any startup cleanup; never silently move/delete existing files.
 1. Approve or annotate the installer page bundle. Recommendation: review the
    complete native flow, including failed GPU test versus failed CPU test.
 2. Upgrade reuses verified models; hash failures are detected before download.
@@ -73,7 +115,28 @@ Setup image matcher and is not final Setup-isolation acceptance evidence.
    whether the plain Checking/Downloading phase is sufficient, or request this
    as a page change. Recommendation: show a clear per-model repair status.
 
+## Installer screenshots
+
+[Draft page review](https://github.com/dusty-corporation/dusty/releases/tag/untagged-a1e1f91641e95222b8da):
+`m5-installer-pages-step-b-895e199-light-review.zip`, 7,861,054 bytes,
+SHA-256 `d09b2e4695fca10c5c0409dcee5cac70121bec5da1e8555b34c68aa57ca0578e`.
+21 real native-control PNGs plus README, archive gate passed. License views,
+catalog, folder, shortcut, consent, progress, retry/CPU retry, incomplete setup,
+finish and uninstall states included. Synthetic states are labeled, not treated
+as functional failure-injection results. CI provenance: 40036996425 / 40039096810 /
+40040642247. Process-effective 96 DPI was used on an unchanged 175% desktop;
+Windows bitmap scaling remains visible. Actual 100%/150% display acceptance is
+not claimed and stays on the Owner checklist. No further wording/layout changes
+are planned before the PM reviews M5-interim-2.md.
+
 ## Self-review
+
+**Blocking finding: ISSUE-020, NN-7.** Named work directories are treated as
+exclusive app property despite being selectable/saved transcript destinations.
+The new startup cases (probe/selftest) and installer self-test preservation case
+all fail. Existing uninstall protection does not cover these paths. No repair
+was implemented after the mandatory S0 stop; further source/packaged/installed
+and uninstall acceptance must follow the PM's decision.
 
 Reviewed new paths against SPEC 2/9/10/11.6 and accepted ADR exceptions. No new
 network-capable application imports or dependencies were introduced; downloads
@@ -93,3 +156,15 @@ PM-approved ADRs 0019 to 0023 and subsequent decisions supersede the original
 MIT/python-docx/shared-folder/Inno-downloader assumptions. Models are not bundled.
 Installer failure simulations in screenshots are review-only. Standard-user,
 SmartScreen, visual scaling and physical GPU tests remain Owner evidence.
+
+## M6 documentation prework branch
+
+Authorized optional prework is pushed on m6-docs-v2 at 8a91934, based on
+m5-installer 20cce6b (same final application/installer behavior at that point).
+It contains user guides, privacy, CONTRIBUTING and README guide links only,
+plus its ledger entry. It covers current installer pages, failed-model outcomes,
+model deletion/voice-detection blocking, normal-stop versus crash partials,
+seven-day cleanup and SmartScreen. Exact SPEC 9.6 wording is retained.
+Reference m6-docs (c855b52) and m5-packaging-spike (95dd90b) remain untouched.
+No M6 acceptance or PR is claimed. Later M5 evidence-only report updates are on
+m5-installer; the documentation branch is available for PM review after M5.

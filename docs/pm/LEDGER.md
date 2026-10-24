@@ -797,3 +797,12 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Carried final M5 audit/receipt and Qt test-driver corrections forward with
   normal commits. No M6 application feature work. User documentation remains
   aligned with the final M4/M5 behavior; reference m6-docs is untouched.
+
+### S0 quarantine carried to documentation branch
+
+- ISSUE-020 confirmed by three repository-local transcript-preservation failures.
+  Copied the enabled failing regressions and incident reports from m5-installer
+  so this branch cannot pass source CI and produce an affected package either.
+- Stop all milestone implementation pending PM-approved cleanup-ownership repair.
+  Existing user documentation is prework, not release acceptance. No user files,
+  tags, releases, branches or runs were deleted; no production safety fix attempted.
