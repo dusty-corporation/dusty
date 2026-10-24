@@ -11,6 +11,23 @@ from dusty.runtime_paths import RuntimePaths
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def test_uninstall_retains_sanitized_legacy_destination(tmp_path):
+    from dusty.queue.storage import save_settings
+    from dusty.work_area import sanitize_output
+
+    root = tmp_path / "Dusty"
+    folder = root / "models"
+    folder.mkdir(parents=True)
+    sentinel = folder / "ggml-tiny.bin"
+    sentinel.write_bytes(b"synthetic private destination sentinel")
+    paths = RuntimePaths(tmp_path, folder, ROOT / "resources", root)
+    save_settings(root / "settings.json", {"schema_version": 1, "output_dir": str(folder)})
+    assert sanitize_output(paths)
+    assert not cleanup(paths, remove_models=True)
+    assert sentinel.read_bytes() == b"synthetic private destination sentinel"
+    assert (root / "settings.json").exists()
+
+
 @pytest.mark.parametrize("remove_models", [False, True])
 def test_cleanup_known_files_and_preserve_outputs(tmp_path, remove_models):
     root = tmp_path / "Dusty"

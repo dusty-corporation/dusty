@@ -1120,3 +1120,16 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   snapshot. Checklist now 90 minutes, Guest Additions/admin reboot, read-only
   auto-mounted host bench share, local guest copies, exact hashes and sentinels.
 - Host commands are instructions only; agent did not write outside the repo.
+
+### M5 second review: ISSUE-023
+
+- Isolated enabled regression failed: after sanitize_output persisted an internal
+  destination in preserved_paths, uninstall omitted that key and removed a
+  synthetic catalog-named file. S0/NN-7; no Owner files or profile touched.
+- Existing PM ISSUE-020 decision authorizes the exact repair: inspect
+  preserved_paths before any unlink, preserve the subtree and metadata. Fixed;
+  focused cleanup/lock tests 9 passed. Original ownership tests stay enabled.
+- Filed ISSUE-023 and M5-interim-10.md. .9/.10 retained draft, superseded as
+  final candidates. New gated pair follows the review; no publication/deletion.
+- Real active receipt-byte lock test already passes: Windows denies the receipt
+  read while the downloader holds it; stale cleanup preserves the active prefix.
