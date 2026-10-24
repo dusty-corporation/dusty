@@ -1021,3 +1021,14 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   requires the normal-cancel pass as well. No release upload gate was relaxed.
 - Source invariants and native CI compilation/acceptance pending. Owner VM must
   still exercise the actual Cancel button, Escape and X; preview is not proof.
+
+### M5 resumed native cancellation gate
+
+- CI 40064929172: source, offline and packaged PE/license/GUI/WFP passed;
+  installer compile failed at generated line 716, Column 33, Type mismatch.
+  Pascal Script Assigned does not accept the saved event type. Pinned native
+  WizardForm has no OnCloseQuery handler; removed the unnecessary saved-handler
+  check, leaving earlier pages to the unchanged native OnClose path. Rerun pending.
+- Reviewed and pushed the leftover checklist/release-process edits as 07a817e.
+- Owner's physical Escape stopped the previous screenshot session, not a product
+  failure. Owner resumed and requested the aligned, elided output-folder row.

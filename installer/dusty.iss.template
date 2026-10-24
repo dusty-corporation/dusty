@@ -153,7 +153,6 @@ var
   TotalModelBytes, CompletedModelBytes: Int64;
   StopRequested: Boolean;
   OriginalCancelClick: TNotifyEvent;
-  OriginalCloseQuery: TCloseQueryEvent;
   DownloadJob: LongWord;
 
 function InitializeSetup: Boolean;

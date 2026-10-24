@@ -424,7 +424,7 @@ begin
     StopModelSetup(True); Exit;
   end;
 #endif
-  if Assigned(OriginalCloseQuery) then OriginalCloseQuery(Sender, CanClose);
+  { Pinned native form has no OnCloseQuery handler. Leave earlier pages to its OnClose. }
 end;
 
 procedure EnableModelPageCancel;
@@ -500,7 +500,6 @@ begin
   RetryButton.Visible := False; CpuButton.Visible := False; WithoutButton.Visible := False;
   OriginalCancelClick := WizardForm.CancelButton.OnClick;
   WizardForm.CancelButton.OnClick := @SetupCancelClick;
-  OriginalCloseQuery := WizardForm.OnCloseQuery;
   WizardForm.OnCloseQuery := @SetupCloseQuery;
   Timer := SetTimer(0, 0, 100, CreateCallback(@PollChild));
 end;
