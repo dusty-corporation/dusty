@@ -53,6 +53,7 @@ def test_simple_mode_defaults_and_central_copy(window) -> None:
     assert not window.table.isVisible()
     assert not window.options_scroll.isVisible()
     assert window.formats["txt"].isChecked() and window.formats["docx"].isChecked()
+    assert window.format_row.isVisible()
     assert not window.formats["json"].isChecked()
     assert not window.start_button.isEnabled()
     assert M.PRIVACY == (
@@ -62,6 +63,55 @@ def test_simple_mode_defaults_and_central_copy(window) -> None:
     )
     assert len(M.LANGUAGES) == 100
     assert window.model_choice.currentData() == "small"
+
+
+def test_output_row_elides_long_path_and_recomputes_on_resize(window, qtbot):
+    path = Path("C:/Transcripts") / ("Long folder name " * 7) / "saved transcripts"
+    window.output_dir = path
+    window.resize(800, 680)
+    window._refresh()
+    qtbot.waitUntil(lambda: "\u2026" in window.output_label.text())
+    narrow = window.output_label.text()
+    assert not window.output_label.wordWrap()
+    assert window.output_label.toolTip() == str(path)
+    assert window.output_label.accessibleDescription() == str(path)
+    assert (
+        window.output_label.fontMetrics().horizontalAdvance(narrow) <= window.output_label.width()
+    )
+    assert window.output_label.geometry().right() < window.output_row.width()
+    window.resize(1700, 780)
+    qtbot.waitUntil(lambda: window.output_label.text() != narrow)
+    assert window.output_button.width() == window.options_button.width()
+    assert (
+        window.output_label.mapTo(window, QPoint()).x()
+        == window.choices_summary.mapTo(window, QPoint()).x()
+    )
+
+
+def test_output_row_three_states_and_keyboard_order(window, qtbot):
+    window.output_dir = None
+    window._refresh()
+    assert window.output_label.text() == M.NO_OUTPUT
+    assert window.output_label.objectName() == "warning"
+    window.output_dir = Path("C:/Transcripts")
+    window._refresh()
+    assert window.output_label.text() == M.SAVING_TO.format(path=str(window.output_dir))
+    assert window.output_label.objectName() == ""
+    window.same_folder.setChecked(True)
+    assert window.output_label.text() == M.SAVING_NEXT_TO
+    assert not window.output_button.isEnabled()
+    window.same_folder.setChecked(False)
+    window.model.set_jobs([Job(Path("C:/Recordings/jfk.wav"))])
+    window._refresh()
+    window.output_button.setFocus()
+    for control in (
+        window.formats["txt"],
+        window.formats["docx"],
+        window.options_button,
+        window.start_button,
+    ):
+        qtbot.keyClick(QApplication.focusWidget(), Qt.Key.Key_Tab)
+        assert QApplication.focusWidget() is control
 
 
 def test_folder_scan_duplicate_reorder_remove(window, qtbot, tmp_path, monkeypatch) -> None:

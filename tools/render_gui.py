@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def render(output: Path, theme: str) -> None:
+def render(output: Path, theme: str, *, output_row_only: bool = False) -> None:
     from dusty.privacy.network_guard import install_guard
 
     install_guard()
@@ -59,6 +59,29 @@ def render(output: Path, theme: str) -> None:
             raise RuntimeError("Screenshot save failed")
 
     window._refresh()
+    if output_row_only:
+        for name, path, same in (
+            ("no-folder", None, False),
+            ("short-path", Path("C:/Transcripts"), False),
+            (
+                "long-path",
+                Path("C:/Transcripts") / ("Long folder name " * 9) / "saved transcripts",
+                False,
+            ),
+            ("next-to-recording", Path("C:/Transcripts"), True),
+        ):
+            window.output_dir = path
+            window.same_folder.setChecked(same)
+            window.resize(800, 680)
+            window._refresh()
+            capture(window, name)
+        window.ready = False
+        window.close()
+        app.processEvents()
+        print(
+            f"Rendered output row: theme={theme}, ratio={app.primaryScreen().devicePixelRatio():g}"
+        )
+        return
     capture(window, "01-empty")
     window.output_dir = Path("C:/Transcripts")
     window._refresh()
@@ -180,13 +203,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=ROOT / "build/m3-screenshots")
     parser.add_argument("--child", action="store_true")
+    parser.add_argument("--output-row", action="store_true")
     parser.add_argument("--theme", choices=("light", "dark"), default="light")
     args = parser.parse_args()
     output = args.output.resolve()
     if not output.is_relative_to(ROOT):
         raise ValueError("Screenshot output must stay inside the repository")
     if args.child:
-        render(output, args.theme)
+        render(output, args.theme, output_row_only=args.output_row)
         return
     for theme in ("light", "dark"):
         for scale in ("1", "1.5"):
@@ -205,18 +229,26 @@ def main() -> None:
                     str(output / f"{theme}-{scale}"),
                     "--theme",
                     theme,
-                ],
+                ]
+                + (["--output-row"] if args.output_row else []),
                 env=env,
                 check=True,
                 cwd=ROOT,
             )
     (output / "README.md").write_text(
-        "# M3 UI review\n\nSynthetic recordings and progress only; no user content.\n"
+        ("# M5 output row review\n\n" if args.output_row else "# M3 UI review\n\n")
+        + "Synthetic recordings and paths only; no user content.\n"
         "All screens are rendered with pinned PySide6 6.9.2 via Qt's offscreen platform.\n"
         "Each light/dark folder uses QT_SCALE_FACTOR 1 or 1.5 (100% or 150%).\n"
-        "The matrix includes every main screen and all failure-code dialogs.\n"
-        "Client areas are captured; native window title bars are outside Qt widget grabs.\n"
-        "Reproduce: uv run python tools/render_gui.py\n",
+        + (
+            "Four output-row states at a narrow 800 x 680 logical window size.\n"
+            if args.output_row
+            else "The matrix includes every main screen and all failure-code dialogs.\n"
+        )
+        + "Client areas are captured; native window title bars are outside Qt widget grabs.\n"
+        "Reproduce: uv run python tools/render_gui.py"
+        + (" --output-row" if args.output_row else "")
+        + "\n",
         encoding="utf-8",
     )
 

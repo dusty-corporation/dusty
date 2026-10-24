@@ -1032,3 +1032,17 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Reviewed and pushed the leftover checklist/release-process edits as 07a817e.
 - Owner's physical Escape stopped the previous screenshot session, not a product
   failure. Owner resumed and requested the aligned, elided output-folder row.
+
+### M5 output-folder row, Owner decision
+
+- Choose folder... precedes the single-line destination; its width matches
+  Options... and summary x positions match. Text/Word stay visible between rows.
+- Qt ElideMiddle recomputes on resize; tooltip and accessible description retain
+  the full path. No-folder uses existing amber; save-next-to explains Options
+  and disables the folder button. Wording remains in messages.py.
+- Added narrow/long path, resize, bounds, full tooltip/accessibility, alignment,
+  three states and actual Tab-order regressions. GUI suite: 29 passed before
+  the final always-visible format-row assertion. Full elevated source run pending.
+- Earlier sandbox full run: 20 failures, 275 passed, 1 skip; local TLS connection
+  and junction operations were denied. Approved escalation reruns unchanged tests;
+  no assertion, policy or safety check was skipped to bypass sandbox restrictions.

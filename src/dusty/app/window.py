@@ -8,7 +8,14 @@ from typing import cast
 from uuid import UUID
 
 from PySide6.QtCore import QByteArray, QEvent, Qt, QThread, QTimer, QUrl, Slot
-from PySide6.QtGui import QAction, QCloseEvent, QDesktopServices, QKeyEvent, QStandardItemModel
+from PySide6.QtGui import (
+    QAction,
+    QCloseEvent,
+    QDesktopServices,
+    QKeyEvent,
+    QResizeEvent,
+    QStandardItemModel,
+)
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -65,6 +72,35 @@ from .presentation import TERMINAL, counts, eta_seconds, overall_progress
 from .table import ProgressDelegate, QueueModel
 from .theme import application_icon, apply_theme
 from .workers import BatchWorker, Prepared, PrepareWorker, ScanWorker, SelfTestWorker
+
+
+class ElidedLabel(QLabel):
+    """Keep the complete destination accessible while fitting one visible line."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.full_text = ""
+        self.setTextFormat(Qt.TextFormat.PlainText)
+        self.setWordWrap(False)
+        self.setMinimumWidth(0)
+        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+
+    def set_full_text(self, text: str, description: str) -> None:
+        self.full_text = text
+        self.setToolTip(description)
+        self.setAccessibleDescription(description)
+        self._elide()
+
+    def _elide(self) -> None:
+        self.setText(
+            self.fontMetrics().elidedText(
+                self.full_text, Qt.TextElideMode.ElideMiddle, self.contentsRect().width()
+            )
+        )
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        super().resizeEvent(event)
+        self._elide()
 
 
 class MainWindow(QMainWindow):
@@ -237,12 +273,11 @@ class MainWindow(QMainWindow):
         self.output_row = QWidget()
         output_layout = QHBoxLayout(self.output_row)
         output_layout.setContentsMargins(0, 0, 0, 0)
-        output_layout.addWidget(self._label(M.OUTPUT))
-        self.output_label = self._label(M.NO_OUTPUT)
-        output_layout.addWidget(self.output_label)
-        self.output_button = self._button(M.CHOOSE_FOLDER, self.choose_output)
+        output_layout.setSpacing(layout.spacing())
+        self.output_button = self._button(M.CHOOSE_OUTPUT_BUTTON, self.choose_output)
         output_layout.addWidget(self.output_button)
-        output_layout.addStretch(1)
+        self.output_label = ElidedLabel()
+        output_layout.addWidget(self.output_label, 1)
         layout.addWidget(self.output_row)
         self.format_row = QWidget()
         formats_layout = QHBoxLayout(self.format_row)
@@ -260,6 +295,11 @@ class MainWindow(QMainWindow):
         options_bar = QHBoxLayout()
         self.options_button = self._button(M.OPTIONS, self.open_options)
         options_bar.addWidget(self.options_button)
+        button_width = max(
+            self.output_button.sizeHint().width(), self.options_button.sizeHint().width()
+        )
+        self.output_button.setFixedWidth(button_width)
+        self.options_button.setFixedWidth(button_width)
         self.choices_summary = self._label(M.PREPARING)
         options_bar.addWidget(self.choices_summary, 1)
         layout.addLayout(options_bar)
@@ -379,6 +419,12 @@ class MainWindow(QMainWindow):
         self.prompt.textChanged.connect(self._rules)
         self.vad.toggled.connect(self._rules)
         self.theme_choice.currentIndexChanged.connect(self._theme_changed)
+        for first, second in zip(
+            (self.output_button, self.formats["txt"], self.formats["docx"], self.options_button),
+            (self.formats["txt"], self.formats["docx"], self.options_button, self.start_button),
+            strict=True,
+        ):
+            QWidget.setTabOrder(first, second)
 
     def _menus(self) -> None:
         file_menu = self.menuBar().addMenu(M.FILE_MENU)
@@ -835,12 +881,18 @@ class MainWindow(QMainWindow):
                 device=M.DEVICES["cpu" if cpu_only else "vulkan"],
             )
         )
-        self.output_label.setText(
-            M.SAME_FOLDER
+        output_text = (
+            M.SAVING_NEXT_TO
             if self.same_folder.isChecked()
-            else str(self.output_dir)
+            else M.SAVING_TO.format(path=str(self.output_dir))
             if self.output_dir
             else M.NO_OUTPUT
+        )
+        self.output_label.set_full_text(
+            output_text,
+            str(self.output_dir)
+            if self.output_dir and not self.same_folder.isChecked()
+            else output_text,
         )
         self.output_label.setObjectName(
             "warning" if not self.output_dir and not self.same_folder.isChecked() else ""
@@ -895,7 +947,7 @@ class MainWindow(QMainWindow):
         self.drop_area.setVisible(not has_jobs)
         self.table.setVisible(has_jobs)
         self.output_row.setVisible(True)
-        self.format_row.setVisible(has_jobs)
+        self.format_row.setVisible(True)
         editing = not self.running and not (self.scanner and self.scanner.isRunning())
         for button in self.edit_buttons + self.queue_buttons:
             button.setEnabled(editing)
