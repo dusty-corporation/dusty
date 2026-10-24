@@ -2,7 +2,7 @@
 
 - Severity: S2
 - Milestone: M6
-- Status: In progress
+- Status: Resolved on m6-hardening; Owner clean-snapshot recheck pending
 - Environment: Owner Windows 11 Home 26H2 VM, .13/.14, 2026-10-24
 
 ## Owner observation
@@ -30,3 +30,17 @@ recovery never replaces it. Unfinished jobs use the current explicitly chosen
 folder, matching the visible Saving to line; completed outputs remain unchanged.
 Managed-destination sanitization may still clear an unsafe legacy choice while
 preserving its protection metadata; it never substitutes another folder.
+
+## Final regression evidence
+
+CI 40134555055 at 932949e passes all source, packaged, installed WFP, PE, license
+and uninstall gates. 423 tests pass, 2 expected skips; no weakened regression.
+Source/packaged GUI connection events 0, fetch 4 allowed/0 blocked; installed
+processing 0. Final M6-report identifies the gated candidate hash and remaining
+clean-snapshot Owner checks. Frozen M5 code/assets unchanged; no distribution.
+
+test_output_folder_survives_owner_model_recovery_and_setup_sequence passes in
+full CI and the 39-test local Model Manager suite (52.50 s). It includes actual
+TLS children and forced GUI death with no further partial growth, then repair,
+recovery and failed/successful Setup settings helpers. Exact VM trigger remains
+unisolated; proven stale restore/startup mechanisms are fixed.

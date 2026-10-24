@@ -2,7 +2,7 @@
 
 - Severity: S1
 - Milestone: M6
-- Status: In progress, PM-approved bundled-root repair
+- Status: Resolved on m6-hardening; Owner clean-snapshot recheck pending
 - Environment: Owner fresh Windows 11 Home VM, M5 Setup; Model Manager shares downloader
 
 ## Owner evidence, 2026-10-24
@@ -49,3 +49,18 @@ exact data-attribution tests pass; combined original downloader/new TLS tests
 fully initializes catalog before deferred probe extraction, displays Checking
 this computer..., blocks Next until bounded completion/fallback, then selects
 recommended/default Small. Full candidate 40130798813 and fresh-VM recheck pending.
+
+## Final regression evidence
+
+CI 40134555055 at 932949e passes all source, packaged, installed WFP, PE, license
+and uninstall gates. 423 tests pass, 2 expected skips; no weakened regression.
+Source/packaged GUI connection events 0, fetch 4 allowed/0 blocked; installed
+processing 0. Final M6-report identifies the gated candidate hash and remaining
+clean-snapshot Owner checks. Frozen M5 code/assets unchanged; no distribution.
+
+Absent-system-root local TLS download succeeds with the bundled fixture root;
+unknown roots and modified/missing bundled files fail. Live bundled-only roots
+validate both hosts in final CI (GitHub ECC/RSA, release-assets RSA; optional ECC
+not served). The same bundled fetch executable serves Setup and Model Manager.
+No root warmup was performed by the app. Fresh VM recheck is acceptance evidence
+still needed, not a claim of another completed Owner test.

@@ -261,3 +261,16 @@ snapshot for known overlaps, including guides/privacy/CONTRIBUTING and the lates
 brief/report; preserve unrelated main changes rather than blindly taking a side.
 Compare final content and run all gates on the actual rebased head. Rehearsal
 success is evidence of a content-preserving route, not an executed main rebase.
+
+
+## Final combined follow-up gates
+
+40134555055 at 932949e passes all four jobs: 423 source tests, 2 expected skips,
+95.7% strict coverage, live bundled-only CA chains, source/packaged/installed
+WFP (processing 0), both 64-PE gates, bundle/installer licenses, 227-file installed
+inventory, both uninstall choices, protected outputs and actual checkbox action.
+Unicode IShellLinkW reader verifies two app shortcuts and zero bare uninstall
+entries; both registry commands use the official route. Synthetic capture is
+present in packaged and installed canary receipts, without private canary data.
+See M6-report.md for artifact hash, candidate/production distinction and all
+remaining Owner/PM actions. No claim of final published-engine activation.

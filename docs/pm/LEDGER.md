@@ -1029,10 +1029,10 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 |---|---|---|---|---|---|
 | M6-01 | M6 | Branch, frozen M5 baseline and brief archive | done | m6-hardening from m6-docs-v2 47594ec; M5 brief archived byte-for-byte; frozen m5-installer 062d1f1, .13 7f7e036 and .14 972977a | - |
 | M6-02 | M6 | User/developer/privacy documentation and consistency gate | done | User/privacy/developer guides, exact FAQ wording, negative consistency tests; candidate CI 40124502580 source checks pass | - |
-| M6-03 | M6 | Audit-note disposition and V1 polish | blocked | Every note has a disposition; V1 progress-meter polish fixed; Qt native producer unproven | ISSUE-027 |
-| M6-04 | M6 | Automated hardening, packaged canary and CI | blocked | Final candidate 40125892713 all gates pass; production-pin CI fails until new engine activation; ISSUE-028 resolved on M6 | ISSUE-026 |
+| M6-03 | M6 | Audit-note disposition and V1 polish | done | PM-approved open S2 ISSUE-027 with bounded passive capture; final candidate CI 40134555055 including packaged capture/canary | ISSUE-027 open by PM |
+| M6-04 | M6 | Automated hardening, packaged canary and CI | blocked | Candidate 40134555055 all gates pass, 423 tests; production engine-v2 Unicode regression stays enabled until engine-v3 publication/PM pin confirmation | ISSUE-026 |
 | M6-05 | M6 | Manual offline checklist and independent audit packet | done | docs/pm/M6-checklist.md and AUDIT-PACKET.md; actual Owner offline sign-off pending; Surface M7 | Owner hardware |
-| M6-06 | M6 | Final report and acceptance | blocked | docs/pm/reports/M6-report.md written; acceptance not met: engine activation, Qt producer and Owner checklists pending; no PR/publication | ISSUE-026, ISSUE-027, Owner sign-off |
+| M6-06 | M6 | Final report and acceptance | blocked | Updated M6-report.md, green candidate, exact artifact/hash and clean-snapshot checklist; acceptance awaits engine activation and Owner hardware evidence | ISSUE-026, Owner sign-off |
 
 ### M6 registry audit checkpoint
 
@@ -1504,3 +1504,31 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   force push, PR or merge. Actual main rebase remains after the Owner merges M5,
   with newest-snapshot preservation and full gates required again.
 - Final candidate validation 40134555055 at 932949e is running.
+
+### Final combined PM handoff
+
+- 40134555055 at 932949e: ALL jobs pass. 423 tests / 2 expected skips / 375.92 s;
+  strict 95.7%, every package >85%; explicit Tiny integration 1 pass / 1.63 s.
+  Both bundled-only live host chains pass; no weaker TLS/hosts/hash policy.
+- Source and packaged Manager GUI 0, fetch 4 allowed / 0 blocked. Packaged AND
+  installed processing 0, probe/self-test/canary/passive capture pass. Setup
+  installer/GUI/native 0, fetch 4 allowed / 0 blocked; cancel 2 / 0, retry passes.
+- Both PE stages check 64 files / 0 findings; license, SBOM/notices and 227-file
+  installed inventory pass. Reinstall preserves model hashes/mtimes with fetch
+  blocked. Both uninstall choices and all protected output sentinels pass.
+- Unicode native entry audit: exactly 2 app shortcuts, both registered uninstall
+  variants approved, zero bare entries. Custom confirmation 1 / generic 0;
+  actual keep-models checkbox test passes. Same-version lifecycle, NOT another
+  true two-version upgrade. Historical .13 to .14 Owner/CI evidence remains.
+- ISSUE-029/031/032 resolved on M6 with final regressions; clean-snapshot Owner
+  confirmation remains in checklist. ISSUE-027 stays OPEN S2 by PM, capture
+  proved but historical producer unknown. ISSUE-026 pending production activation.
+- Gated unsigned CI artifact: 34,714,668 bytes, SHA256SUMS independently checked:
+  219e90a9fc6f3db86773bd830d4f134965c22fabf46cbca787a04e65f05def4f.
+  M6-report.md names exact artifact/run and full Owner recheck instructions.
+- Engine-v3 remains verified DRAFT, isolated pin branch 299fea3 unmerged; active
+  pins engine-v2. Exact Owner publication command in report. M5 PR #6 DRAFT/open;
+  frozen .13/.14 assets/code unchanged, no M5-only distribution, no publication.
+- Final report records accepted decisions, VM evidence, pending hardware and
+  verified ignored-clone rebase route. Later commits docs/ledger/changelog only.
+  Stop after this report; no next milestone or M6 PR.

@@ -6,6 +6,10 @@ All notable changes to Dusty will be documented here. This project follows Keep 
 
 ### Added
 
+- Pinned public TLS roots for fresh Windows downloads, with integrity checks and
+  a CI canary for both approved hosts; no automatic root retrieval.
+- Bounded passive native-diagnostic capture with redacted module/context data.
+
 - M6 user/privacy/developer guides, documentation consistency gate, manual
   offline checklist and independent-audit packet with explicit evidence gaps.
 - Forced-GUI-death recovery, Unicode and long-path processing, disk-exhaustion
@@ -32,6 +36,10 @@ All notable changes to Dusty will be documented here. This project follows Keep 
   screenshot matrix covering light/dark appearance at two display scales.
 
 ### Fixed
+
+- Explicit output-folder choices survive model events, crash recovery and Setup.
+- Setup names/counts only needed downloads, supports Check and test for installed
+  selections, and shows the full model list before the bounded graphics check.
 
 - Windows namespace aliases now share managed-folder protection comparisons;
   active work leases prevent another instance's startup cleanup removing it.
