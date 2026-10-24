@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tomllib
 import zipfile
 from io import BytesIO
 
@@ -15,10 +16,18 @@ from tools.prepare_m6_candidate import ROOT, prepare
 
 
 @pytest.mark.parametrize("damage", [None, "cpu", "vulkan", "unexpected"])
-def test_candidate_checks_every_package_before_staging(tmp_path, damage):
+@pytest.mark.parametrize("release_tag", ["engine-v2", "engine-v3"])
+def test_candidate_checks_every_package_before_staging(tmp_path, damage, release_tag):
     native = tmp_path / "native"
     native.mkdir()
     shutil.copyfile(ROOT / "native/versions.toml", native / "versions.toml")
+    pins_file = native / "versions.toml"
+    pins = pins_file.read_text(encoding="utf-8")
+    original = tomllib.loads(pins)
+    pins_file.write_text(
+        pins.replace(f'tag = "{original["engine_release"]["tag"]}"', f'tag = "{release_tag}"'),
+        encoding="utf-8",
+    )
     manifest = native / "windows-utf8.manifest"
     manifest.write_bytes(b"fixture manifest")
     spec = {
@@ -59,6 +68,10 @@ def test_candidate_checks_every_package_before_staging(tmp_path, damage):
         prepare(source, tmp_path)
         assert (tmp_path / "build/bin/cpu/whisper-cli.exe").read_bytes() == b"cpu fixture"
         assert "m6-validation-only" in (native / "versions.toml").read_text(encoding="utf-8")
+        staged = tomllib.loads(pins_file.read_text(encoding="utf-8"))
+        assert staged["engine_release"]["tag"] == "m6-validation-only"
+        assert staged["whisper_cpp"] == original["whisper_cpp"]
+        assert staged["models_release"] == original["models_release"]
 
 
 def test_candidate_cli_refuses_non_ci_execution():

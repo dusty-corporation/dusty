@@ -72,7 +72,13 @@ def prepare(source: Path, root: Path = ROOT) -> None:
         )
         if count != 1:
             raise ValueError("Candidate pin field missing")
-    pins = pins.replace('tag = "engine-v2"', 'tag = "m6-validation-only"')
+    pins, count = re.subn(
+        r'(?m)^(\[engine_release\]\n)tag = "[^"]+"',
+        r'\1tag = "m6-validation-only"',
+        pins,
+    )
+    if count != 1:
+        raise ValueError("Candidate release section missing")
     pins = re.sub(r"native_run_id = \d+", f"native_run_id = {spec['run_id']}", pins)
     pins = re.sub(
         r'source_commit = "[0-9a-f]{40}"', f'source_commit = "{spec["source_commit"]}"', pins
@@ -88,7 +94,7 @@ def prepare(source: Path, root: Path = ROOT) -> None:
         ),
         encoding="utf-8",
     )
-    print("M6 validation-only candidate staged; committed production pins are not activated")
+    print("Validation-only candidate staged in the disposable checkout")
 
 
 if __name__ == "__main__":

@@ -1547,3 +1547,18 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   only native/versions.toml differs from snapshot before documentation updates.
 - Production gates running with published engine-v3, candidate input OFF.
   ISSUE-026 remains pending until the normal Unicode and packaged gates pass.
+
+### Production validation and CA provenance checkpoint
+
+- Published production archives fetched and verified from engine-v3, no candidate
+  staging override. Local full suite: 423 pass / 1 skip / 1 failure, 224.74 s;
+  the Unicode integration now PASSES. Sole failure: legacy disposable candidate
+  helper replaces only engine-v2, so v3 fixture lacks validation-only marker.
+- Repair helper's engine_release section replacement for either starting tag;
+  preserve every changed-byte/unexpected-member rejection and add both tag cases,
+  asserting whisper/model pins remain unchanged. Normal full gates rerun required.
+- All four bundled DER fingerprints match CA-published fingerprint fields:
+  Sectigo-owned crt.sh canonical IDs 2841410 / 1199354, ownership confirmed in
+  Sectigo terms; ISRG CP/CPS v6.2 section 1.1. Verified HTTPS, not acquisition
+  replacement, no Windows-store change or new shipped host. tls-roots.md records
+  exact hashes, comparison date and official primary-source links.

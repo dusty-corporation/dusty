@@ -28,14 +28,14 @@ four exact pinned PEM paths/bytes, never code under a broad data exception.
 ## Acquisition
 
 Sectigo's published crt.sectigo.com HTTPS endpoint rejected its handshake.
-Automatic approval review rejected HTTP retrieval and a crt.sh retrieval; neither
-ran. Authenticated support.sectigo.com attachments were inspected, including a
+During initial acquisition, automatic approval review rejected HTTP retrieval
+and a crt.sh retrieval; those requests did not run. Authenticated support.sectigo.com attachments were inspected, including a
 USERTrust RSA root matching the selected fingerprint. The bundled USERTrust roots
 were instead copied exactly from pre-existing trusted Windows ROOT entries,
 with their official CA reference URLs recorded, without altering that store.
 ISRG roots were downloaded from its official HTTPS URLs with certificate checks.
 No claim is made that USERTrust bytes were downloaded from the reference URL.
-Automatic approval review accepted this safer local-store/HTTPS acquisition. No rejected transport was worked around.
+Automatic approval review accepted this safer local-store/HTTPS acquisition. No rejected acquisition transport was worked around.
 
 ## Runtime and canary
 
@@ -59,3 +59,30 @@ never a certificate-validation bypass. Default chains must always pass. CPython
 3.12.11's _sslobj.get_verified_chain/public_bytes API is verified and used only
 for CI diagnosis, not the production download path. The captured 2026-10-24
 local chain probe is separate from the CI receipt.
+
+
+## Official fingerprint comparison, 2026-10-24
+
+All four bundled **certificate DER SHA-256 fingerprints** were recomputed and
+compared with fingerprint fields published by the CAs, over verified HTTPS.
+These are certificate fingerprints, not hashes of PEM text, public keys or
+cross-signed versions. Every comparison is equal; bundled files/pins unchanged.
+
+| Root | Bundled DER and CA-published SHA-256 (identical) | Official source |
+|---|---|---|
+| USERTrust ECC | `4ff460d54b9c86dabfbcfc5712e0400d2bed3fbc4d4fbdaa86e06adcd2a9ad7a` | [CA fingerprint record](https://crt.sh/?id=2841410) |
+| USERTrust RSA | `e793c9b02fd8aa13e21c31228accb08119643b749c898964b1746d46c3d4cbd2` | [CA fingerprint record](https://crt.sh/?id=1199354) |
+| ISRG Root X1 | `96bcec06264976f37460779acf28c5a7cfe8a3c0aae11a8ffcee05c0bddf08c6` | [CA fingerprint record](https://letsencrypt.org/documents/isrg-cp-cps-v6.2/) |
+| ISRG Root X2 | `69729b8e15a86efc177a57afb7171dfc64add28c2fca8cf1507e34453ccb1470` | [CA fingerprint record](https://letsencrypt.org/documents/isrg-cp-cps-v6.2/) |
+
+ISRG CP/CPS v6.2 section 1.1 explicitly lists both self-signed root fingerprints.
+For USERTrust, Sectigo's canonical records 2841410 and 1199354 explicitly show
+Certificate Fingerprints / SHA-256, independently of a hash-search query.
+[Sectigo's official terms](https://www.sectigo.com/terms-of-use) identify crt.sh
+as a website it operates. The Owner's later explicit official-CA cross-check
+request and that ownership evidence supported this read-only HTTPS verification;
+it is separate from the initially rejected acquisition requests above.
+No certificate was replaced or installed into Windows, no insecure transport
+was used, and crt.sh is NOT added to the app/downloader host allowlist.
+Raw public pages/comparison stay ignored under build/m6-official-root-comparison;
+only this compact result and primary-source links are committed.
