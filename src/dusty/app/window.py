@@ -56,11 +56,13 @@ from dusty.runtime_paths import RuntimePaths, resolve_paths
 
 from . import messages as M
 from .dialogs import (
+    AboutDialog,
     ChoiceDelegate,
     CloseDialog,
     CollisionDialog,
     ErrorDialog,
     FolderDialog,
+    NoticesDialog,
     ResumeDialog,
     SummaryDialog,
     SyncDialog,
@@ -449,12 +451,13 @@ class MainWindow(QMainWindow):
             M.PRIVACY_TITLE,
             lambda: TextDialog(M.PRIVACY_TITLE, (M.PRIVACY, M.ACCURACY), self).exec(),
         )
-        help_menu.addAction(
-            M.ABOUT,
-            lambda: TextDialog(
-                M.ABOUT, (M.ABOUT_VERSION.format(version=__version__), M.PRIVACY, M.ACCURACY), self
-            ).exec(),
-        )
+        self.about_action = help_menu.addAction(M.ABOUT, self.show_about)
+
+    def show_about(self) -> None:
+        AboutDialog(__version__, self.open_notices, self).exec()
+
+    def open_notices(self) -> None:
+        NoticesDialog(self.paths.resources_dir.parent / "THIRD_PARTY_NOTICES.md", self).exec()
 
     def initialize(self) -> None:
         if self.preparer and self.preparer.isRunning():

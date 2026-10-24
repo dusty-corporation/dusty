@@ -11,6 +11,11 @@ FILE_FILTER = (
 )
 PRIVACY_TITLE = "Privacy and accuracy"
 ABOUT_VERSION = "Dusty {version}"
+ABOUT_DESCRIPTION = "Transcribe recordings privately on this computer."
+ABOUT_LICENSE = "License: Apache-2.0"
+REPOSITORY_ADDRESS = "https://github.com/dusty-corporation/dusty"
+THIRD_PARTY_NOTICES = "Third-party notices"
+NOTICES_UNAVAILABLE = "The bundled notices could not be opened. Reinstall Dusty to restore them."
 TAGLINE = "Private transcription that never leaves your computer."
 PRIVACY = (
     "Dusty processes your recordings entirely on this computer. After installation, it "
@@ -533,6 +538,10 @@ FETCH_ERRORS = {
 
 # Inno Setup custom messages are generated from this same plain-language source.
 INSTALLER = {
+    "UninstallRegistrationFailed": (
+        "Dusty could not finish setting up its uninstall command. "
+        "Close Setup and try installing again."
+    ),
     "PartialKept": (
         "The download stopped, but its partial file could not be removed. "
         "Close other programs using the download before trying again. "

@@ -10,10 +10,12 @@ from PySide6.QtWidgets import QApplication, QDialog, QFileDialog, QLabel, QPushB
 
 from dusty.app import messages as M
 from dusty.app.dialogs import (
+    AboutDialog,
     CloseDialog,
     CollisionDialog,
     ErrorDialog,
     FolderDialog,
+    NoticesDialog,
     ResumeDialog,
     SummaryDialog,
     SyncDialog,
@@ -29,6 +31,41 @@ from dusty.queue.storage import load_batch, save_batch
 from dusty.runtime_paths import RuntimePaths, resolve_paths
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_about_is_distinct_and_repository_is_selectable(qtbot):
+    clicked = []
+    dialog = AboutDialog("test-version", lambda: clicked.append(True))
+    qtbot.addWidget(dialog)
+    labels = dialog.findChildren(QLabel)
+    texts = [label.text() for label in labels]
+    assert M.ABOUT_VERSION.format(version="test-version") in texts
+    assert M.ABOUT_DESCRIPTION in texts and M.ABOUT_LICENSE in texts
+    assert M.PRIVACY not in texts and M.ACCURACY not in texts
+    repository = next(label for label in labels if label.text() == M.REPOSITORY_ADDRESS)
+    assert repository.textInteractionFlags() & Qt.TextInteractionFlag.TextSelectableByMouse
+    assert repository.textInteractionFlags() & Qt.TextInteractionFlag.TextSelectableByKeyboard
+    assert not repository.openExternalLinks()
+    qtbot.mouseClick(dialog.notices_button, Qt.MouseButton.LeftButton)
+    assert clicked == [True]
+
+
+def test_notices_open_the_bundled_local_text(window, tmp_path, qtbot, monkeypatch):
+    from dataclasses import replace
+
+    notices = tmp_path / "THIRD_PARTY_NOTICES.md"
+    notices.write_text("Original local notices\nLicense text\n", encoding="utf-8")
+    window.paths = replace(window.paths, resources_dir=tmp_path / "resources")
+    seen = []
+
+    def inspect(dialog):
+        seen.append(dialog.text.toPlainText())
+        assert dialog.text.isReadOnly()
+        return QDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(NoticesDialog, "exec", inspect)
+    window.open_notices()
+    assert seen == [notices.read_text(encoding="utf-8")]
 
 
 @pytest.fixture
