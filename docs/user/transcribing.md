@@ -23,6 +23,11 @@
 
 ## Existing transcripts
 
+Keep recordings and transcripts outside Dusty's own app and data folders. Dusty
+will ask you to choose another folder if you select one it manages. If an older
+saved destination points there, your files are kept in place and Dusty asks for
+a new destination. It does not move or delete them.
+
 When a transcript already existed before the run, Dusty names it and asks whether
 to keep both, replace the old transcript, or skip that recording. You can apply
 the choice to remaining recordings. **Stop** stops the run. Two different

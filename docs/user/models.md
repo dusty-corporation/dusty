@@ -26,7 +26,8 @@ status and a description; the dialog shows free space on the model drive.
   Voice detection is included when needed. Cancel or close Dusty during a
   download to stop it and remove its partial file. After a normal stop, the next attempt starts fresh. After a crash or forced
   close, a recent partial may resume; full size and SHA-256 are still checked.
-  Startup removes partials older than seven days.
+  Startup removes partials older than seven days only when its local record
+  confirms they belong to a download. Unknown or changed files are kept.
 - **Installed** means the local file passed its SHA-256 check against the catalog
   bundled with your app. **Damaged** means it failed verification; Dusty will not
   use it. Choose Download again.

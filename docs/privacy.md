@@ -17,21 +17,28 @@ legal, or other important decisions.
 - `%LOCALAPPDATA%/Dusty/state/queue.json`: recording/output paths and batch
   choices, including vocabulary hints, required to resume an unfinished batch.
   Clear history removes it. Dismissing a completed batch summary also removes it.
-- `%LOCALAPPDATA%/Dusty/work/<job UUID>/`: temporary decoded audio and native
-  transcription JSON. The coordinator removes the directory on success,
-  failure and cancellation. Startup removes abandoned per-job directories.
-  Short graphics-probe and self-test work also lives under the work folder.
+- `%LOCALAPPDATA%/Dusty/work/<purpose-random ID>/`: temporary decoded audio and
+  native transcription JSON. A local ownership marker records the purpose and
+  hashes of the temporary files Dusty created. Cleanup removes only matching
+  owned content. Unknown, changed, linked or protected content is preserved,
+  including after a crash. Graphics-probe and self-test work use separate random
+  folders under the same work area. The hashes are not uploaded or logged.
 - `%LOCALAPPDATA%/Dusty/models/`: downloaded and hash-verified model data in an
   installed app. Development models/binaries use ignored `build/` directories.
   Downloads use `.part` files until verification succeeds; cancelling or closing
   Dusty normally during a download removes the partial. A crash/forced close
-  can leave a recent partial for verified resumption; startup removes partials
-  older than seven days. A lock file coordinates downloads. These are model
-  data, not recordings.
+  can leave a recent partial for verified resumption. Startup removes partials
+  older than seven days only when a matching local ownership/hash receipt proves
+  what they are. Unknown or changed prefixes remain. A lock file coordinates
+  downloads and holds the receipt. These are public model data, not recordings.
 - `%LOCALAPPDATA%/Dusty/logs/`: rotating redacted diagnostics with statuses and
   numeric timings, not recording names/paths, transcript text or vocabulary hints.
 - Transcripts are saved only to the chosen destination. Clearing history or
   the queue does not delete recordings or exported transcripts.
+- App-managed folders cannot be selected for recordings or transcripts. If an
+  older saved destination points there, Dusty preserves it and asks for another
+  folder. Settings retain that location as a protected path so later cleanup
+  does not guess that its files are disposable.
 - Corrupt or unfamiliar settings/state may be renamed with a `.corrupt-` suffix
   for safe recovery. These backups can retain the same private paths or hints.
 - App files normally live under `%LOCALAPPDATA%/Programs/Dusty`, separately from
