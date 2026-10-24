@@ -29,6 +29,7 @@ def linked(path: Path) -> bool:
 
 def managed_roots(paths: RuntimePaths) -> tuple[Path, ...]:
     return (
+        paths.user_dir,
         *(paths.user_dir / name for name in ("work", "models", "state", "logs")),
         paths.models_dir,
         paths.bin_dir.parent,

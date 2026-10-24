@@ -116,14 +116,28 @@ finally {
             ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint)) { $safe = $false }
     }
     if ($safe) {
-        $marker = Get-Content -LiteralPath $markerPath -Raw | ConvertFrom-Json
-        $safe = $marker.schema -eq 1 -and $marker.directory -eq (Split-Path $work -Leaf) -and
-            $marker.purpose -eq 'device-probe'
+        try {
+            $marker = Get-Content -LiteralPath $markerPath -Raw | ConvertFrom-Json
+            $safe = $marker.schema -eq 1 -and $marker.directory -eq (Split-Path $work -Leaf) -and
+                $marker.purpose -eq 'device-probe'
+            $inventory = @{}
+            foreach ($entry in $entries) {
+                if ($entry.Name -ne '.dusty-owned.json') {
+                    $inventory[$entry.Name] = (Get-FileHash -LiteralPath $entry.FullName -Algorithm SHA256).Hash
+                }
+            }
+            if ($safe) {
+                $marker.files = $inventory
+                $marker | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $markerPath
+            }
+        } catch { $safe = $false }
     }
     if ($safe) {
         foreach ($entry in $entries) {
             if ($entry.Name -ne '.dusty-owned.json') {
-                Remove-Item -LiteralPath $entry.FullName -Force
+                if ((Get-FileHash -LiteralPath $entry.FullName -Algorithm SHA256).Hash -eq $inventory[$entry.Name]) {
+                    Remove-Item -LiteralPath $entry.FullName -Force
+                }
             }
         }
         Remove-Item -LiteralPath $markerPath -Force

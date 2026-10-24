@@ -37,3 +37,20 @@ promote an item to an issue if it affects correctness, privacy or licensing.
 - M5: temporary extraction precedes the bounded driver probe. Measure full page
   entry time on a slow clean machine; driver deadlines alone do not measure disk
   extraction. Do not extrapolate the standalone probe timing into install timing.
+
+- M5: native license-viewer links. Pinned Inno RichEditViewer.pas EN_LINK handling
+  invokes ShellExecute to open the default browser after an explicit link click.
+  Full terms are already bundled locally. No link was clicked and no network
+  activity was observed from Setup. Independently review whether to disable
+  auto-link activation for a stricter offline Setup experience; this external
+  browser action is outside the processing-image WFP attribution.
+- M5: Inno partial cleanup ignores DeleteFile's failure return. Normal cancellation
+  is covered, but a future audit should inject a locked/permission-denied partial
+  and verify that any preserved file is explained without promising removal.
+
+## M5 follow-up audit notes
+
+- Work ownership currently uses preflight reparse/inventory checks, not OS handle-relative
+  traversal. Review concurrent path replacement and two simultaneous Dusty instances in M6.
+- Queue relative_dir is persisted input. Audit containment of restored relative paths under
+  the explicitly chosen output folder, including manually edited queue metadata.
