@@ -917,3 +917,14 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   now carries the actual frozen install root explicitly. Development protects
   its binary/resource/model folders without rejecting sibling test outputs.
   The installed app still protects the complete install folder.
+
+### ISSUE-020 automatic partial ownership
+
+- The M4 age-only .part deletion now also requires an exact downloader-written
+  hash receipt in the existing .lock file. Unknown/modified old prefixes survive.
+  Interrupted transfer attempts write receipts; recent crash prefixes still
+  resume and the final size/SHA-256 checks remain mandatory. A crash before its
+  receipt can leave an old prefix preserved instead of guessing ownership.
+- Downloader plus stale-prefix tests: 24 passed in 32.36 s. Dedicated unknown and
+  modified stale-prefix preservation regression added. Full final-head gates next.
+- M5-interim-9.md records the repair and every explicit delete/rmtree call site.

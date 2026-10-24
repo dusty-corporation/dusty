@@ -711,6 +711,9 @@ def test_gui_startup_removes_stale_partial_and_keeps_recent_prefix(models, qtbot
 
     stale = models.paths.models_dir / "abandoned-model.bin.part"
     stale.write_bytes(b"old prefix")
+    from dusty_fetch.downloader import record_partial
+
+    record_partial(stale)
     old = time.time() - 8 * 24 * 60 * 60
     os.utime(stale, (old, old))
     recent = models.file.with_suffix(".bin.part")

@@ -5,6 +5,7 @@ from pathlib import Path
 
 from dusty.models import cleanup_stale_partials
 from dusty.models.partials import PARTIAL_MAX_AGE_SEC
+from dusty_fetch.downloader import record_partial
 
 
 def test_partial_age_boundary_and_non_partial_files(tmp_path):
@@ -17,6 +18,7 @@ def test_partial_age_boundary_and_non_partial_files(tmp_path):
     ):
         path = tmp_path / name
         path.write_bytes(b"data")
+        record_partial(path)
         os.utime(path, (now - age, now - age))
     nested = tmp_path / "nested.part"
     nested.mkdir()
@@ -33,6 +35,7 @@ def test_partial_age_boundary_and_non_partial_files(tmp_path):
 def test_busy_partial_does_not_break_startup(tmp_path, monkeypatch):
     part = tmp_path / "busy.part"
     part.write_bytes(b"data")
+    record_partial(part)
     os.utime(part, (0, 0))
     original = Path.unlink
 
@@ -44,3 +47,17 @@ def test_busy_partial_does_not_break_startup(tmp_path, monkeypatch):
     monkeypatch.setattr(Path, "unlink", locked)
     assert cleanup_stale_partials(tmp_path) == 0
     assert part.read_bytes() == b"data"
+
+
+def test_unknown_or_modified_stale_prefix_is_preserved(tmp_path):
+    unknown = tmp_path / "unknown.part"
+    unknown.write_bytes(b"user data")
+    changed = tmp_path / "changed.part"
+    changed.write_bytes(b"prefix")
+    record_partial(changed)
+    changed.write_bytes(b"user replacement")
+    for file in (unknown, changed):
+        os.utime(file, (0, 0))
+    assert cleanup_stale_partials(tmp_path) == 0
+    assert unknown.read_bytes() == b"user data"
+    assert changed.read_bytes() == b"user replacement"
