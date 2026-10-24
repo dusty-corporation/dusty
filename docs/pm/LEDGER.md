@@ -928,3 +928,16 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Downloader plus stale-prefix tests: 24 passed in 32.36 s. Dedicated unknown and
   modified stale-prefix preservation regression added. Full final-head gates next.
 - M5-interim-9.md records the repair and every explicit delete/rmtree call site.
+
+### ISSUE-020 packaged gate checkpoint
+
+- 40059794329: source checks, offline and upload regression pass; packaged PE,
+  GUI smoke, license gate, self-test WFP and Model Manager WFP pass. Inno compile
+  failed at generated line 400: Unknown preprocessor directive. A line beginning
+  with Pascal #13#10 in the new damaged-model label was parsed by ISPP. Joined
+  it to the assignment; added a generator regression against leading #digits.
+- Installed WFP/uninstall were correctly skipped. Installer upload was blocked.
+- Full local measured source: 291 passed/1 expected skip, 217.06 s; core 93.7%,
+  export 98.6%, models 96.6%, queue 91.8%, privacy 96.6%; total 94.2%.
+- m6-docs-v2 511b0b6 has the repair plus updated preservation/privacy guides;
+  implementation parity with m5-installer was checked before this syntax fix.

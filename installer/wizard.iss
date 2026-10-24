@@ -166,8 +166,7 @@ begin
     if (Code = 0) and LoadStringFromFile(ExpandConstant('{tmp}\model-status.json'), S) then
       for I := 0 to GetArrayLength(ModelIds) - 1 do
         if Pos('"' + ModelIds[I] + '":"damaged"', String(S)) > 0 then
-          ModelsPage.CheckListBox.ItemCaption[I] := ModelsPage.CheckListBox.ItemCaption[I] +
-            #13#10 + CustomMessage('NeedsDownload');
+          ModelsPage.CheckListBox.ItemCaption[I] := ModelsPage.CheckListBox.ItemCaption[I] + #13#10 + CustomMessage('NeedsDownload');
     Stage := 0; Exit;
   end;
   if Stage = -1 then begin
