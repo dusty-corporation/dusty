@@ -791,3 +791,9 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Preserved the exact SPEC 9.6 HIPAA/accuracy/privacy wording. Corrected fixture
   provenance documentation path. Local Markdown links and dash scan: no findings.
 - Documentation prework only; no M6 acceptance, hardware check or release claimed.
+
+### M6 docs v2 synchronization checkpoint
+
+- Carried final M5 audit/receipt and Qt test-driver corrections forward with
+  normal commits. No M6 application feature work. User documentation remains
+  aligned with the final M4/M5 behavior; reference m6-docs is untouched.
