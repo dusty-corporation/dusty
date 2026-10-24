@@ -24,12 +24,13 @@ failure regression from ISSUE-019 remains in the reusable workflow. Release
 staging rejects unexpected/duplicate inputs and cannot reuse an existing staging
 directory. The negative checks include missing assets and unapproved tags.
 
-Starting with N=2, acceptance obtains the preceding draft's installer using the
-runner token, requires a strictly increasing numeric version, installs the old
+When an earlier successful tagged run exists, acceptance obtains its gated
+installer artifact using the read-only runner token, requires a strictly
+increasing numeric version, installs the old
 build, then upgrades with the new build. The downloader is blocked during upgrade;
 verified model hashes and write times must remain unchanged. This exercises two
-builds, rather than installing one executable twice. A failed/missing preceding
-draft prevents the new release. The Owner never needs to publish a test build.
+builds, rather than installing one executable twice. Tags N >= 3 require that
+prior successful input. The Owner never needs to publish a test build.
 
 The installer download WFP audit calibrates with a deliberately blocked control,
 then observes Setup's original EXE and extracted runtime, Dusty/probe and native
@@ -58,7 +59,10 @@ For test tags N >= 3, release staging independently requires receipts proving an
 increasing-version upgrade, model hash/write-time preservation, current installed
 payload/PE/WFP gates, both uninstall choices, unchanged user outputs and a fresh
 CURRENT-installer download/probe audit with zero Setup/GUI/native events. Missing
-or false receipts prevent draft creation. The first successful build can have no
+or false receipts prevent draft creation. A normal-cancel receipt must also pass:
+the real downloader writes a partial, the shared Cancel/X routine stops it,
+the active partial is removed, retry succeeds and the output sentinel survives.
+The first successful build can have no
 prior upgrade input. Intermediate experiments are not two-version evidence.
 
 Each calibrated WFP phase uses a unique repository-local audit-policy CSV and
