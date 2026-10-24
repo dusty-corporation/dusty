@@ -995,3 +995,16 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   handlers, so review binaries can never start downloads or change selection.
 - Actual source download progress reads the current manifest partial/file size
   with pinned Inno FileSize64; no downloader/network logic was added to Setup.
+
+### M5 native page interaction check
+
+- First page build aeae3e6 is fully green, CI 40062564379, including installed
+  WFP and uninstall. Inspected its gated ReviewOnly executable in a repo-local
+  TEMP profile; no installation, network request or real profile change.
+- Compact Uninstall Dusty dialog: text unclipped, checkbox checked, Cancel has
+  the default-button outline. Finish wording and checked Open Dusty now visible.
+- Actual Back -> model page -> toggle Tiny -> Next changed consent from Small
+  plus Voice detection (488.5 MB) to Small plus Tiny plus Voice detection
+  (566.2 MB). This verifies the native return-page data binding, not just text.
+- Closed the verified own preview process after QA. Final screenshots will use
+  the later gated build with UTF-8 size reading and safe consistent examples.
