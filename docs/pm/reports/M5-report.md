@@ -3,15 +3,16 @@
 ## Summary
 
 M5 engineering work is complete on m5-installer; fresh standard-user VM
-acceptance is still pending. Final repaired drafts are **v0.5.0-m5.11** and
-**v0.5.0-m5.12**, with every release job green and a real .11 to .12 upgrade.
-The second review found and fixed ISSUE-023 (legacy destination protection)
-and ISSUE-024 (interrupted license cleanup); all original regressions remain
-enabled. No Owner data was accessed, and no PR, merge or publication was made.
+acceptance is still pending. Final repaired drafts are **v0.5.0-m5.13** and
+**v0.5.0-m5.14**, with every release job green and a real .13 to .14 upgrade.
+The second review found and fixed ISSUE-023 (legacy destination protection),
+ISSUE-024 (interrupted license cleanup) and ISSUE-025 (native uninstall boundary).
+All original regressions remain enabled. No Owner data was accessed, and no
+PR, merge or publication was made.
 
 ## Owner actions
 
-1. Use only the final .11/.12 pair below. .1 through .10 are historical,
+1. Use only the final .13/.14 pair below. .1 through .12 are historical,
    superseded drafts. Keep every test release draft.
 2. Follow [M5-checklist.md](../M5-checklist.md), about 90 minutes after setup and
    downloads. Dusty-M5: Windows 11 Home, 8 GB, 4 CPUs, 80 GB, VBoxSVGA,
@@ -21,7 +22,8 @@ enabled. No Owner data was accessed, and no PR, merge or publication was made.
    verify the full installer hashes below. No GitHub credentials go to the guest.
 4. Return numbered PASS/FAIL results, Windows build, SmartScreen/UAC outcome,
    model hashes/write times across upgrade, and both uninstall results. Test
-   the explicit legacy-setting/sentinel commands separately, then revert clean.
+   the explicit legacy-setting/sentinel and protected-installation commands
+   separately, then revert clean.
 5. Confirm native 100%/150% layout, Cancel/X/Escape and checked Open Dusty now
    surviving Setup exit. Use public fixtures only. VirtualBox is CPU acceptance;
    real-device GPU tests and the pre-M7 Surface Vulkan smoke remain hardware checks.
@@ -33,11 +35,11 @@ enabled. No Owner data was accessed, and no PR, merge or publication was made.
 |---|---|---|
 | 1. PyInstaller split payload, bin/resources | Done | Separate app/fetch onedir; engine-v2, minimal FFmpeg, resources, no bundled models. Exact PE pins, license/notices/SBOM and GUI gates pass. |
 | 2. Generated installer, choices, downloads, self-tests | Implementation done; VM partial | Shared catalog/wording, bounded real-GPU/RAM probe, Auto per selected model plus smallest CPU test, VAD verification, retry/processor/Finish without. PM pages accepted; fresh VM pending. |
-| 3. Upgrade | CI done; VM partial | Real .11 to .12; verified models reused with fetch blocked, hashes/write times preserved. Damaged files show Needs download again. Exact installed inventory passes. |
+| 3. Upgrade | CI done; VM partial | Real .13 to .14; verified models reused with fetch blocked, hashes/write times preserved. Damaged files show Needs download again. Exact installed inventory passes. |
 | 4. Uninstall | CI done; VM partial | Both choices, output sentinel, persisted legacy protection and conservative owned cleanup pass. Actual standard-user VM controls remain manual. |
-| 5. Gated tagged draft release | Done | Runs 40099284709 and 40100326932; every job green, five assets each, hashes verified. No portable asset. |
+| 5. Gated tagged draft release | Done | Runs 40104236818 and 40105275700; every job green, five assets each, hashes verified. No portable asset. |
 | 6. SmartScreen README | Done | Unsigned explanation, More info/Run anyway, Get-FileHash and full checksum comparison. |
-| Acceptance: tagged draft with artifacts | Met | Final .11/.12 drafts; release assets listed below. |
+| Acceptance: tagged draft with artifacts | Met | Final .13/.14 drafts; release assets listed below. |
 | Acceptance: fresh Windows 11 VM, SPEC 11.6 | Not met yet, Owner | Exact 90-minute checklist, shared-folder transfer, standard user, interruption/tamper/upgrade/both uninstalls and expected results. |
 | Acceptance: installer size | Met | Exact sizes below, about 34.7 MB compressed, no model weights. |
 | Brief: page review and scaling | PM review accepted; VM scaling partial | 21 native light PNGs plus README, explicit scale limitation. Output row has 16 Qt light/dark 100%/150% captures. Genuine native monitor-scale checks remain Owner evidence. |
@@ -53,9 +55,9 @@ Options, elides long paths and preserves complete accessibility/tooltip text.
 
 ## Test results and CI evidence
 
-- Final code/test head 791682b, tag .12, [CI 40100326932](https://github.com/dusty-corporation/dusty/actions/runs/40100326932):
-  **354 passed, 2 expected skips**, 315.72 s; separate real-network test
-  **1 passed**, 1.95 s. Skips are unavailable hosted Vulkan and the default-disabled
+- Final implementation 7f7e036, tag .14 at 972977a, [CI 40105275700](https://github.com/dusty-corporation/dusty/actions/runs/40105275700):
+  **355 passed, 2 expected skips**, 309.22 s; separate real-network test
+  **1 passed**, 1.74 s. Skips are unavailable hosted Vulkan and the default-disabled
   CI-only real-network test, which is run explicitly afterwards.
 - Required package coverage **94.7% (1012/1069)**, all above 85%: core 93.7%,
   export 98.6%, models 96.6%, queue 92.7%, privacy 96.6%.
@@ -64,19 +66,24 @@ Options, elides long paths and preserves complete accessibility/tooltip text.
   included in the final full CI run. GUI/output-row tests: 29 passed.
 - Ruff/format (140 files), mypy (77 sources), static network with zero exceptions,
   excluded-host policy, runtime/installer license and exact PE gates pass.
-- .11 [CI 40099284709](https://github.com/dusty-corporation/dusty/actions/runs/40099284709)
-  and .12 have every source/offline/package/installed/draft job green. Receipts
+- .13 [CI 40104236818](https://github.com/dusty-corporation/dusty/actions/runs/40104236818)
+  and .14 have every source/offline/package/installed/draft job green. Receipts
   prove true upgrade, preserved model hashes/times with fetch blocked, exact
-  installed payload, legacy protection, normal cancel/retry, both uninstalls and
-  unchanged output sentinel. Failed/missing legacy receipt rejects release staging.
+  installed payload, legacy and registered-installation protection, normal
+  cancel/retry, both uninstalls and unchanged output sentinel. Failed/missing
+  legacy or protected-installation receipt rejects release staging.
 - Deliberate failing-license upload regression proves no installer upload follows
   a failed gate. Its expected negative annotation is not a failed job.
 - Historical failures are retained: .8 inventory caught old versioned notices;
   40064929172 caught a native script type mismatch; docs-only 40066264053 had an
   offline child exit 1. None is green evidence. Local Qt diagnostic 0x8001010d
   with exit 0 is recorded for M6 audit, without suppression or invented cause.
+- Final local lint, format, types and all three source policy checks pass.
+  Search command: git grep -n -I -P '[\x{2013}\x{2014}]' -- .
+  Output: none; exit 1 (no matches). Owner brief bytes and reference branches
+  are unchanged. All six checklist PowerShell blocks parse without execution.
 
-### Calibrated final .12 WFP counts
+### Calibrated final .14 WFP counts
 
 | Scenario | Setup | GUI/probe | Native | Fetch allowed | Fetch blocked |
 |---|---:|---:|---:|---:|---:|
@@ -88,6 +95,10 @@ zero connection events. Only dusty-fetch downloads; no new network code or
 static exception was added. Original and extracted Setup images are attributed.
 
 ## Page review round
+
+The rare protected-installation uninstall message is a safety stop added after
+the accepted normal pages; its exact VM test is in step 17. The normal uninstall
+layout is unchanged.
 
 PM **ACCEPTED** native pages 7b8d28b and app output row a75f1cf on 2026-10-24.
 Shared wording covers three license views, catalog, inline consent, persistent
@@ -120,31 +131,31 @@ logical size. Own preview process was closed; no host settings/profile changed.
 Both downloads were verified against every API SHA-256 digest and all four
 SHA256SUMS entries per release: ten asset digests and eight listed checksums
 match. No installer was executed against the Owner's profile. Five assets per
-draft only; no portable bundle. Historical .1 through .10 remain untouched and
+draft only; no portable bundle. Historical .1 through .12 remain untouched and
 superseded, not recommended as final candidates.
 
-### v0.5.0-m5.11
+### v0.5.0-m5.13
 
-[Draft release](https://github.com/dusty-corporation/dusty/releases/tag/untagged-ac62bd72d9a50ad10d0f), installer **34,695,893 bytes** (34.70 MB).
+[Draft release](https://github.com/dusty-corporation/dusty/releases/tag/untagged-fea5beb0d808b6269b11), installer **34,696,202 bytes** (34.70 MB).
 
 | Asset | SHA-256 |
 |---|---|
-| Dusty-0.5.0-m5.11-draft-unsigned.exe | 7dd7ac6d67a5cd175e2acec2956a0090c64fe3e05ff17a54393854efc7b4bac9 |
-| SHA256SUMS.txt | 5ca935fd9dab575a86c2a1f75cbae370c5f62c448f0f6284035699dfa5cdb5e0 |
-| THIRD_PARTY_NOTICES.md | e89e579cb529a1f635f0051f45448e8d16b4ba924c9182fbc20f7ac3136a9dba |
-| dusty-0.5.0-m5.11-sbom.json | 2aec240041bab48794ce8663cf83231488745f2287a292500a6300e0eeaa1707 |
+| Dusty-0.5.0-m5.13-draft-unsigned.exe | f637dedf4bf655b264fe136f20156367959502a85dcb9d8dde923a69b6b309c7 |
+| SHA256SUMS.txt | 714b08c84e8b11d9f25ccdcd49e3a0cc033b169a551b328e05b3a14d247b7c27 |
+| THIRD_PARTY_NOTICES.md | 8a536ee8163542099d5740b480b9459fd52f7668674a456457c7ac1d0554852b |
+| dusty-0.5.0-m5.13-sbom.json | 73bbaf9db8f30a5764cf6925c777ec32ec374df25d296c64272f0ae2d9df643a |
 | installer-jedi-source.zip | 4dac842302518887fd2e8692da73ca1f2adcac9092c32cb634e4f7143f4ae217 |
 
-### v0.5.0-m5.12
+### v0.5.0-m5.14
 
-[Draft release](https://github.com/dusty-corporation/dusty/releases/tag/untagged-4c18b8608a05f5d8eb38), installer **34,685,652 bytes** (34.69 MB).
+[Draft release](https://github.com/dusty-corporation/dusty/releases/tag/untagged-cfca271ef6ea524c8e86), installer **34,689,908 bytes** (34.69 MB).
 
 | Asset | SHA-256 |
 |---|---|
-| Dusty-0.5.0-m5.12-draft-unsigned.exe | bf2b137b014e26723643f3512ca5ce7d57f7e25f831a27402c88af0d1b38cd54 |
-| SHA256SUMS.txt | 58454c95a7bcccdfc00d28dc73edfb85f200856cf15572b584c71a8359674574 |
-| THIRD_PARTY_NOTICES.md | 90192151cedeeeaca067eaa12384762e42961ff6d4d6ae9704ad7e8bbbf92193 |
-| dusty-0.5.0-m5.12-sbom.json | 8ddba09296f47da7b8453b101407b6c924072c47e9bf73d37c64e9ef434ed5e1 |
+| Dusty-0.5.0-m5.14-draft-unsigned.exe | 257e74499d09dd0d68e056bc2106fd95df4a3fb01561937cf38968fae1f2d652 |
+| SHA256SUMS.txt | ed1794ea987127c19ec7a992eba0924ad169de60e830ceee88a03896567cf0bc |
+| THIRD_PARTY_NOTICES.md | b520493284508311eaa9be7b61700b7d467d5e0cb898474367b152ca173a060d |
+| dusty-0.5.0-m5.14-sbom.json | 90d1e6df4a0c53de8b75db9ecd7e610ecde9a9063ae7914e383208adef8c8897 |
 | installer-jedi-source.zip | 4dac842302518887fd2e8692da73ca1f2adcac9092c32cb634e4f7143f4ae217 |
 
 ## Probe evidence
@@ -174,6 +185,13 @@ synthetic OneDrive output sentinels were tested. No real synced folder was used.
   exclusive purpose/directory/hash receipt now permits safe retry and rejects
   changed receipt/content, unknown files and reparse points. Normal completion
   leaves no receipt in the exact installed inventory.
+- **ISSUE-025, S0/NN-7:** a failing metadata-retention regression exposed
+  Inno's independent registered-file removal. Read-only preflight now runs before
+  every native uninstall path, including silent mode; a protected installation
+  destination or uncertain metadata aborts. Both final CI runs replace the
+  registered catalog with synthetic private bytes and prove exit 1 with the app,
+  protection metadata and exact bytes intact. They restore the original before
+  normal inventory/WFP/uninstall gates. No new policy exception was needed.
 - Abrupt exit during other cleanup preserves unrelated output. Incomplete work
   inventories stay conservative. Atomic exit before/after replace keeps an old
   or new complete file; ordinary failures clean only their exclusive temporary.
@@ -201,6 +219,7 @@ No new dependency, native component or policy exception was added this round.
 | 022 | S1 | Resolved | Exact obsolete own-license cleanup; true-upgrade inventory passes. |
 | 023 | S0 | Resolved | Persisted legacy protection verified by installed exe and release receipt. |
 | 024 | S1 | Resolved | Actual abrupt-exit recovery and unchanged/unknown preservation tests. |
+| 025 | S0 | Resolved | Native uninstall abort preserves protected registered payload and metadata; mandatory final receipt. |
 
 ## Questions for the PM
 
@@ -211,7 +230,7 @@ claimed as fresh Windows 11 Home standard-user or physical GPU evidence.
 
 ## Branches and remaining risks
 
-m5-installer holds implementation and this handoff. m6-docs-v2 e6de0aa carries
+m5-installer holds implementation and this handoff. m6-docs-v2 c58fcf6 carries
 all second-review code/tests with verified parity and matching privacy/install
 guides; final evidence/checklist are mirrored on that branch. No M6 acceptance is claimed.
 Reference m5-packaging-spike (95dd90b) and m6-docs (c855b52) remain unchanged.
@@ -222,5 +241,5 @@ assumed passes. Unknown/changed content is intentionally preserved with a notice
 
 Ownership repair, native post-copy cancellation and real two-version upgrade
 inventory required more work than screenshots. The second review added real OS
-failure tests and installed-state coverage, finding two defects before handoff.
+failure tests and installed-state coverage, finding three defects before handoff.
 Engineer work is complete; stop here pending Owner VM results and PM acceptance.

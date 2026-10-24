@@ -47,7 +47,7 @@ It includes only PNGs and README, with source/provenance and synthetic paths not
 M5's two-version draft run exposed obsolete versioned own-license copies
 (ISSUE-022). The strict inventory gate blocked the .8 draft. A narrow guarded
 pre-copy repair and preservation regressions are pushed; final tagged reruns
-passed. The second review then fixed ISSUE-023/024; final .11/.12 drafts and
+passed. The second review then fixed ISSUE-023/024/025; final .13/.14 drafts and
 all gates are green. See M5-report.md for exact safe builds and hashes.
 The Owner still measures total first-page extraction time and native scaling;
 probe driver deadlines alone do not establish extraction time.

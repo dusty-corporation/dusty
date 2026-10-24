@@ -52,18 +52,18 @@ identified by Dusty. Do not download an unofficial Windows image.
 
 The Owner is creating Dusty-M5: Windows 11 Home, 8 GB, 4 CPUs, 80 GB VDI,
 VBoxSVGA, standard user DustyTester, snapshot clean. Keep that configuration.
-Earlier: **v0.5.0-m5.11**, CI 40099284709. Later: **v0.5.0-m5.12**, CI 40100326932.
-Both are successful DRAFT releases. The latter tested the real .11 to .12 upgrade.
-Do not use .1 through .10. Do not publish any release.
+Earlier: **v0.5.0-m5.13**, CI 40104236818. Later: **v0.5.0-m5.14**, CI 40105275700.
+Both are successful DRAFT releases. The latter tested the real .13 to .14 upgrade.
+Do not use .1 through .12. Do not publish any release.
 
 Run on the HOST in PowerShell, using the Owner's authenticated gh:
 
 ```powershell
 $vmShare = 'C:\Users\kdash\bench\m5-vm'
-New-Item -ItemType Directory -Force -Path $vmShare, "$vmShare\m5.11", "$vmShare\m5.12" | Out-Null
-gh release download v0.5.0-m5.11 --repo dusty-corporation/dusty --dir "$vmShare\m5.11"
+New-Item -ItemType Directory -Force -Path $vmShare, "$vmShare\m5.13", "$vmShare\m5.14" | Out-Null
+gh release download v0.5.0-m5.13 --repo dusty-corporation/dusty --dir "$vmShare\m5.13"
 if ($LASTEXITCODE -ne 0) { throw 'Earlier draft download failed' }
-gh release download v0.5.0-m5.12 --repo dusty-corporation/dusty --dir "$vmShare\m5.12"
+gh release download v0.5.0-m5.14 --repo dusty-corporation/dusty --dir "$vmShare\m5.14"
 if ($LASTEXITCODE -ne 0) { throw 'Later draft download failed' }
 Copy-Item -LiteralPath 'C:\Users\kdash\whisper_app\tests\fixtures\audio\formats\jfk.wav' -Destination "$vmShare\jfk.wav"
 ```
@@ -81,13 +81,13 @@ In the GUEST, signed in as DustyTester, copy locally before running anything:
 if ($env:USERNAME -ne 'DustyTester') { throw 'Run this inside the VM as DustyTester' }
 $vmDownloads = Join-Path $env:USERPROFILE 'Downloads\M5-check'
 New-Item -ItemType Directory -Force -Path $vmDownloads | Out-Null
-Copy-Item -LiteralPath '\\VBOXSVR\m5-vm\m5.11' -Destination $vmDownloads -Recurse
-Copy-Item -LiteralPath '\\VBOXSVR\m5-vm\m5.12' -Destination $vmDownloads -Recurse
+Copy-Item -LiteralPath '\\VBOXSVR\m5-vm\m5.13' -Destination $vmDownloads -Recurse
+Copy-Item -LiteralPath '\\VBOXSVR\m5-vm\m5.14' -Destination $vmDownloads -Recurse
 Copy-Item -LiteralPath '\\VBOXSVR\m5-vm\jfk.wav' -Destination $vmDownloads
-$earlier = Join-Path $vmDownloads 'm5.11\Dusty-0.5.0-m5.11-draft-unsigned.exe'
-$later = Join-Path $vmDownloads 'm5.12\Dusty-0.5.0-m5.12-draft-unsigned.exe'
-if ((Get-FileHash -LiteralPath $earlier -Algorithm SHA256).Hash -ne '7dd7ac6d67a5cd175e2acec2956a0090c64fe3e05ff17a54393854efc7b4bac9') { throw 'Earlier installer hash mismatch' }
-if ((Get-FileHash -LiteralPath $later -Algorithm SHA256).Hash -ne 'bf2b137b014e26723643f3512ca5ce7d57f7e25f831a27402c88af0d1b38cd54') { throw 'Later installer hash mismatch' }
+$earlier = Join-Path $vmDownloads 'm5.13\Dusty-0.5.0-m5.13-draft-unsigned.exe'
+$later = Join-Path $vmDownloads 'm5.14\Dusty-0.5.0-m5.14-draft-unsigned.exe'
+if ((Get-FileHash -LiteralPath $earlier -Algorithm SHA256).Hash -ne 'f637dedf4bf655b264fe136f20156367959502a85dcb9d8dde923a69b6b309c7') { throw 'Earlier installer hash mismatch' }
+if ((Get-FileHash -LiteralPath $later -Algorithm SHA256).Hash -ne '257e74499d09dd0d68e056bc2106fd95df4a3fb01561937cf38968fae1f2d652') { throw 'Later installer hash mismatch' }
 Get-FileHash -LiteralPath $earlier,$later -Algorithm SHA256
 ```
 

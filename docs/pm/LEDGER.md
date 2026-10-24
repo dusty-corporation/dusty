@@ -630,7 +630,7 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 | M5-01C | M5 | Revalidate port source | done | 224 passed/1 expected skip, 94.6%; lint/format 127 files, mypy 70, all source policies pass; CI 40011781091 checks/offline/upload regression green | - |
 | M5-01D | M5 | Model-free Vulkan investigation | done | Pinned engine-v2 API: 1 device/init/4 KiB buffer clear+sync, no model, exit 0 in 0.468 s; docs/dev/m5-model-free-vulkan-check.md | - |
 | M5-01E | M5 | Gap analysis and decision inventory | done | M5-interim-1.md covers all six SPEC tasks/three acceptance items, brief gaps, six recommended decisions, Phase 2 estimate | - |
-| M5-02 | M5 | Finish installer and release acceptance | blocked | Explicit Phase 1 stop; await PM reply to interim-1 before any Phase 2 implementation/test tags | PM decisions |
+| M5-02 | M5 | Finish installer and release acceptance | blocked | Engineering complete; final .13/.14 all jobs green (40104236818, 40105275700), true upgrade and native protection pass; exact VM checklist and final report mirrored from m5-installer 062d1f1 | Owner VM acceptance |
 
 - Original spike interim-1 retained as M5-packaging-spike-interim-1.md; other
   spike reports remain historical, with no old passing run claimed for this head.
@@ -1002,3 +1002,23 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 ## M5 native uninstall boundary resolution carried, 2026-10-24
 - ISSUE-025 resolved in .13 CI 40104236818, all jobs green. Actual native uninstall stopped before deleting protected registered payload; app, metadata and synthetic private bytes survived. Both ordinary uninstall paths still pass.
 - Carried the exact disposable-VM boundary check and resolution evidence. .14 run 40105275700 is testing the final .13 to .14 upgrade; final handoff metadata will be mirrored after it finishes.
+
+
+## M5 final repaired handoff mirrored, 2026-10-24
+
+- Carried final report, exact .13/.14 checklist, accepted page report and ISSUE-025
+  native resolution from m5-installer 062d1f1. Reference m6-docs remains untouched.
+- Both final release runs GREEN: 40104236818 and 40105275700. Actual .13 to .14
+  upgrade preserves model bytes/times with fetch blocked. Source 355 passed/2
+  expected skips plus separate network pass; required coverage 94.7%.
+- Native protected installation case, legacy destination, exact payload/PE/license,
+  packaged/installed WFP, cancel/retry and both uninstalls pass. Calibrated full
+  Setup/GUI/native 0, fetch 4/0; cancellation 0/0/0, fetch 2/0.
+- All ten final API asset digests/eight checksums verified. No installer executed
+  against Owner data. All releases remain draft, no PR/publication/deletion.
+- Source/installer/tools/tests/workflows parity checked after the safety carry;
+  M6 user/privacy guidance describes protected uninstall abort, crash partials
+  and conservative temporary retention. No M6 acceptance is claimed.
+- Remaining Owner actions: 90-minute fresh Dusty-M5 VM checklist with standard
+  DustyTester, native scaling/SmartScreen/interactive failure outcomes. No new
+  PM policy decision requested. Stop here.
