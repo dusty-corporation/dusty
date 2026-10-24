@@ -1094,3 +1094,39 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Candidate preparation negative tests reject tampered CPU/Vulkan bytes and
   unexpected members before staging or changing pins. Five tests pass; lint and
   mypy 80 sources pass. CLI refuses non-CI use. No release/publication or M5 change.
+
+### M6 remaining hardening checkpoint
+
+- Real GUI and coordinator forced-death/resume variants pass: 2 tests, 21.87 s.
+  Kill targets the actual GUI PID with a live native child; Job Object death,
+  immediate Resume and preserved finished output bytes/time are asserted.
+- Real native long-path/non-ASCII source plus all five exports pass beyond
+  300 characters; original unchanged and owned work empty. Cancel-retention UI
+  test also passes (2 focused cases, 1.79 s).
+- Cancel cleanup now returns nonzero on retained/locked partials; Setup checks
+  the result and reports it, and Model Manager has a specific retained-prefix
+  reason. Real exclusive Windows handle and generator/support tests: 28 pass,
+  2.43 s. Fixed test helpers to kill the base interpreter, not a venv redirector.
+- Added CI-only packaged GUI canary through the actual MainWindow/BatchWorker,
+  Tiny CPU and public self-test audio; checks source bytes, complete TXT/DOCX,
+  all rotated logs, work cleanup and active network guard. Both packaged and
+  installed WFP phases invoke it; validation pending final candidate CI.
+- Installer CI now installs under a spaced Persian/Japanese path and preserves
+  a synthetic OneDrive-style output sentinel. Actual non-ASCII Windows account
+  creation is not claimed; source app-data/model/profile path regression covers
+  the equivalent filesystem paths. Owner environment remains an explicit gap.
+
+### M6 resume checkpoint, 2026-10-24
+
+- Resumed with uncommitted crash/resume, long-path, cancellation-retention and
+  packaged-canary changes from the previous authorized session; no decoder
+  disk-full patch was applied when approval review hit its usage limit.
+- Candidate CI 40112187690: 1 failed, 375 passed, 2 expected skips, 95.8%
+  required coverage. Failure was a fixture that expected removal while holding
+  a live work lease. Strengthened it to assert live preservation, release its
+  owner, then assert orphan cleanup. No skip or weakened production guard.
+- Focused cleanup/lease/entry/generator suite: 15 passed, 1.50 s; ruff, format
+  (149 files), mypy (81 sources) pass. Remaining full candidate gates pending.
+- New PM findings queued: successful-install default selection, distinct About
+  with local notices, one registered uninstall confirmation, and internet-zone
+  tagging instructions. ThinkPad .14 evidence recorded with the M5 docs update.

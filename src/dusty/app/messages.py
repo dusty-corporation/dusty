@@ -525,10 +525,19 @@ FETCH_ERRORS = {
     "START_FAILED": "The downloader could not start. Check the installed files.",
     "PROTOCOL": "The downloader did not finish correctly. Try the download again.",
     "DELETE": "The downloaded model could not be deleted.",
+    "CANCEL_CLEANUP": (
+        "The download stopped, but its partial file could not be removed. "
+        "Close other programs using the download and try again."
+    ),
 }
 
 # Inno Setup custom messages are generated from this same plain-language source.
 INSTALLER = {
+    "PartialKept": (
+        "The download stopped, but its partial file could not be removed. "
+        "Close other programs using the download before trying again. "
+        "Your verified models have been kept."
+    ),
     "UninstallProtected": (
         "Dusty could not confirm that its installation folder is safe to remove. "
         "Uninstall has stopped to protect your files. Ask the person who installed "

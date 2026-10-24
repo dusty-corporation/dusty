@@ -45,5 +45,8 @@ status and a description; the dialog shows free space on the model drive.
   in Model Manager and Options once any model is installed.
 
 Models live under `%LOCALAPPDATA%\Dusty\models`, separately from the app files.
+If another program prevents partial-file removal, Dusty reports that it was kept
+while the download dialog is open. Close that program before retrying. A leftover
+partial cannot be used as a model without the full size and file check.
 Do not substitute an arbitrary model or manifest from another website. Adding
 models after installation is an explicit online action; transcription stays offline.

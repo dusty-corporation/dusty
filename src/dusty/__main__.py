@@ -23,6 +23,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out")
     parser.add_argument("--installer-upgrade-root", help=argparse.SUPPRESS)
     parser.add_argument("--check-model-download", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--check-hardening", action="store_true", help=argparse.SUPPRESS)
     for flag in (
         "probe-vulkan",
         "probe-vulkan-child",
@@ -118,7 +119,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.installer_cancel_part:
             from dusty.installer_support import cancel_partial
 
-            cancel_partial(resolve_paths(), args.model)
+            return 0 if cancel_partial(resolve_paths(), args.model) else 1
         elif args.out:
             Path(args.out).write_text(model_size(resolve_paths()), encoding="utf-8")
         return 0
@@ -132,6 +133,13 @@ def main(argv: list[str] | None = None) -> int:
             if cleanup(resolve_paths(), remove_models=args.uninstall_data == "remove-models")
             else 1
         )
+
+    if args.check_hardening:
+        from pathlib import Path
+
+        from dusty.app.hardening_check import run
+
+        return run(Path(args.out)) if args.out else 2
 
     if args.check_model_download:
         from pathlib import Path

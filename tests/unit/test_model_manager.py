@@ -25,6 +25,32 @@ from dusty.runtime_paths import RuntimePaths, resolve_fetch_command, resolve_pat
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def test_cancel_reports_partial_retention_when_removal_fails(models, qtbot, monkeypatch):
+    dialog = models.create()
+    part = models.paths.models_dir / (models.registry.manifest.models["tiny"].file_name + ".part")
+    part.write_bytes(b"public partial")
+    unlink = Path.unlink
+
+    def locked(path, *args, **kwargs):
+        if path == part:
+            raise PermissionError("Synthetic exclusive lock")
+        return unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "unlink", locked)
+    monkeypatch.setattr(
+        "dusty.app.model_manager.run_job_process",
+        lambda *a, **k: SimpleNamespace(cancelled=True, exit_code=130),
+    )
+    worker = ModelWorker(models.registry, models.paths, action="download", ids=("tiny",))
+    with qtbot.waitSignal(worker.result, timeout=5000) as result:
+        worker.start()
+    qtbot.waitUntil(lambda: not worker.isRunning())
+    assert result.args[0]["error"] == "CANCEL_CLEANUP"
+    dialog._result(result.args[0])
+    assert dialog.message.text() == M.FETCH_ERRORS["CANCEL_CLEANUP"]
+    assert part.read_bytes() == b"public partial"
+
+
 @pytest.fixture
 def models(tmp_path, qtbot, monkeypatch, request):
     server = request.getfixturevalue("tls")

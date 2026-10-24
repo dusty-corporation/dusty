@@ -92,7 +92,7 @@ def model_status(paths: RuntimePaths) -> dict[str, str]:
     return statuses
 
 
-def cancel_partial(paths: RuntimePaths, model_id: str) -> None:
+def cancel_partial(paths: RuntimePaths, model_id: str) -> bool:
     from dusty.models import load_manifest
 
     manifest = load_manifest(paths.resources_dir / "models.json")
@@ -108,5 +108,9 @@ def cancel_partial(paths: RuntimePaths, model_id: str) -> None:
             part.resolve().is_relative_to(p) or p.is_relative_to(part.resolve()) for p in protected
         )
     ):
-        return
-    part.unlink(missing_ok=True)
+        return False
+    try:
+        part.unlink(missing_ok=True)
+        return True
+    except OSError:
+        return False

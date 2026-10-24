@@ -102,3 +102,29 @@ def test_disk_exhaustion_fails_plainly_and_removes_partial_outputs(tmp_path, mon
     assert not list((tmp_path / "out").glob("*"))
     assert not list((paths.user_dir / "work").iterdir())
     assert source.read_bytes() == before
+
+
+def test_real_native_decode_and_all_exports_with_extended_unicode_paths(tmp_path):
+    folder = tmp_path
+    while len(str(folder)) < 310:
+        folder /= "Long recording folder گفتگو"
+    folder = Path("\\\\?\\" + str(folder.resolve()))
+    folder.mkdir(parents=True)
+    source = folder / "تست ضبط public recording.wav"
+    shutil.copyfile(ROOT / "tests/fixtures/audio/formats/jfk.wav", source)
+    before = hashlib.sha256(source.read_bytes()).hexdigest()
+    paths = runtime(tmp_path)
+    job = Job(source)
+    options = BatchOptions(
+        "tiny",
+        folder / "Saved transcripts",
+        backend="cpu",
+        formats=("txt", "docx", "srt", "vtt", "json"),
+    )
+    registry = ModelRegistry(load_manifest(paths.resources_dir / "models.json"), paths.models_dir)
+    Coordinator(paths, registry).run_batch([job], options, vulkan_ok=False)
+    assert job.status == JobStatus.DONE
+    assert len(job.outputs) == 5 and all(p.is_file() for p in job.outputs)
+    assert "Americans" in job.outputs[0].read_text(encoding="utf-8")
+    assert hashlib.sha256(source.read_bytes()).hexdigest() == before
+    assert not list((paths.user_dir / "work").iterdir())

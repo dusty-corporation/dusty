@@ -360,6 +360,8 @@ begin
   Success := Exec(ExpandConstant('{app}\dusty\dusty.exe'),
     '--installer-cancel-part --model ' + Quoted(CurrentId),
     ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, Code);
+  if (not Success) or (Code <> 0) then
+    SuppressibleMsgBox(CustomMessage('PartialKept'), mbInformation, MB_OK, IDOK);
 end;
 
 procedure WithoutClick(Sender: TObject);

@@ -168,9 +168,13 @@ class ModelWorker(QThread):
                         part = self.paths.models_dir / (
                             model_files(self.registry)[key][0] + ".part"
                         )
-                        if not linked(part):
-                            part.unlink(missing_ok=True)
                         self.failure = "CANCELLED"
+                        try:
+                            if linked(part):
+                                raise OSError("Linked partial retained")
+                            part.unlink(missing_ok=True)
+                        except OSError:
+                            self.failure = "CANCEL_CLEANUP"
                     elif process.exit_code or "complete" not in events:
                         self.failure = self.failure or "PROTOCOL"
                     if self.failure:

@@ -1,7 +1,9 @@
 """A second startup must not remove another live instance's owned work."""
 
+import os
 import subprocess
 import sys
+from pathlib import Path
 
 from dusty.queue import cleanup_orphaned_work
 
@@ -10,7 +12,7 @@ def test_second_process_preserves_live_work_and_cleans_after_owner_crash(tmp_pat
     work = tmp_path / "work"
     child = subprocess.Popen(
         [
-            sys.executable,
+            sys._base_executable,
             "-u",
             "-c",
             "from pathlib import Path; import sys; from dusty.work_area import OwnedWork; "
@@ -23,6 +25,7 @@ def test_second_process_preserves_live_work_and_cleans_after_owner_crash(tmp_pat
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
         text=True,
+        env={**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[2] / "src")},
     )
     try:
         assert child.stdout.readline().strip() == "ready"

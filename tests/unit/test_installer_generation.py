@@ -87,6 +87,10 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     assert "--probe-vulkan --out" in text
     assert "--installer-cancel-part --model " in text
     assert "DeleteFile(ExpandConstant('{localappdata}" not in text
+    partial = text.split("procedure CleanupActivePartial", 1)[1].split("procedure WithoutClick", 1)[
+        0
+    ]
+    assert "(not Success) or (Code <> 0)" in partial and "PartialKept" in partial
     without = text.split("procedure WithoutClick", 1)[1].split("procedure ModelsClick", 1)[0]
     assert without.index("CleanupActivePartial;") < without.index("Stage := 5;")
     cancel = text.split("procedure CancelButtonClick", 1)[1].split("function GetCustom", 1)[0]

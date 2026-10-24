@@ -23,6 +23,9 @@ legal, or other important decisions.
   owned content. Unknown, changed, linked or protected content is preserved,
   including after a crash. Graphics-probe and self-test work use separate random
   folders under the same work area. The hashes are not uploaded or logged.
+  An OS-held lease prevents another running instance's startup cleanup from
+  removing active work. A process exit releases that lease. This does not make
+  two windows' shared queue/settings a supported concurrent editing workflow.
 - `%LOCALAPPDATA%/Dusty/models/`: downloaded and hash-verified model data in an
   installed app. Development models/binaries use ignored `build/` directories.
   Downloads use `.part` files until verification succeeds; cancelling or closing
@@ -106,6 +109,12 @@ probe passed. Setup itself does not download: it launches dusty-fetch only after
 the inline model-download consent. Closing or crashing Setup kills its children.
 
 ## Interrupted writes and retained destinations
+
+Normal cancellation removes the active public-model prefix when the filesystem
+allows it. If another program locks it or access is denied, the prefix may stay;
+an open download dialog or Setup reports the failed cleanup. It is not a verified
+model and cannot be used until the complete size and hash match. A closed app
+does not promise that an OS-denied removal succeeded.
 
 A crash before an atomic write completes may leave a unique .dusty-tmp beside
 its destination. The final file remains the previous complete file or the new

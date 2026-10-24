@@ -14,13 +14,13 @@ if ($twoVersions) {
 }
 $work = Join-Path $repo 'build/installer/acceptance'
 New-Item -ItemType Directory -Path $work -Force | Out-Null
-$install = Join-Path $work 'app'
+$install = Join-Path $work 'App install گفتگو 日本語'
 # Inno uses the Windows known folder, not the LOCALAPPDATA environment override.
 $local = [Environment]::GetFolderPath('LocalApplicationData')
 if ($env:LOCALAPPDATA -ne $local) { throw 'Inno and app user-data roots must match' }
 $data = Join-Path $local 'Dusty'
 if (Test-Path -LiteralPath $data) { throw 'Refusing to change pre-existing runner app data' }
-$outputs = Join-Path $work 'user-outputs'
+$outputs = Join-Path $work 'OneDrive/Documents/Transcript outputs گفتگو'
 New-Item -ItemType Directory -Path $outputs -Force | Out-Null
 $sentinel = Join-Path $outputs 'keep.txt'
 'public test output sentinel' | Set-Content -LiteralPath $sentinel -Encoding utf8NoBOM
