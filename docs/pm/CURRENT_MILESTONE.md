@@ -75,3 +75,17 @@ No new dependencies, weakened TLS/host/hash checks or automatic root retrieval.
 PM specifically authorizes one DRAFT M5_installer_and_release_pipeline PR from
 m5-installer; never ready/merge it. Keep frozen code/assets unchanged. Prepare
 M6 for main after M5, include clean-snapshot rechecks, update M6-report and stop.
+
+
+## Owner activation/handoff supplement, 2026-10-24
+
+PR #6 is merged and engine-v3 is published as a prerelease. Carry the newest M6
+snapshot onto actual main (fresh branch allowed), integrate the approved pins,
+compare full trees and pass every normal gate, including ISSUE-026 Unicode.
+Cross-check all four bundled DER SHA-256 fingerprints with official CA-published
+fingerprints and record in docs/dev/tls-roots.md. Open only a DRAFT main PR titled
+M6_hardening_and_docs. Consolidate all remaining Owner checks into one session
+in M6-checklist.md using its exact final PR artifact/hash: clean VM recheck,
+second standard space/non-ASCII account INSIDE VM, desktop and ThinkPad offline
+reboots, and ThinkPad Turbo Vulkan/Small CPU >=2h endurance. Mark unattended
+parts. Update report, post PR number and stop. No publishing/deleting/main force.

@@ -1532,3 +1532,18 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Final report records accepted decisions, VM evidence, pending hardware and
   verified ignored-clone rebase route. Later commits docs/ledger/changelog only.
   Stop after this report; no next milestone or M6 PR.
+
+### Owner merge/publication and production activation, 2026-10-24
+
+- Owner merged PR #6: main dfd4237958d9a8f9c614c25995215b1ca4d6ce1f,
+  2026-10-24 18:49:37 America/New_York. Main tree exactly equals frozen M5
+  dcf7f98; no unintended new main changes to reconcile.
+- Owner published engine-v3 as a prerelease, not a draft, at 18:49:50 local.
+  Published CPU/Vulkan/FFmpeg digests match approved pins and native source d0abc30.
+- User explicitly permits a fresh branch: m6-hardening-main from actual main.
+  7897d48 carries exact newest M6 snapshot 0bea959; BOTH complete tree hashes
+  ece12ebb23dd57fb3e2a8010c149f55da755f269. No source loss or force push;
+  original m6-hardening preserved. Cherry-picked isolated pins as f427da5;
+  only native/versions.toml differs from snapshot before documentation updates.
+- Production gates running with published engine-v3, candidate input OFF.
+  ISSUE-026 remains pending until the normal Unicode and packaged gates pass.
