@@ -43,3 +43,21 @@ Fix on M6, with tests:
 Continue all remaining M6 work autonomously. Record Owner actions and PM
 questions instead of waiting. Do not alter frozen .13/.14 drafts. No PR,
 publishing or deletion of branches/tags/releases/runs. Stop with M6-report.md.
+
+## PM report decisions, 2026-10-24
+
+1. ADR 0024 accepted. Prepare exact gated engine-v3 draft with packages, hashes,
+   provenance and licenses. Owner publishes prerelease; give exact gh command.
+   Prepare m6-engine-v3-pins from M6, never merge before PM publication confirmation.
+2. No M5 backport or M5-only distribution. M5 merges after VM pass, M6 immediately
+   after, first real-use build from main after M6 (M7). Mark report and .13/.14
+   draft notes Not for distribution; draft-only edits, no publishing.
+3. ISSUE-027 stays S2/open; automatic passive module/context capture, no user data
+   or suppression; document in audit packet.
+4. Windows Settings > Apps official uninstall route approved. Audit every shortcut
+   and registration, remove or correct bare-uninstaller entries, with tests.
+5. ThinkPad installed-app endurance instructions: same >=2h public audio/hash as
+   desktop, Turbo Vulkan and Small CPU, time/RTF/peak RAM/work cleanup. Surface M7.
+
+Record decisions in ledger/issues/ADRs. Never wait for Owner; commit and push
+checkpoints; no PR/publication/deletion. Update M6-report.md and stop.

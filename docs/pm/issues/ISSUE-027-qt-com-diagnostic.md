@@ -28,3 +28,10 @@ An empty capture is not a root-cause finding. Do not close this issue based on
 the HRESULT's name, an unreproduced run or a hypothesis about COM/accessibility.
 M6 report must name this unresolved item and any needed follow-up. Continue
 independent M6 work per the PM's autonomous instruction.
+
+## PM decision, 2026-10-24
+
+Keep open, S2. Add automatic passive recurrence capture of the producing module
+and native call context, with no user data and no exception suppression. A
+synthetic capture test proves the observer, never the actual diagnostic cause.
+Include its startup, storage and privacy boundaries in AUDIT-PACKET.md.

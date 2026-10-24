@@ -51,3 +51,9 @@ PE and license gates, protected destinations and complete uninstall lifecycle.
 This does not activate engine-v2 replacements. Ordinary production-pin CI
 40124502543 still fails the enabled Unicode case. ADR 0024 approval, reviewed
 new engine release preparation/publication and production-pin rerun remain.
+
+## PM decision, 2026-10-24
+
+ADR 0024 is approved. Prepare an exact engine-v3 draft and separate production
+pin branch m6-engine-v3-pins. Owner publication and PM confirmation are required
+before integrating those pins. No engine-v2 mutation and no premature closure.

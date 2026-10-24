@@ -1,5 +1,13 @@
 # M5 report - Packaging, installer and draft release pipeline
 
+## Not for distribution
+
+PM decision, 2026-10-24: .13/.14 are frozen Owner VM test drafts only. No build
+from the M5-only state is distributed to anyone. M5 merges after its VM pass,
+M6 merges immediately after, and the first build for real use is M7 from main
+after M6. No M5 code backport is planned.
+
+
 ## Summary
 
 M5 engineering work is complete on m5-installer; fresh standard-user VM

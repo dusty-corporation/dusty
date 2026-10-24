@@ -1,6 +1,6 @@
 # 0024 - Windows native Unicode paths
 
-- Status: Proposed; candidate build, activation pending PM/Owner
+- Status: Accepted by PM; production activation waits for publication confirmation
 - Date: 2026-10-24
 
 ## Context
@@ -9,7 +9,7 @@ ISSUE-026 demonstrates the pinned CLI receives lossy narrow command-line
 arguments on a legacy-code-page Windows installation. This affects ordinary
 non-ASCII Windows profile names, model folders and temporary audio paths.
 
-## Proposed decision
+## Decision
 
 Embed activeCodePage=UTF-8 and longPathAware in the existing whisper.cpp EXEs
 at link time. Keep all CPU dispatch, no-network and VAD patch settings. Verify
@@ -30,3 +30,11 @@ system locale, rely on optional 8.3 aliases, relocate private work outside app
 data, or modify an executable at runtime. The proposed manifest is build input,
 not an application-time workaround. Keep the failing integration test enabled
 until the candidate has been activated and the full app gates pass.
+
+## PM approval, 2026-10-24
+
+Prepare engine-v3 as a draft from exact native run 40110881732 at
+d0abc304942255a1d30d741fff0ca98c2c1cdf45, already gated by app run 40125892713.
+Keep engine-v2 unchanged. Owner publishes engine-v3 as a prerelease, not latest.
+Prepare the pin switch only on m6-engine-v3-pins based on m6-hardening; do not
+merge it before the PM confirms publication.

@@ -1282,3 +1282,18 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - M5 code diff from 062d1f1 empty; only authorized M5 docs d4ee428. .13/.14
   identities unchanged. SPEC, lockfile, catalog and metadata unchanged on M6.
   No PR/merge, publication or deletion of branches/tags/releases/runs. Stop.
+
+### M6 PM decisions, 2026-10-24
+
+- ADR 0024 accepted: exact engine-v3 draft preparation doing; native 40110881732,
+  d0abc30, gated app 40125892713. Separate m6-engine-v3-pins, no integration until
+  PM confirms Owner publication. engine-v2 remains immutable. ISSUE-026 stays open.
+- No M5 backport: M5 VM pass/merge then immediate M6 merge; never distribute M5-only
+  state; first real-use M7 build from main after M6. ISSUE-028/M5 report updated;
+  .13/.14 draft-note updates queued.
+- ISSUE-027 remains open S2; automatic passive module/context capture doing, no
+  user content or suppression.
+- ADR 0008 updated: official Settings > Apps route approved. Full shortcut/registry
+  audit queued, including Inno QuietUninstallString.
+- ThinkPad >=2h installed Turbo Vulkan/Small CPU protocol queued, same public
+  source/hash as desktop; Surface endurance belongs to M7.

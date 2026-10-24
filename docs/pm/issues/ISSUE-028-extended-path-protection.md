@@ -58,3 +58,9 @@ Final candidate 40125892713 (fc2c6e5) passed every job, both installed-protectio
 spellings, the actual one-confirmation UI, installed inventory/PE/WFP/canary,
 both uninstall choices, cancellation/retry and unchanged output sentinels.
 The complete native lifecycle now has a passing receipt; M5 remains frozen.
+
+## PM distribution decision, 2026-10-24
+
+No M5 backport. M5 merges after the Owner VM pass, then M6 merges immediately.
+No M5-only build is distributed to anyone. The first build for real use is M7
+from main after M6. Frozen .13/.14 are test-only and not for distribution.
