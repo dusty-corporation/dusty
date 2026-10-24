@@ -26,7 +26,7 @@ $sentinel = Join-Path $outputs 'keep.txt'
 'public test output sentinel' | Set-Content -LiteralPath $sentinel -Encoding utf8NoBOM
 $sentinelHash = (Get-FileHash -LiteralPath $sentinel).Hash
 
-function Invoke-Checked([string]$Executable, [string[]]$Arguments) {
+function Invoke-Checked([string]$Executable, [string[]]$Arguments, [int]$ExpectedExit = 0) {
     $psi = [Diagnostics.ProcessStartInfo]::new()
     $psi.FileName = $Executable
     $psi.UseShellExecute = $false
@@ -36,7 +36,7 @@ function Invoke-Checked([string]$Executable, [string[]]$Arguments) {
     $p.StartInfo = $psi
     [void]$p.Start()
     if (-not $p.WaitForExit(600000)) { $p.Kill($true); throw 'Installer acceptance process timed out' }
-    if ($p.ExitCode -ne 0) { throw "Installer acceptance exit_code=$($p.ExitCode)" }
+    if ($p.ExitCode -ne $ExpectedExit) { throw "Installer acceptance exit_code=$($p.ExitCode) expected=$ExpectedExit" }
 }
 function Install-App {
     Write-Host 'acceptance: install or upgrade'
@@ -122,4 +122,26 @@ try {
 Uninstall-App 'yes'
 Assert-Output
 if ((Test-Path -LiteralPath $data) -or (Test-Path -LiteralPath (Join-Path $install 'dusty/dusty.exe'))) { throw 'Final fresh-install cleanup left owned files' }
-@{silent_per_user_install='passed';installer_download_tiny_and_vad='passed';current_installer_fresh_download_wfp='passed';installed_wfp='passed';two_distinct_versions=$twoVersions;upgrade_models_preserved_with_downloader_blocked='passed';uninstall_keep_models='passed';uninstall_remove_models='passed';user_outputs_unchanged=$true} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $work 'summary.json') -Encoding utf8NoBOM
+# Exercise the same stop routine as Cancel/X after real partial bytes arrive.
+# The flag is honored only for explicit silent acceptance on a disposable CI runner.
+$completeAudit = Get-Content -LiteralPath (Join-Path $work 'download-wfp.json') -Raw
+$audit = Start-InstallerAudit $work
+try {
+    Invoke-Checked $Installer @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/CURRENTUSER','/ACCEPTTERMS=yes','/ALLOWDOWNLOAD=yes','/MODELS=tiny','/TESTCANCEL=yes',('/DIR='+$install)) 130
+    if (@(Get-ChildItem -LiteralPath (Join-Path $data 'models') -Filter '*.part').Count) { throw 'Normal stop left an active partial' }
+    # Completion racing a stop may keep a final model, but only a verified one.
+    if (Test-Path -LiteralPath (Join-Path $data 'models/ggml-tiny.bin')) {
+        Invoke-Checked (Join-Path $install 'dusty-fetch/dusty-fetch.exe') @('verify','--id','tiny','--dest',(Join-Path $data 'models'),'--manifest',(Join-Path $install 'resources/models.json'))
+    }
+    Complete-InstallerAudit $audit $Installer $work
+    Copy-Item -LiteralPath (Join-Path $work 'download-wfp.json') -Destination (Join-Path $work 'download-wfp-cancel.json')
+    # Retain the full successful-download receipt as the primary release audit.
+    Set-Content -LiteralPath (Join-Path $work 'download-wfp.json') -Value $completeAudit -Encoding utf8NoBOM
+} finally { Stop-InstallerAudit $audit }
+Assert-Output
+Install-App
+Save-UserState
+Uninstall-App 'yes'
+Assert-Output
+if ((Test-Path -LiteralPath $data) -or (Test-Path -LiteralPath (Join-Path $install 'dusty/dusty.exe'))) { throw 'Cancelled-install retry cleanup left owned files' }
+@{silent_per_user_install='passed';installer_download_tiny_and_vad='passed';current_installer_fresh_download_wfp='passed';installed_wfp='passed';two_distinct_versions=$twoVersions;upgrade_models_preserved_with_downloader_blocked='passed';uninstall_keep_models='passed';uninstall_remove_models='passed';normal_cancel_removes_partial='passed';user_outputs_unchanged=$true} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $work 'summary.json') -Encoding utf8NoBOM

@@ -1,5 +1,7 @@
 { Shared production and review page controls. No installer HTTP calls. }
 function InitializeUninstall: Boolean; forward;
+procedure FinishStopped; forward;
+procedure StopModelSetup(Confirm: Boolean); forward;
 #ifdef ReviewOnly
 procedure ReviewTick; forward;
 #endif
@@ -203,12 +205,20 @@ begin
 end;
 
 procedure PollChild(A, B, C, D: LongWord);
-var Code: LongWord; I: Integer; Memory: TMemoryStatus; S: AnsiString;
+var Code: LongWord; I: Integer; Memory: TMemoryStatus; S: AnsiString; Prefix, Expected: Int64; Part: String;
 begin
 #ifdef ReviewOnly
   ReviewTick;
   Exit;
 #endif
+  { Explicit, disposable CI acceptance: stop a real transfer after bytes arrive. }
+  if WizardSilent and (GetEnv('GITHUB_ACTIONS') = 'true') and
+     (ExpandConstant('{param:TESTCANCEL|}') = 'yes') and (Stage = 1) and not StopRequested then begin
+    if Downloads[DownloadIndex] < 0 then begin Part := '@@VAD_FILE@@'; Expected := @@VAD_BYTES@@; end
+    else begin Part := ModelFiles[Downloads[DownloadIndex]]; Expected := ModelBytes[Downloads[DownloadIndex]]; end;
+    if FileSize64(ExpandConstant('{localappdata}\Dusty\models\') + Part + '.part', Prefix) then
+      if (Prefix > 0) and (Prefix < Expected) then begin StopModelSetup(False); Exit; end;
+  end;
   if DownloadStarted and Busy then ShowAmount;
   if (Stage = -1) and (Child.Process <> 0) and (Tick - ProbeBegan > 7000) then begin
     ReleaseChild; ShowMemoryWarning; CheckExistingModels; Exit;
@@ -243,6 +253,7 @@ begin
     Phase.Caption := CustomMessage('FinishedWithout');
     WizardForm.NextButton.Enabled := True;
     WizardForm.NextButton.Caption := SetupMessage(msgButtonNext);
+    if StopRequested then FinishStopped;
     Exit;
   end;
   if Stage = 6 then begin
@@ -368,6 +379,61 @@ begin
   CpuButton.Visible := False; WithoutButton.Visible := False;
 end;
 
+procedure FinishStopped;
+var I: Integer;
+begin
+  { Use Inno's ordinary finish/cleanup, with no postinstall application launch. }
+  if WizardForm.CurPageID = ReturnModelsPage.ID then
+    WizardForm.NextButton.OnClick(WizardForm.NextButton);
+  if WizardForm.CurPageID = DownloadPage.ID then
+    WizardForm.NextButton.OnClick(WizardForm.NextButton);
+  if WizardForm.CurPageID = wpFinished then begin
+    for I := 0 to WizardForm.RunList.Items.Count - 1 do WizardForm.RunList.Checked[I] := False;
+    WizardForm.NextButton.OnClick(WizardForm.NextButton);
+  end;
+end;
+
+procedure StopModelSetup(Confirm: Boolean);
+begin
+  if StopRequested then Exit;
+  if Busy and Confirm then
+    if SuppressibleMsgBox(CustomMessage('StopInstall'), mbConfirmation, MB_YESNO, IDNO) <> IDYES then Exit;
+  StopRequested := True;
+  if InstallationReady then begin ReleaseChild; FinishStopped; end
+  else begin
+    WithoutClick(nil);
+    if not Busy and FinishedWithout then FinishStopped;
+  end;
+end;
+
+procedure SetupCancelClick(Sender: TObject);
+begin
+#ifndef ReviewOnly
+  if (WizardForm.CurPageID = DownloadPage.ID) or (WizardForm.CurPageID = ReturnModelsPage.ID) then begin
+    StopModelSetup(True); Exit;
+  end;
+#endif
+  OriginalCancelClick(Sender);
+end;
+
+procedure SetupCloseQuery(Sender: TObject; var CanClose: Boolean);
+begin
+#ifndef ReviewOnly
+  if (WizardForm.CurPageID = DownloadPage.ID) or (WizardForm.CurPageID = ReturnModelsPage.ID) then begin
+    CanClose := False;
+    StopModelSetup(True); Exit;
+  end;
+#endif
+  if Assigned(OriginalCloseQuery) then OriginalCloseQuery(Sender, CanClose);
+end;
+
+procedure EnableModelPageCancel;
+begin
+  WizardForm.CancelButton.Visible := True;
+  WizardForm.CancelButton.Enabled := True;
+  SetupEnableMenuItem(SetupSystemMenu(WizardForm.Handle, False), $F060, 0);
+end;
+
 procedure ModelsClick(Sender: TObject);
 begin
   ModelsTouched := True;
@@ -432,6 +498,10 @@ begin
   CpuButton := NewButton(DownloadPage.Surface, 105, 192, 220, CustomMessage('RetryCpu'), @CpuClick);
   WithoutButton := NewButton(DownloadPage.Surface, 335, 192, 215, CustomMessage('FinishWithout'), @WithoutClick);
   RetryButton.Visible := False; CpuButton.Visible := False; WithoutButton.Visible := False;
+  OriginalCancelClick := WizardForm.CancelButton.OnClick;
+  WizardForm.CancelButton.OnClick := @SetupCancelClick;
+  OriginalCloseQuery := WizardForm.OnCloseQuery;
+  WizardForm.OnCloseQuery := @SetupCloseQuery;
   Timer := SetTimer(0, 0, 100, CreateCallback(@PollChild));
 end;
 
@@ -439,6 +509,7 @@ procedure CurPageChanged(Page: Integer);
 var Code: Integer; I, Count: Integer; Mode: String;
 begin
   if Page = ReturnModelsPage.ID then begin
+    EnableModelPageCancel;
     ModelsPage.CheckListBox.Parent := ReturnModelsPage.Surface;
     VoiceNotice.Parent := ReturnModelsPage.Surface;
     AccuracyNotice.Parent := ReturnModelsPage.Surface;
@@ -457,6 +528,7 @@ begin
 #endif
   end;
   if Page = DownloadPage.ID then begin
+    EnableModelPageCancel;
     WizardForm.BackButton.Visible := True;
     WizardForm.BackButton.Enabled := not DownloadStarted;
     WizardForm.NextButton.Enabled := not DownloadStarted or InstallationReady or FinishedWithout;
@@ -504,6 +576,9 @@ begin
 #endif
   end;
   if Page = wpFinished then begin
+    WizardForm.BackButton.Visible := False;
+    if StopRequested then
+      for I := 0 to WizardForm.RunList.Items.Count - 1 do WizardForm.RunList.Checked[I] := False;
     if FinishedWithout then WizardForm.FinishedLabel.Caption := CustomMessage('FinishedWithout')
     else WizardForm.FinishedLabel.Caption := SuccessText;
   end;
@@ -522,6 +597,7 @@ function NextButtonClick(CurPageID: Integer): Boolean;
 var I, Count: Integer; Info: TJobLimits32;
 begin
   Result := True;
+  if StopRequested then Exit;
   if (CurPageID = ModelsPage.ID) or (CurPageID = ReturnModelsPage.ID) then begin
     Count := 0; for I := 0 to GetArrayLength(ModelIds) - 1 do if ModelsPage.Values[I] then Count := Count + 1;
     Result := Count > 0;
@@ -556,6 +632,7 @@ begin
   if (CurStep = ssPostInstall) and WizardSilent then begin
     DownloadClick(nil);
     while Busy do begin Sleep(100); PollChild(0, 0, 0, 0); end;
+    if StopRequested then Exit;
     if not InstallationReady then RaiseException(CustomMessage('SelfTestFailed'));
   end;
 end;
@@ -577,7 +654,8 @@ end;
 
 function GetCustomSetupExitCode: Integer;
 begin
-  if InstallationReady or FinishedWithout then Result := 0 else Result := 10;
+  if StopRequested then Result := 130
+  else if InstallationReady or FinishedWithout then Result := 0 else Result := 10;
 end;
 
 function UninstallModelSize: String;

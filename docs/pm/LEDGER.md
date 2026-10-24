@@ -1008,3 +1008,16 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   (566.2 MB). This verifies the native return-page data binding, not just text.
 - Closed the verified own preview process after QA. Final screenshots will use
   the later gated build with UTF-8 size reading and safe consistent examples.
+
+### M5 post-copy cancellation correction (ISSUE-021)
+
+- Pinned Inno MainForm.Close only handles pre-install/install steps. The model
+  page occurs after file installation, so its original Cancel/X path was inert.
+  Fixed with explicit button/Close-query callbacks and normal Finish/cleanup,
+  no app launch, active partial removal and exit code 130. No abrupt self-kill.
+- Added CI-only real-prefix cancellation acceptance under calibrated WFP, then
+  retry/uninstall/sentinel checks. Its separate cancellation audit is retained;
+  the complete-download audit stays the primary receipt. Final tag staging now
+  requires the normal-cancel pass as well. No release upload gate was relaxed.
+- Source invariants and native CI compilation/acceptance pending. Owner VM must
+  still exercise the actual Cancel button, Escape and X; preview is not proof.

@@ -178,3 +178,15 @@ Verified against the pinned Inno Setup 6.7.3 source already retained for ADR 002
 The native window inspection and the fresh standard-user VM remain separate
 from compiler/source checks. The VM must confirm Open Dusty now survives Setup
 exit, Back changes models before download, and uninstall works at both scales.
+
+### Post-copy normal cancellation
+
+Pinned Setup.MainForm.Close handles only ssPreInstall and ssInstall, and native
+button visibility disables Cancel after wpInstalling. Both post-copy model pages
+therefore explicitly enable Cancel/Close and bind Cancel.OnClick and OnCloseQuery
+to a shared stop routine. The previous handlers remain for all earlier pages.
+The stop path uses Inno's ordinary Finish processing with every postinstall run
+unchecked, never ExitProcess; custom exit code is 130. Failed defaults are cleared
+before finishing. A CI-only explicit TESTCANCEL parameter is gated by silent mode
+and GITHUB_ACTIONS=true; it stops only after real prefix bytes arrive, exercising
+the same routine under calibrated WFP before retry/uninstall acceptance.

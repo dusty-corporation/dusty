@@ -106,6 +106,7 @@ def test_final_release_rejects_missing_or_false_upgrade_and_wfp_evidence(tmp_pat
         "upgrade_models_preserved_with_downloader_blocked": "passed",
         "uninstall_keep_models": "passed",
         "uninstall_remove_models": "passed",
+        "normal_cancel_removes_partial": "passed",
         "user_outputs_unchanged": True,
     }
     audit = dict(installer=0, gui=0, native=0, fetch_allowed=4, fetch_blocked=0)
@@ -120,6 +121,11 @@ def test_final_release_rejects_missing_or_false_upgrade_and_wfp_evidence(tmp_pat
     with pytest.raises(ValueError, match="true upgrade"):
         stage(tmp_path / "input", tmp_path / "same-build", "v0.5.0-m5.6")
     receipt["two_distinct_versions"] = True
+    receipt["normal_cancel_removes_partial"] = "failed"
+    summary.write_text(json.dumps(receipt))
+    with pytest.raises(ValueError):
+        stage(tmp_path / "input", tmp_path / "cancel-failed", "v0.5.0-m5.6")
+    receipt["normal_cancel_removes_partial"] = "passed"
     summary.write_text(json.dumps(receipt))
     audit["installer"] = 1
     wfp.write_text(json.dumps(audit))

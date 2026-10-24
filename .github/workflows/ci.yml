@@ -252,6 +252,7 @@ jobs:
             build/installer/installer-jedi-source.zip
             build/installer/acceptance/summary.json
             build/installer/acceptance/download-wfp.json
+            build/installer/acceptance/download-wfp-cancel.json
           if-no-files-found: error
       - name: Preserve installer draft audit metadata even when policy blocks binaries
         if: always()

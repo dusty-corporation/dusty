@@ -113,6 +113,10 @@ function TerminateChild(Process, Code: LongWord): Boolean;
   external 'TerminateProcess@kernel32.dll stdcall';
 function Tick: Int64;
   external 'GetTickCount64@kernel32.dll stdcall';
+function SetupSystemMenu(Wnd: LongWord; Revert: Boolean): LongWord;
+  external 'GetSystemMenu@user32.dll stdcall';
+function SetupEnableMenuItem(Menu, Item, Flags: LongWord): LongWord;
+  external 'EnableMenuItem@user32.dll stdcall';
 #ifdef ReviewOnly
 function WindowDpi(Wnd: LongWord): LongWord;
   external 'GetDpiForWindow@user32.dll stdcall';
@@ -147,6 +151,9 @@ var
   DownloadActive: Boolean;
   DownloadStarted, ReturnModelsRequested: Boolean;
   TotalModelBytes, CompletedModelBytes: Int64;
+  StopRequested: Boolean;
+  OriginalCancelClick: TNotifyEvent;
+  OriginalCloseQuery: TCloseQueryEvent;
   DownloadJob: LongWord;
 
 function InitializeSetup: Boolean;

@@ -97,6 +97,14 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     assert "runasoriginaluser" in text and "skipifsilent" in text
     assert "(CurPageID = wpFinished) and not Busy" in text
     assert "Cancel.Default := True" in text
+    assert "WizardForm.CancelButton.OnClick := @SetupCancelClick" in text
+    assert "WizardForm.OnCloseQuery := @SetupCloseQuery" in text
+    assert "WizardForm.CancelButton.Visible := True" in text
+    assert "SetupEnableMenuItem(SetupSystemMenu" in text
+    stop = text.split("procedure FinishStopped;\n", 1)[1].split("procedure ModelsClick", 1)[0]
+    assert "WizardForm.RunList.Checked[I] := False" in stop
+    assert "ExitProcess" not in stop
+    assert "if StopRequested then Result := 130" in text
     size_reader = text.split("function UninstallModelSize", 1)[1].split("procedure ReviewTick", 1)[
         0
     ]
