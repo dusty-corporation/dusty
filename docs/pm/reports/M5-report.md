@@ -1,16 +1,13 @@
 # M5 report - Packaging, installer and draft release pipeline
 
-## S0 STOP: ISSUE-020
+## ISSUE-020 repair in progress
 
-**M5 is blocked and must not be released or installed for acceptance.** Final
-self-review confirmed that startup/installer self-test cleanup can recursively
-delete a saved transcript destination inside app-managed work areas. Three
-repository-local synthetic preservation tests failed in 0.38 s; no Owner files
-were read or changed. See [ISSUE-020](../issues/ISSUE-020-work-cleanup-deletes-transcripts.md)
-and [M5-interim-8.md](M5-interim-8.md) for evidence and the proposed repair.
-Milestone implementation stopped under AGENTS rule 2 / SPEC NN-7. Active builds
-were requested cancelled; enabled failing regressions block downstream packaging.
-Historical green evidence below does not supersede this data-loss failure.
+PM approved the ownership repair on 2026-10-23. It is pushed with the original
+three regressions enabled, expanded reparse/destination/unknown-content tests,
+and a complete delete-call sweep in [M5-interim-9.md](M5-interim-9.md). Final
+source, packaged, installed WFP and uninstall gates are running. Keep affected
+historical drafts unpublished and postpone VM acceptance until a repaired build
+is identified below. No Owner files were inspected or changed.
 
 ## Summary
 
@@ -23,13 +20,13 @@ remain outstanding. No PR, merge or published release is authorized or created.
 
 ## Owner actions for the morning
 
-0. PM: approve the focused cleanup-ownership repair in M5-interim-8.md. Keep M5
-   drafts unpublished and postpone the installer/VM checklist. If any real files
+0. The ownership repair is approved. Keep historical M5 drafts unpublished and
+   wait for the repaired build identified in this report before VM acceptance. If any real files
    are under Dusty's app-managed work folders, back them up manually before
    launching/updating affected builds; the agent has not inspected the real profile.
-1. PM: review M5-interim-2.md and its draft screenshot bundle before requesting
-   any further installer wording/layout changes.
-2. Owner: enable AMD SVM, set up the Windows 11 VM, and return each numbered
+1. PM page decisions have arrived. Their implementation follows green repair
+   gates; a new page-review screenshot bundle will replace the earlier review.
+2. Owner: AMD SVM is now enabled (2026-10-23). Set up the VM and return each numbered
    result from docs/pm/M5-checklist.md. Windows 11 Home uses VirtualBox 7.2.22;
    no host security setting will be changed by this agent.
 3. Check real-device model inference and CPU retry where possible. VirtualBox
