@@ -168,7 +168,10 @@ class OwnedWork:
                     raise ValueError("Work inventory must be flat")
                 file = self.path / name
                 if file.exists() and not linked(file) and file.is_file():
-                    self.files[name] = _fingerprint(file)
+                    digest = _fingerprint(file)
+                    if name in self.files and self.files[name] != digest:
+                        raise ValueError("Previously recorded work changed")
+                    self.files[name] = digest
             data = self._data()
             with marker.open("wb") as stream:
                 stream.write(data)
@@ -178,7 +181,12 @@ class OwnedWork:
             _LOG.info("work_cleanup=preserved")
 
     def cleanup(self, user_dir: Path) -> bool:
-        if not self.valid:
+        try:
+            marker = self.path / MARKER
+            current = not linked(marker) and marker.read_bytes() == self._marker_bytes
+        except OSError:
+            current = False
+        if not self.valid or not current:
             _LOG.info("work_cleanup=preserved")
             return False
         return cleanup_owned(self.path, protected=protected_paths(user_dir))
