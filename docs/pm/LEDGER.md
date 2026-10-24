@@ -983,3 +983,13 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   installation guides. No cleanup sweep of user transcript folders.
 - M5 f9b39f9 full source 339 passed/1 skip, 94.2%; all 49 adversarial cases pass.
   Final native repaired pair still pending; no M6 acceptance or PR.
+
+### M6 docs v2 final M5 evidence mirror
+
+- Mirrored final checklist/report and ISSUE-023/024 closures from M5 00d2b04.
+  Safe drafts .11/.12, runs 40099284709 and 40100326932 all jobs green.
+- Final CI 354 passed/2 skips + explicit real-network 1 pass; 94.7% required
+  coverage. 49 adversarial cases, installed legacy protection and safe upgrade
+  receipts pass. Exact hashes and Owner VM commands are in the copied checklist.
+- Production/test/tool/workflow parity remains exact; no M6 acceptance, new
+  feature, PR or publication. Reference branches remain untouched.

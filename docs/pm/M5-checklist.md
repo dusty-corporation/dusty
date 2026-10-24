@@ -5,10 +5,6 @@ Owner runs this on a disposable VM, not on the host installation. Allow about
 number, installer versions, guest Windows build and screenshots of failures.
 Do not send recordings, transcript contents, settings or raw Security logs.
 
-Second-review notice: .9/.10 below are the historical test pair, superseded by
-ISSUE-023's preservation repair. Use only public/synthetic files in the disposable
-VM. The final .11/.12 pair and exact hashes will replace these entries after gates.
-
 ## Owner actions before testing
 
 1. Owner confirmed AMD SVM enabled on 2026-10-23. Check it remains enabled.
@@ -36,7 +32,8 @@ VM. The final .11/.12 pair and exact hashes will replace these entries after gat
    without a Microsoft account. Create DustyTester; its Account type must be
    Standard User. Sign out, then sign in as DustyTester. Keep the administrator
    account separate. Dusty must never request its credentials.
-7. Take the snapshot named clean before installing Dusty. Shared clipboard and
+7. Configure the read-only auto-mounted share described below before taking
+   the snapshot named clean, so it is present after a revert. Shared clipboard and
    drag/drop can remain off; enable only the read-only shared folder below. The VM normally exposes no physical
    Vulkan GPU, so Small pre-selection is expected; it cannot prove Iris Xe use.
    Set the guest display to 1920 x 1080 and 100% before baseline tests, then
@@ -55,18 +52,18 @@ identified by Dusty. Do not download an unofficial Windows image.
 
 The Owner is creating Dusty-M5: Windows 11 Home, 8 GB, 4 CPUs, 80 GB VDI,
 VBoxSVGA, standard user DustyTester, snapshot clean. Keep that configuration.
-Earlier: **v0.5.0-m5.9**, CI 40067407725. Later: **v0.5.0-m5.10**, CI 40068461160.
-Both are successful DRAFT releases. The latter tested the real .9 to .10 upgrade.
-Do not use .1 through .8. Do not publish any release.
+Earlier: **v0.5.0-m5.11**, CI 40099284709. Later: **v0.5.0-m5.12**, CI 40100326932.
+Both are successful DRAFT releases. The latter tested the real .11 to .12 upgrade.
+Do not use .1 through .10. Do not publish any release.
 
 Run on the HOST in PowerShell, using the Owner's authenticated gh:
 
 ```powershell
 $vmShare = 'C:\Users\kdash\bench\m5-vm'
-New-Item -ItemType Directory -Force -Path $vmShare, "$vmShare\m5.9", "$vmShare\m5.10" | Out-Null
-gh release download v0.5.0-m5.9 --repo dusty-corporation/dusty --dir "$vmShare\m5.9"
+New-Item -ItemType Directory -Force -Path $vmShare, "$vmShare\m5.11", "$vmShare\m5.12" | Out-Null
+gh release download v0.5.0-m5.11 --repo dusty-corporation/dusty --dir "$vmShare\m5.11"
 if ($LASTEXITCODE -ne 0) { throw 'Earlier draft download failed' }
-gh release download v0.5.0-m5.10 --repo dusty-corporation/dusty --dir "$vmShare\m5.10"
+gh release download v0.5.0-m5.12 --repo dusty-corporation/dusty --dir "$vmShare\m5.12"
 if ($LASTEXITCODE -ne 0) { throw 'Later draft download failed' }
 Copy-Item -LiteralPath 'C:\Users\kdash\whisper_app\tests\fixtures\audio\formats\jfk.wav' -Destination "$vmShare\jfk.wav"
 ```
@@ -84,13 +81,13 @@ In the GUEST, signed in as DustyTester, copy locally before running anything:
 if ($env:USERNAME -ne 'DustyTester') { throw 'Run this inside the VM as DustyTester' }
 $vmDownloads = Join-Path $env:USERPROFILE 'Downloads\M5-check'
 New-Item -ItemType Directory -Force -Path $vmDownloads | Out-Null
-Copy-Item -LiteralPath '\\VBOXSVR\m5-vm\m5.9' -Destination $vmDownloads -Recurse
-Copy-Item -LiteralPath '\\VBOXSVR\m5-vm\m5.10' -Destination $vmDownloads -Recurse
+Copy-Item -LiteralPath '\\VBOXSVR\m5-vm\m5.11' -Destination $vmDownloads -Recurse
+Copy-Item -LiteralPath '\\VBOXSVR\m5-vm\m5.12' -Destination $vmDownloads -Recurse
 Copy-Item -LiteralPath '\\VBOXSVR\m5-vm\jfk.wav' -Destination $vmDownloads
-$earlier = Join-Path $vmDownloads 'm5.9\Dusty-0.5.0-m5.9-draft-unsigned.exe'
-$later = Join-Path $vmDownloads 'm5.10\Dusty-0.5.0-m5.10-draft-unsigned.exe'
-if ((Get-FileHash -LiteralPath $earlier -Algorithm SHA256).Hash -ne '9605ab888149228322c9f02c6d0101ddcb6e51cbb769a72f7128fee4936f5997') { throw 'Earlier installer hash mismatch' }
-if ((Get-FileHash -LiteralPath $later -Algorithm SHA256).Hash -ne '5c5d1972bbc2d71636546bdd805f1baf19792b50ba832410bd575b9e6c4cf337') { throw 'Later installer hash mismatch' }
+$earlier = Join-Path $vmDownloads 'm5.11\Dusty-0.5.0-m5.11-draft-unsigned.exe'
+$later = Join-Path $vmDownloads 'm5.12\Dusty-0.5.0-m5.12-draft-unsigned.exe'
+if ((Get-FileHash -LiteralPath $earlier -Algorithm SHA256).Hash -ne '7dd7ac6d67a5cd175e2acec2956a0090c64fe3e05ff17a54393854efc7b4bac9') { throw 'Earlier installer hash mismatch' }
+if ((Get-FileHash -LiteralPath $later -Algorithm SHA256).Hash -ne 'bf2b137b014e26723643f3512ca5ce7d57f7e25f831a27402c88af0d1b38cd54') { throw 'Later installer hash mismatch' }
 Get-FileHash -LiteralPath $earlier,$later -Algorithm SHA256
 ```
 
