@@ -1082,3 +1082,16 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   and block. Strict installed gate unchanged. Focused regressions: 18 passed.
 - m6-docs-v2 7ec6c59 has implementation parity through d90d706 and updated guides.
   Reference m6-docs/c855b52 and m5-packaging-spike/95dd90b remain unchanged.
+
+### M5 upgrade repair source acceptance
+
+- ca6ff44 full local source: 302 passed/1 expected skip in 213.10 s, 94.2%
+  required coverage. Focused upgrade/generation/release tests: 18 passed.
+- Local pytest-qt prints Windows 0x8001010d during the event-loop test, but
+  continues and exits 0; focused recheck also 1 passed/exit 0. Recorded in
+  AUDIT-NOTES.md without suppressing the diagnostic or changing assertions.
+- Earlier docs-only CI 40066264053 failed an offline child with exit_code=1;
+  source-identical output-row CI 40066065751 and subsequent .9 offline gates
+  pass. No cause is invented and no failed run is counted as green evidence.
+- .9 run 40067407725 source/offline/upload regression green; native installer
+  compiling. Strict installed inventory and both-version receipts still required.

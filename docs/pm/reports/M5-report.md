@@ -102,6 +102,39 @@ manifest size/SHA checks. Setup/GUI/probe/native connection events must be zero.
 Static no-network has zero exceptions; audit hook, excluded networking modules,
 exact pinned platform PE exceptions and dynamic WFP remain enforced.
 
+## What was built
+
+PyInstaller split-layout specs and inventory tools; generated Inno template and
+shared wizard controller; guarded offline installer/probe/upgrade helpers;
+calibrated packaged/installed/download WFP harnesses; strict PE, provenance and
+license gates; tag-only draft release staging; SmartScreen guide and VM checklist.
+This round also aligns the main output row and adds 100%/150% Qt review captures.
+
+## Deviations from the original SPEC
+
+- Apache-2.0 replaces MIT by Owner decision ([ADR 0012](../../adr/0012-license.md)).
+- Standard-library DOCX replaces shipped python-docx/lxml; separate app/fetch
+  onedir folders and exact platform primitive pins follow accepted
+  [ADR 0019](../../adr/0019-standard-library-docx-writer.md) and
+  [ADR 0021](../../adr/0021-platform-socket-primitive-imports.md).
+- Runtime redistribution and installer-only exceptions follow
+  [ADR 0020](../../adr/0020-visual-cpp-runtime-redistribution-exception.md),
+  [ADR 0023](../../adr/0023-inno-installer-license.md), and the
+  [PyInstaller exception](../../adr/0014-pyinstaller-bootloader-license-exception.md).
+- The bundled hardened fetch process replaces Inno's network downloader
+  ([ADR 0022](../../adr/0022-installer-model-downloads.md)). PM-approved bounded
+  real-GPU/RAM selection, failure/CPU retry and Finish without supersede the brief's
+  earlier assumptions. No portable release is produced.
+
+## Issues
+
+| Issue | Severity | Status | Outcome |
+|---|---|---|---|
+| 013 to 019 | S0/S1, historical | Resolved | Approved runtime/installer licensing, removed networking extras, exact pins and upload ordering gates. |
+| 020 | S0 | Resolved | Ownership-only work cleanup and protected destinations; final repair CI 40061186069. |
+| 021 | S1 | Resolved | Native post-copy Cancel/X stop path; CI 40065869279. |
+| 022 | S1 | Repair rerun pending | Exact obsolete own-license copies, preserving unknown/changed files; .8 correctly blocked. |
+
 ## Final draft builds and release assets
 
 `v0.5.0-m5.8` / 40066137913 failed true-upgrade inventory: old versioned own
