@@ -1476,3 +1476,19 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   (already contains frozen M5 plus all repairs/prework docs), use it to resolve
   these known overlaps after the Owner merges M5, preserve unrelated main edits,
   then require tree comparison and all gates. No branch/history rewrite performed.
+
+### Native shortcut audit correction
+
+- 40132812499: full source/live-CA/offline and packaged WFP/PE/licenses pass.
+  Initial Setup passes: installer/GUI/native 0, fetch allowed 4 / blocked 0;
+  upgrade with fetch blocked preserves models, installed inventory 227 matches.
+  Mandatory shortcut audit sees zero owned targets via WScript.Shell, fails;
+  no installer binary uploaded. Inno logs show both shortcuts created.
+- Reproduced WScript rejection of a Unicode target locally. Replace only the
+  CI reader with stdlib ctypes IShellLinkW/IPersistFile, RAWPATH/no Resolve;
+  real Unicode links, bare uninstaller rejection and missing-shortcut failure
+  pass. Keep required count and argument gates, no waiver.
+- ISSUE-032 final review: initial hash verification of a damaged final file must
+  not briefly count existing bytes as a new transfer; meter reads current bytes
+  only during download/post-download verification, never initial verify.
+- Full candidate rerun required after reader/one-condition correction.

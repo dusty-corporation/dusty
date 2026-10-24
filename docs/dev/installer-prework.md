@@ -202,3 +202,20 @@ own-license pairs matching the new bundled bytes are removed. All old folders
 are preflighted, hashes rechecked before unlink, reparse/protected/unknown or
 changed contents preserved, and directories removed only when empty. A blocked
 migration gives a shared plain message; models and transcripts are not targets.
+
+
+## Unicode shortcut audit
+
+The CI entry audit uses Windows Unicode IShellLinkW through IPersistFile.Load,
+GetPath(SLGP_RAWPATH) and GetArguments. It never calls Resolve, launches a target
+or saves a real installed link. WScript.Shell rejected an actual Unicode target
+in a repository-local fixture and returned no owned entries in the runner.
+Two Unicode native links and bare-route rejection are now tested through the
+W interface. No new dependency or shipped component. The same required two app
+shortcuts and approved uninstall arguments remain.
+
+API references: [IShellLinkW](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nn-shobjidl_core-ishelllinkw),
+[GetPath](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-ishelllinkw-getpath),
+[GetArguments](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-ishelllinkw-getarguments).
+The read buffer covers the Windows Unicode string limit; possible truncation
+fails. Fixture writers exist only in tests and never alter real shortcuts.

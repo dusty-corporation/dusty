@@ -97,7 +97,7 @@ procedure ShowAmount;
 var Bytes, Current: Int64; FileName: String;
 begin
   Current := 0;
-  if (Stage >= 0) and (Stage <= 2) and CurrentDownloadWanted then begin
+  if (Stage >= 1) and (Stage <= 2) and CurrentDownloadWanted then begin
     if Downloads[DownloadIndex] < 0 then FileName := '@@VAD_FILE@@'
     else FileName := ModelFiles[Downloads[DownloadIndex]];
     FileName := ExpandConstant('{localappdata}\Dusty\models\') + FileName;

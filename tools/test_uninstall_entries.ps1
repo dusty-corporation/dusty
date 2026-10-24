@@ -17,21 +17,9 @@ foreach ($value in $values.PSObject.Properties) {
         $registered += $value.Name
     }
 }
-$shell = New-Object -ComObject WScript.Shell
-$checked = @()
-try {
-    foreach ($root in @([Environment]::GetFolderPath('Programs'),[Environment]::GetFolderPath('DesktopDirectory'))) {
-        foreach ($file in @(Get-ChildItem -LiteralPath $root -Recurse -Filter '*.lnk' -File)) {
-            $link = $shell.CreateShortcut($file.FullName)
-            try {
-                $target = [string]$link.TargetPath
-                if (-not $target -or -not $target.StartsWith($InstallPath + '\',[StringComparison]::OrdinalIgnoreCase)) { continue }
-                $relative = [IO.Path]::GetRelativePath($InstallPath,$target)
-                if ([IO.Path]::GetFileName($target) -match '(?i)^unins[0-9]*\.exe$' -and $link.Arguments -ne '/SILENT /DUSTYCONFIRM=yes') { throw 'Shortcut launches a bare uninstaller' }
-                $checked += @{target=$relative;arguments=[string]$link.Arguments}
-            } finally { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($link) }
-        }
-    }
-} finally { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($shell) }
+$repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+$raw = & (Join-Path $repo '.venv/Scripts/python.exe') -m tools.audit_shortcuts $InstallPath ([Environment]::GetFolderPath('Programs')) ([Environment]::GetFolderPath('DesktopDirectory'))
+if ($LASTEXITCODE -ne 0) { throw 'Unicode shortcut target audit failed' }
+$checked = @($raw | ConvertFrom-Json)
 @{registered_commands=$registered;shortcuts=$checked;bare_uninstall_entries=0} | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $Output -Encoding utf8NoBOM
 if (@($checked | Where-Object { $_.target -eq (Join-Path 'dusty' 'dusty.exe') }).Count -ne 2) { throw 'Expected Start Menu and default Desktop app shortcuts' }

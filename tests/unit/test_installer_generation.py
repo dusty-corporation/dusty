@@ -121,7 +121,10 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
         "DownloadIndex := DownloadIndex + 1", 1
     )[0]
     assert "CompletedModelBytes" in credit
-    assert "CurrentDownloadWanted then begin" in text.split("procedure ShowAmount;", 1)[1]
+    assert (
+        "(Stage >= 1) and (Stage <= 2) and CurrentDownloadWanted"
+        in text.split("procedure ShowAmount;", 1)[1]
+    )
     assert "Check and test" in text
     assert "if (Stage = -4) or (Stage = -1)" in text
     assert "--installer-cancel-part --model " in text
