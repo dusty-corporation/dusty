@@ -130,3 +130,11 @@ models-v1, engine-v2 or any release. Ordinary push CI still tests engine-v2 and
 exposes ISSUE-026. Candidate green evidence must always name this explicit mode;
 it is not proof that a published app has switched engines. Never bypass gates
 or silently swap binaries to hide the production activation gap.
+
+The native confirmation driver reads cross-process control text with bounded
+WM_GETTEXT via SendMessageTimeoutW, as required by Microsoft
+[GetWindowTextW](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowtextw)
+and [SendMessageTimeoutW](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendmessagetimeoutw)
+(checked 2026-10-24). It ignores hidden staging windows and waits for initialized
+visible controls within the original deadline. Missing controls or a generic
+confirmation still fail; these checks do not bypass the actual checkbox action.

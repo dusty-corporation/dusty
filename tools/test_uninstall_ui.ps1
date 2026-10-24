@@ -20,12 +20,18 @@ public static class DustyUninstallUi {
   [DllImport("user32.dll")] static extern bool EnumWindows(EnumProc f, IntPtr p);
   [DllImport("user32.dll")] static extern bool EnumChildWindows(IntPtr h, EnumProc f, IntPtr p);
   [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
-  [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetWindowTextW(IntPtr h, StringBuilder b, int n);
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern IntPtr SendMessageTimeoutW(IntPtr h, uint m, UIntPtr w, StringBuilder b, uint flags, uint timeout, out UIntPtr result);
   [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetClassNameW(IntPtr h, StringBuilder b, int n);
   [DllImport("user32.dll")] public static extern IntPtr SendMessageW(IntPtr h, uint m, IntPtr w, IntPtr l);
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
   [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
-  public static string Text(IntPtr h) { var b=new StringBuilder(2048); GetWindowTextW(h,b,b.Capacity); return b.ToString(); }
+  public static string Text(IntPtr h) {
+    // WM_GETTEXT is marshalled across processes. GetWindowTextW is not a
+    // supported way to read another process's custom control text.
+    var b=new StringBuilder(2048); UIntPtr result;
+    if(SendMessageTimeoutW(h,0x000D,new UIntPtr((uint)b.Capacity),b,0x22,250,out result)==IntPtr.Zero) return "";
+    return b.ToString();
+  }
   public static string Class(IntPtr h) { var b=new StringBuilder(128); GetClassNameW(h,b,b.Capacity); return b.ToString(); }
   public static IntPtr[] Windows(IntPtr parent) {
     var r=new List<IntPtr>(); EnumProc f=(h,p)=>{r.Add(h);return true;};

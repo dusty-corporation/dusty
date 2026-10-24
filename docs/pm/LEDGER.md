@@ -1234,3 +1234,8 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   failure. Overall run remains failed; 40125713083 is the full rerun.
 - No M5 backport or production activation is implied. M5 docs-only d4ee428 and
   frozen tags are unchanged. PM must authorize any M5 code change separately.
+
+- Follow-up Win32 contract check: GetWindowTextW cannot reliably read custom
+  control text in another process. The driver now uses Microsoft-documented
+  WM_GETTEXT through SendMessageTimeoutW (250 ms, abort-if-hung/error-on-exit).
+  This corrects the discovery API while retaining actual native acceptance.
