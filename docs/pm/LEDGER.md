@@ -1213,3 +1213,8 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   requires its receipt; false/missing protection rejects release.
 - Filed ISSUE-025 (S0) and interim 11. New .13/.14 pair follows all gates, with
   no new policy exception, publication or deleted release/tag/run/branch.
+
+## M5 second-review installed boundary checkpoint, 2026-10-24
+- ISSUE-025 source/offline/package/installed WFP/native uninstall gates passed in release run 40104236818; final draft staging pending.
+- Added exact disposable-VM commands for the protected registered-payload case. Native uninstall must abort before removing app, metadata or synthetic private bytes.
+- Carried the safety repair to m6-docs-v2 c58fcf6, preserving its user documentation. Final repaired upgrade pair will be .13/.14; .11/.12 are superseded.

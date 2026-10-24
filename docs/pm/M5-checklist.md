@@ -173,6 +173,36 @@ Expected: the protected folder, sentinels, verified models and protection metada
 remain, with the retained-data notice. This deliberate legacy protection is not
 a normal clean-uninstall result. Revert clean before baseline uninstall tests.
 
+Test the installation-folder boundary separately from a clean disposable
+snapshot, after installing and closing Dusty. These commands create a synthetic
+legacy destination in the guest only. They replace the installed catalog with a
+sentinel, so do not launch Dusty afterwards; revert the snapshot after the test.
+
+```powershell
+if ($env:USERNAME -ne 'DustyTester') { throw 'Run only inside the test VM' }
+$installRoot = Join-Path $env:LOCALAPPDATA 'Programs\Dusty'
+$protectedResource = Join-Path $installRoot 'resources\models.json'
+$settingsFile = Join-Path $env:LOCALAPPDATA 'Dusty\settings.json'
+if (!(Test-Path -LiteralPath $protectedResource) -or !(Test-Path -LiteralPath $settingsFile)) { throw 'Install and close Dusty first' }
+$settings = Get-Content -LiteralPath $settingsFile -Raw | ConvertFrom-Json
+$settings | Add-Member -NotePropertyName preserved_paths -NotePropertyValue @((Join-Path $installRoot 'resources')) -Force
+[IO.File]::WriteAllText($settingsFile, ($settings | ConvertTo-Json -Depth 20), [Text.UTF8Encoding]::new($false))
+[IO.File]::WriteAllText($protectedResource, 'Owner VM synthetic private transcript: preserve this file', [Text.UTF8Encoding]::new($false))
+$before = (Get-FileHash -LiteralPath $protectedResource -Algorithm SHA256).Hash
+$uninstaller = Get-ChildItem -LiteralPath $installRoot -Filter 'unins*.exe' | Select-Object -First 1
+if (!$uninstaller) { throw 'Uninstaller not found' }
+$result = Start-Process -FilePath $uninstaller.FullName -Wait -PassThru
+if ($result.ExitCode -ne 1) { throw 'Expected protected-folder uninstall to stop with exit code 1' }
+if (!(Test-Path -LiteralPath (Join-Path $installRoot 'dusty\dusty.exe')) -or !(Test-Path -LiteralPath $settingsFile)) { throw 'Protected uninstall removed app or metadata' }
+if ((Get-FileHash -LiteralPath $protectedResource -Algorithm SHA256).Hash -ne $before) { throw 'Protected file changed' }
+```
+
+Expected: a plain cannot-confirm-safe-removal message before the uninstall
+options; app, settings and exact sentinel bytes remain. This is deliberate
+protection, not successful removal. Revert snapshot clean before any further
+baseline install/uninstall checks. Do not try to repair or delete protected
+contents as part of Dusty behavior.
+
 For the tamper test, use a guest PowerShell window with Dusty closed:
 
 ```powershell
