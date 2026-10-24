@@ -211,3 +211,20 @@ def test_development_outputs_can_be_siblings_of_native_staging(tmp_path):
         environment={"LOCALAPPDATA": str(tmp_path / "local")},
     )
     assert managed_destination(tmp_path / "app/anywhere", installed)
+
+
+@pytest.mark.parametrize("damage", ["missing", "changed"])
+def test_recording_outputs_cannot_recreate_lost_ownership(tmp_path, damage):
+    owned = OwnedWork(tmp_path / "user/work", "job")
+    file = owned.path / "raw.json"
+    file.write_text("preserve data")
+    marker = owned.path / ".dusty-owned.json"
+    if damage == "missing":
+        marker.unlink()
+    else:
+        marker.write_text('{"purpose":"other"}')
+    before = marker.read_bytes() if marker.exists() else None
+    owned.record("raw.json")
+    assert not owned.cleanup(tmp_path / "user")
+    assert file.read_text() == "preserve data"
+    assert (marker.read_bytes() if marker.exists() else None) == before
