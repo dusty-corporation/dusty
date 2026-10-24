@@ -1095,3 +1095,17 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   pass. No cause is invented and no failed run is counted as green evidence.
 - .9 run 40067407725 source/offline/upload regression green; native installer
   compiling. Strict installed inventory and both-version receipts still required.
+
+### M5 first repaired draft release
+
+- v0.5.0-m5.9, ca6ff44, run 40067407725 all jobs GREEN; draft created only
+  after every source/package/installer/installed gate. ISSUE-022 resolved.
+- Receipt two_distinct_versions=true; model hash/write-time preservation with
+  fetch blocked, exact installed inventory/PE/WFP, normal cancel/retry, both
+  uninstall choices and output sentinel all pass. Calibrated Setup/GUI/native
+  0, fetch allowed 4/blocked 0.
+- Installer 34,701,693 bytes. Downloaded all five draft assets and verified every
+  API SHA-256 digest plus all four checksum-list entries; all match. No execution
+  of the installer against the Owner's profile. Asset hashes in M5-report.md.
+- Authorized v0.5.0-m5.10 pushed at 5a88b49; run 40068461160 uses the now-gated
+  .9 artifact for the safe .9 to .10 pair. It remains pending before VM use.

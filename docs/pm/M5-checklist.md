@@ -31,6 +31,10 @@ Do not send recordings, transcript contents, settings or raw Security logs.
 6. Take a clean VM snapshot before installing Dusty. Shared clipboard, drag/drop
    and host shared folders can remain off. The VM normally exposes no physical
    Vulkan GPU, so Small pre-selection is expected; it cannot prove Iris Xe use.
+   Set the guest display to 1920 x 1080 and 100% before baseline tests, then
+   use 150% for the scale checks. Do not change the host display. If the guest
+   cannot provide that resolution, record the exact limitation and arrange the
+   VM display drivers before testing; do not count clipped screens as a pass.
 
 Settings checked against Oracle VirtualBox 7.2 [creation guide](https://docs.oracle.com/en/virtualization/virtualbox/7.2/user/create-vm.html)
 and [VM settings](https://docs.oracle.com/en/virtualization/virtualbox/7.2/user/working-with-vms.html),

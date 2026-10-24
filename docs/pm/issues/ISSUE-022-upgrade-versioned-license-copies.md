@@ -2,7 +2,7 @@
 
 - Severity: S1
 - Milestone: M5
-- Status: In progress, fix implemented; true-upgrade rerun pending
+- Status: Resolved (2026-10-24), true-upgrade and installed inventory passed
 
 ## Evidence and root cause
 
@@ -26,3 +26,13 @@ deletion, no model/data/output removal, no installed inventory exception.
 
 Unit regressions cover matching copies and changed/unknown/linked/protected
 content. The original true-upgrade gate must pass before any safe-build claim.
+
+## Resolution evidence
+
+ca6ff44, v0.5.0-m5.9, CI 40067407725: every job passed and a draft-only release
+was created. Receipt two_distinct_versions=true; strict installed inventory/PE,
+installed WFP, fetch-blocked model/hash/time preservation, both uninstall choices,
+normal-cancel partial removal/retry and user-output sentinel preservation pass.
+Current Setup/GUI/native counts 0; fetch allowed 4, blocked 0, calibrated.
+Full local source: 302 passed/1 expected skip, required coverage 94.2%.
+The follow-up .9 to .10 run is a separate safe-build-pair acceptance check.

@@ -4,7 +4,7 @@
 
 Implementation is on `m5-installer`. ISSUE-020 is resolved with green ownership,
 packaged, installed WFP and uninstall evidence. The PM page round and Owner's
-output-row change are implemented. Final tagged upgrade acceptance is running;
+output-row change are implemented. The first repaired tagged upgrade passed; the .9 to .10 pair is running;
 M5 acceptance remains pending the Owner's fresh standard-user VM results.
 No PR, merge or published release has been created.
 
@@ -28,15 +28,15 @@ No PR, merge or published release has been created.
 |---|---|---|
 | 1. PyInstaller, bin/resources | Done | Separate onedir app/fetch, engine-v2 and minimal FFmpeg, exact PE pins, license/SBOM/notices gates. No models bundled. |
 | 2. Generated installer pages, download, self-tests | Partial | Shared catalog/consent, model-free real-GPU/RAM probe, Auto per model plus smallest CPU test, VAD verification, Retry/CPU/Finish without, revised pages implemented. Native cancellation passed in CI 40065869279; fresh VM pending. |
-| 3. Upgrade | Partial | Verified hashes and write times preserved with fetch blocked in CI. New two-version tagged evidence pending below. Damaged models show Needs download again. |
+| 3. Upgrade | Partial | Verified hashes and write times preserved with fetch blocked in CI. True .4 to .9 upgrade passed; safe .9 to .10 pair running below. Damaged models show Needs download again. |
 | 4. Uninstall | Partial | Both automated variants and transcript sentinel pass for ISSUE-020 repair. Conservative owned-content cleanup preserves unknown/linked/changed files. Native Cancel passed in CI 40065869279; VM both variants pending. |
-| 5. Gated draft release | Partial | Read-only prior gated artifact, strict receipt checks, upload-order negative test and five-asset staging implemented. Final repaired tag runs pending. |
+| 5. Gated draft release | Partial | Read-only prior gated artifact, strict receipt checks, upload-order negative test and five-asset staging implemented. Repaired .9 all gates and five-asset draft pass; .10 pending. |
 | 6. SmartScreen README | Done | Plain unsigned explanation, More info/Run anyway, full SHA comparison using Get-FileHash. |
-| Acceptance: tagged CI draft and artifacts | Pending | Final repaired test tags listed below when all gates finish. Historical drafts are not recommended. |
+| Acceptance: tagged CI draft and artifacts | Pending | Repaired .9 is draft, CI 40067407725 all jobs green; .10 pair pending. Historical drafts are not recommended. |
 | Acceptance: fresh Windows 11 VM, SPEC 11.6 | Owner needed | Checklist includes expected results, standard user, model tamper, normal/crash interruption, upgrade, both uninstall variants and protected outputs. |
-| Acceptance: installer size | Pending | Record final asset bytes and hashes after the gated draft completes. |
+| Acceptance: installer size | Pending | Repaired .9: 34,701,693 bytes; .10 size/hashes follow its gates. |
 | Brief: all native pages light 100%/150% | Partial | 21 new native page PNGs plus README uploaded. Effective 96 DPI on unchanged 175% desktop is disclosed; genuine native scaling remains VM acceptance. |
-| Brief: Setup/probe/GUI/fetch WFP | Done for repair | CI 40061186069: Setup 0, GUI/probe 0, native 0, fetch allowed 4, blocked 0. Final tagged receipt pending. |
+| Brief: Setup/probe/GUI/fetch WFP | Done for repair | CI 40061186069: Setup 0, GUI/probe 0, native 0, fetch allowed 4, blocked 0. Repaired .9 repeats 0/0/0, fetch 4/0; .10 receipt pending. |
 
 ## Test and CI evidence
 
@@ -133,7 +133,7 @@ This round also aligns the main output row and adds 100%/150% Qt review captures
 | 013 to 019 | S0/S1, historical | Resolved | Approved runtime/installer licensing, removed networking extras, exact pins and upload ordering gates. |
 | 020 | S0 | Resolved | Ownership-only work cleanup and protected destinations; final repair CI 40061186069. |
 | 021 | S1 | Resolved | Native post-copy Cancel/X stop path; CI 40065869279. |
-| 022 | S1 | Repair rerun pending | Exact obsolete own-license copies, preserving unknown/changed files; .8 correctly blocked. |
+| 022 | S1 | Resolved | .9 true upgrade and exact inventory pass, CI 40067407725; .8 correctly blocked. |
 
 ## Final draft builds and release assets
 
@@ -141,10 +141,26 @@ This round also aligns the main output row and adds 100%/150% Qt review captures
 LICENSE/NOTICE remained. No draft or gated installer upload. ISSUE-022 repair
 `ca6ff44` adds exact byte/hash-checked obsolete own-license cleanup before copy;
 unknown/changed/linked/protected contents preserve and block. Unit tests pass.
-`v0.5.0-m5.9` / 40067407725 is the repaired rerun. A second successful repaired
-build follows for the Owner's VM upgrade test. Final assets/receipts pending.
+`v0.5.0-m5.9` / [40067407725](https://github.com/dusty-corporation/dusty/actions/runs/40067407725)
+is green, all jobs, with a draft-only release. True-upgrade, model hashes/times,
+installed inventory/PE/WFP, normal cancel/retry, both uninstalls and user-output
+sentinel pass. Calibrated current Setup/GUI/native 0, fetch allowed 4/blocked 0.
+`v0.5.0-m5.10` / 40068461160 tests the repaired .9 to .10 pair; pending.
 Five assets only: unsigned installer, THIRD_PARTY_NOTICES.md, versioned CycloneDX
 SBOM, installer-jedi-source.zip, SHA256SUMS.txt. No portable asset.
+
+### First safe draft .9
+
+[Draft release](https://github.com/dusty-corporation/dusty/releases/tag/untagged-0f5f841950840ec74afe), installer 34,701,693 bytes (34.7 MB).
+All five downloaded API digests and all four SHA256SUMS entries match.
+
+| Asset | SHA-256 |
+|---|---|
+| Dusty-0.5.0-m5.9-draft-unsigned.exe | 9605ab888149228322c9f02c6d0101ddcb6e51cbb769a72f7128fee4936f5997 |
+| dusty-0.5.0-m5.9-sbom.json | 266954b5c146db2a76a7702cf74a9592cd1747d001943da0454498077af0569c |
+| installer-jedi-source.zip | 4dac842302518887fd2e8692da73ca1f2adcac9092c32cb634e4f7143f4ae217 |
+| SHA256SUMS.txt | 334847ee285029486f83b72de1937248c63734c22dba52b557aff2e2b1f452d8 |
+| THIRD_PARTY_NOTICES.md | ba9735f5da96c742644dbb5a4a7529812e23a2a06054c405589abb7525f07e0d |
 
 ## Self-review
 
