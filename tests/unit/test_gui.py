@@ -39,7 +39,10 @@ def window(qtbot, tmp_path: Path):
     qtbot.addWidget(view)
     view.apply_prepared(
         Prepared(
-            tuple(view.registry.manifest.models), False, {"schema_version": 1, "welcome_seen": True}
+            tuple(view.registry.manifest.models),
+            False,
+            {"schema_version": 1, "welcome_seen": True},
+            vad_installed=True,
         )
     )
     view.output_dir = tmp_path / "out"
@@ -141,7 +144,9 @@ def test_folder_scan_duplicate_reorder_remove(window, qtbot, tmp_path, monkeypat
 
 def test_backend_defaults_language_translation_and_hint_rules(window, qtbot, tmp_path) -> None:
     window.apply_prepared(
-        Prepared(tuple(window.registry.manifest.models), True, {"schema_version": 1})
+        Prepared(
+            tuple(window.registry.manifest.models), True, {"schema_version": 1}, vad_installed=True
+        )
     )
     assert window.model_choice.currentData() == "large-v3-turbo-q8_0"
     assert ", recommended" in window.model_choice.currentText()
@@ -251,7 +256,9 @@ def test_resume_and_settings_preserve_preferences(window, qtbot, tmp_path, monke
     monkeypatch.setattr(ResumeDialog, "exec", lambda self: QDialog.DialogCode.Accepted)
     resumed = []
     monkeypatch.setattr(window, "start_batch", lambda: resumed.append(True))
-    window._startup_dialogs(Prepared(window.installed, False, window.settings, recovered))
+    window._startup_dialogs(
+        Prepared(window.installed, False, window.settings, recovered, vad_installed=True)
+    )
     qtbot.waitUntil(lambda: bool(resumed))
     assert window.model.jobs[0].status == JobStatus.QUEUED
     assert window.model.jobs[0].elapsed_sec == 0
@@ -285,7 +292,9 @@ def test_device_reprobe_preserves_user_choice_and_relabels_default(
     window, qtbot, monkeypatch
 ) -> None:
     window.apply_prepared(
-        Prepared(tuple(window.registry.manifest.models), True, {"schema_version": 1})
+        Prepared(
+            tuple(window.registry.manifest.models), True, {"schema_version": 1}, vad_installed=True
+        )
     )
     window.interactive = True
 
@@ -295,6 +304,7 @@ def test_device_reprobe_preserves_user_choice_and_relabels_default(
                 tuple(worker.registry.manifest.models),
                 True,
                 {"schema_version": 1, "backend": "auto"},
+                vad_installed=True,
             )
         )
 
@@ -308,7 +318,7 @@ def test_device_reprobe_preserves_user_choice_and_relabels_default(
 
 
 def test_resume_never_silently_substitutes_an_uninstalled_model(window, qtbot, tmp_path) -> None:
-    window.apply_prepared(Prepared(("tiny",), False, {"schema_version": 1}))
+    window.apply_prepared(Prepared(("tiny",), False, {"schema_version": 1}, vad_installed=True))
     window.restore_batch(BatchOptions("medium", tmp_path / "out"), [Job(tmp_path / "clip.wav")])
     assert not window.start_button.isEnabled()
     assert window.resume_model_button.isVisible()
@@ -582,7 +592,7 @@ def test_welcome_uses_output_folder_not_legacy_flag(window, monkeypatch, folder_
     monkeypatch.setattr(
         WelcomeDialog, "exec", lambda _: seen.append("welcome") or QDialog.DialogCode.Rejected
     )
-    prepared = Prepared(window.installed, False, window.settings)
+    prepared = Prepared(window.installed, False, window.settings, vad_installed=True)
     window._startup_dialogs(prepared)
     window._startup_dialogs(prepared)
     assert seen == ([] if folder_chosen else ["welcome"])
@@ -594,7 +604,11 @@ def test_welcome_finishes_before_resume_and_reentrant_startup_is_ignored(
     window.output_dir = None
     options = BatchOptions("tiny", window.paths.user_dir / "out")
     prepared = Prepared(
-        window.installed, False, window.settings, (options, [Job(Path("one.wav"), elapsed_sec=99)])
+        window.installed,
+        False,
+        window.settings,
+        (options, [Job(Path("one.wav"), elapsed_sec=99)]),
+        vad_installed=True,
     )
     seen = []
 
@@ -677,3 +691,7 @@ def test_managed_source_and_output_refused(window, tmp_path, monkeypatch, area):
         Coordinator(window.paths, window.registry).run_batch(
             [Job(folder / "recording.wav")], BatchOptions("tiny", original, same_folder=True)
         )
+
+
+def test_prepared_missing_voice_flag_fails_closed():
+    assert Prepared((), False, {}).vad_installed is False

@@ -271,7 +271,9 @@ def test_closing_manager_cancels_child_and_removes_part(models, qtbot):
 def test_model_manager_is_reachable_from_tools_and_options(models, qtbot, monkeypatch, entry):
     view = MainWindow(models.paths, interactive=False)
     qtbot.addWidget(view)
-    view.apply_prepared(Prepared((), False, {"output_dir": str(models.paths.user_dir)}))
+    view.apply_prepared(
+        Prepared((), False, {"output_dir": str(models.paths.user_dir)}, vad_installed=True)
+    )
     view.show()
     seen = []
 
@@ -299,7 +301,9 @@ def test_main_window_close_cancels_model_child_without_orphan(models, qtbot, mon
     monkeypatch.setattr("dusty.app.model_manager.resolve_fetch_command", lambda: models.command)
     view = MainWindow(models.paths, interactive=False)
     qtbot.addWidget(view)
-    view.apply_prepared(Prepared((), False, {"output_dir": str(models.paths.user_dir)}))
+    view.apply_prepared(
+        Prepared((), False, {"output_dir": str(models.paths.user_dir)}, vad_installed=True)
+    )
     view.show()
     started = []
     part = models.file.with_suffix(".bin.part")
@@ -844,7 +848,7 @@ def test_failed_installer_test_keeps_models_and_shows_empty_options_choice(model
     clear_failed_selection(models.paths)
     view = MainWindow(models.paths, interactive=False)
     qtbot.addWidget(view)
-    view.apply_prepared(Prepared(("tiny",), False, load_settings(file)))
+    view.apply_prepared(Prepared(("tiny",), False, load_settings(file), vad_installed=True))
     assert models.file.read_bytes() == DATA
     assert view.model_choice.currentData() is None
     assert view.start_hint.text() == M.CHOOSE_MODEL

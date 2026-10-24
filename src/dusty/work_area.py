@@ -7,9 +7,11 @@ import stat
 from pathlib import Path
 from uuid import UUID, uuid4
 
+from dusty.platform.work_lease import acquire, available
 from dusty.runtime_paths import RuntimePaths
 
 MARKER = ".dusty-owned.json"
+LEASE = ".dusty-active.lock"
 _LOG = logging.getLogger("dusty")
 
 
@@ -96,6 +98,9 @@ def cleanup_owned(directory: Path, *, protected: set[Path] | None) -> bool:
         marker = directory / MARKER
         if linked(marker):
             raise ValueError
+        lease = directory / LEASE
+        if lease.exists() and (linked(lease) or not available(lease)):
+            raise ValueError
         data = json.loads(marker.read_text(encoding="utf-8"))
         if (
             data.get("schema") != 1
@@ -141,7 +146,11 @@ class OwnedWork:
         self.path = root / f"{purpose}-{uuid4()}"
         self.path.mkdir()
         self.purpose = purpose
-        self.files: dict[str, str] = {}
+        lease = self.path / LEASE
+        with lease.open("xb") as stream:
+            stream.write(b"0")
+        self._lease = acquire(lease)
+        self.files: dict[str, str] = {LEASE: hashlib.sha256(b"0").hexdigest()}
         self.valid = True
         self._marker_bytes = self._data()
         with (self.path / MARKER).open("xb") as stream:
@@ -181,6 +190,7 @@ class OwnedWork:
             _LOG.info("work_cleanup=preserved")
 
     def cleanup(self, user_dir: Path) -> bool:
+        self._lease.close()
         try:
             marker = self.path / MARKER
             current = not linked(marker) and marker.read_bytes() == self._marker_bytes

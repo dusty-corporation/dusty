@@ -114,7 +114,7 @@ class MainWindow(QMainWindow):
         self.settings: dict = {"schema_version": 1}
         self.installed: tuple[str, ...] = ()
         self.vulkan_ok = False
-        self.vad_installed = True
+        self.vad_installed = False
         self._explicit_model = False
         self.model_manager: ModelManager | None = None
         self.ready = False

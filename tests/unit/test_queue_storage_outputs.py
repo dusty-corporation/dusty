@@ -79,6 +79,7 @@ def test_startup_cleans_preparation_work_but_keeps_unknown_directories(tmp_path:
         owned = OwnedWork(tmp_path, purpose)
         (owned.path / "audio.wav").write_bytes(b"generated")
         owned.record("audio.wav")
+        del owned  # Simulate abandoned owners; live owners are tested separately.
     cleanup_orphaned_work(tmp_path)
     assert {path.name for path in tmp_path.iterdir()} == set(legacy)
 
