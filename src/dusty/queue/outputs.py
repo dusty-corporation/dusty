@@ -24,6 +24,8 @@ def output_targets(job: Job, options: BatchOptions) -> list[Path]:
     """Plan all batch formats with one shared Keep both suffix."""
     folder = job.source.parent if options.same_folder else options.output_dir
     if options.keep_structure and job.relative_dir and not options.same_folder:
+        if job.relative_dir.root or job.relative_dir.drive or ".." in job.relative_dir.parts:
+            raise ValueError("Invalid relative output directory")
         folder /= job.relative_dir
     suffix = ".en" if options.task == "translate" else ""
 

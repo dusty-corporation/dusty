@@ -94,6 +94,7 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     failure = text.split("procedure Failure", 1)[1].split("function CurrentId", 1)[0]
     assert "RetryButton.Visible := True" in failure
     assert "WizardForm.NextButton.Enabled := False" in failure
+    assert "Meter.Position := CompletedModelBytes * 100 div TotalModelBytes" in failure
     assert "Action := NewButton" not in text
     assert "BackButtonClick" in text and "ReturnModelsRequested := Result" in text
     assert "if not ModelsTouched then ModelsPage.Values[I]" in text

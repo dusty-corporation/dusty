@@ -135,6 +135,9 @@ begin
   RetryButton.Visible := True;
   CpuButton.Visible := IsTest and GpuFailed;
   WithoutButton.Visible := True;
+  { The byte line describes download progress, even after a model test fails. }
+  if TotalModelBytes > 0 then
+    Meter.Position := CompletedModelBytes * 100 div TotalModelBytes;
   WizardForm.NextButton.Enabled := False;
 end;
 
