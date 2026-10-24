@@ -1218,3 +1218,17 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - ISSUE-025 source/offline/package/installed WFP/native uninstall gates passed in release run 40104236818; final draft staging pending.
 - Added exact disposable-VM commands for the protected registered-payload case. Native uninstall must abort before removing app, metadata or synthetic private bytes.
 - Carried the safety repair to m6-docs-v2 c58fcf6, preserving its user documentation. Final repaired upgrade pair will be .13/.14; .11/.12 are superseded.
+
+
+### M5 final repaired pair checkpoint
+
+- ISSUE-025 RESOLVED: .13 CI 40104236818 all jobs GREEN, including actual native
+  protected-installation abort with app/metadata/private bytes intact. Mandatory
+  protection receipt passed; ordinary exact payload/PE/license/WFP and both
+  uninstalls still pass. Source 355 passed/2 expected skips, separate network
+  1 passed, required coverage 94.7%. No new policy exception.
+- .13 assets downloaded without execution; all five API digests and four listed
+  checksums match. Installer 34,696,202 bytes. .14 tag at 972977a, release run
+  40105275700, true upgrade from .13; final pair evidence pending completion.
+- Checklist's six PowerShell blocks syntax-checked without executing host or
+  guest instructions. New native-boundary test is restricted to DustyTester VM.
