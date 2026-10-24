@@ -7,7 +7,7 @@ from pathlib import Path
 
 from dusty.core import BatchOptions, Job, Transcript
 from dusty.export import render_docx, render_json, render_srt, render_txt, render_vtt
-from dusty.work_area import linked
+from dusty.work_area import canonical, linked
 
 RENDERERS = {
     "txt": render_txt,
@@ -24,6 +24,8 @@ def output_targets(job: Job, options: BatchOptions) -> list[Path]:
     """Plan all batch formats with one shared Keep both suffix."""
     folder = job.source.parent if options.same_folder else options.output_dir
     if options.keep_structure and job.relative_dir and not options.same_folder:
+        if job.relative_dir.root or job.relative_dir.drive or ".." in job.relative_dir.parts:
+            raise ValueError("Invalid relative output directory")
         folder /= job.relative_dir
     suffix = ".en" if options.task == "translate" else ""
 
@@ -39,7 +41,7 @@ def output_targets(job: Job, options: BatchOptions) -> list[Path]:
             targets = candidate(number)
     elif options.collision != "overwrite" and any(path.exists() for path in targets):
         raise OutputExistsError("Output exists")
-    if any(path.resolve() == job.source.resolve() for path in targets):
+    if any(canonical(path) == canonical(job.source) for path in targets):
         raise OutputExistsError("Output would replace source")
     return targets
 

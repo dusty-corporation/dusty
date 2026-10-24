@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 
 from dusty.runtime_paths import RuntimePaths
-from dusty.work_area import linked, protected_paths
+from dusty.work_area import canonical, linked, protected_paths
 
 RECEIPT = ".dusty-license-cleanup.json"
 
@@ -37,7 +37,7 @@ def tidy_license_copies(paths: RuntimePaths, install: Path) -> bool:
             or linked(folder)
             or not folder.is_dir()
             or any(
-                folder.resolve().is_relative_to(p) or p.is_relative_to(folder.resolve())
+                canonical(folder).is_relative_to(p) or p.is_relative_to(canonical(folder))
                 for p in protected
             )
         ):
@@ -79,7 +79,7 @@ def tidy_license_copies(paths: RuntimePaths, install: Path) -> bool:
                 linked(file)
                 or not file.is_file()
                 or any(
-                    file.resolve().is_relative_to(p) or p.is_relative_to(file.resolve())
+                    canonical(file).is_relative_to(p) or p.is_relative_to(canonical(file))
                     for p in protected
                 )
                 or hashlib.sha256(file.read_bytes()).hexdigest() != expected[name]

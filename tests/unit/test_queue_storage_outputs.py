@@ -8,7 +8,7 @@ import pytest
 
 from dusty.core import BatchOptions, Job, JobStatus, Segment, Transcript
 from dusty.queue import cleanup_orphaned_work
-from dusty.queue.outputs import OutputExistsError, write_outputs
+from dusty.queue.outputs import OutputExistsError, output_targets, write_outputs
 from dusty.queue.storage import (
     clear_history,
     load_batch,
@@ -20,6 +20,19 @@ from dusty.queue.storage import (
 
 def _transcript() -> Transcript:
     return Transcript((Segment(0, 0, 1, "Hello"),), "en", "transcribe", "tiny", "cpu", 1)
+
+
+@pytest.mark.parametrize("relative", ["../elsewhere", "C:/elsewhere", "/elsewhere"])
+def test_restored_relative_directory_must_stay_below_chosen_destination(tmp_path, relative):
+    options = BatchOptions("tiny", tmp_path / "out", keep_structure=True)
+    job = Job(tmp_path / "clip.wav", relative_dir=Path(relative))
+    with pytest.raises(ValueError, match="relative output directory"):
+        output_targets(job, options)
+    saved = tmp_path / "queue.json"
+    save_batch(saved, options, [job])
+    assert load_batch(saved) is None
+    assert len(list(tmp_path.glob("queue.json.corrupt-*"))) == 1
+    assert not (tmp_path / "out").exists()
 
 
 def test_output_collision_policies(tmp_path: Path) -> None:
@@ -66,6 +79,7 @@ def test_startup_cleans_preparation_work_but_keeps_unknown_directories(tmp_path:
         owned = OwnedWork(tmp_path, purpose)
         (owned.path / "audio.wav").write_bytes(b"generated")
         owned.record("audio.wav")
+        del owned  # Simulate abandoned owners; live owners are tested separately.
     cleanup_orphaned_work(tmp_path)
     assert {path.name for path in tmp_path.iterdir()} == set(legacy)
 

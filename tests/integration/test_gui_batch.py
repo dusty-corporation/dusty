@@ -22,7 +22,9 @@ def ready_window(qtbot, tmp_path):
     paths = RuntimePaths(dev.bin_dir, dev.models_dir, dev.resources_dir, tmp_path / "user")
     window = MainWindow(paths, interactive=False)
     qtbot.addWidget(window)
-    window.apply_prepared(Prepared(("tiny",), False, {"schema_version": 1, "welcome_seen": True}))
+    window.apply_prepared(
+        Prepared(("tiny",), False, {"schema_version": 1, "welcome_seen": True}, vad_installed=True)
+    )
     window.output_dir = tmp_path / "out"
     window.show()
     return window
@@ -125,7 +127,9 @@ def test_close_mid_batch_saves_resume_and_sync_warning(qtbot, tmp_path, monkeypa
     assert list((window.paths.user_dir / "work").iterdir()) == []
     second = ready_window(qtbot, tmp_path)
     monkeypatch.setattr(ResumeDialog, "exec", lambda self: QDialog.DialogCode.Accepted)
-    second._startup_dialogs(Prepared(("tiny",), False, second.settings, recovered))
+    second._startup_dialogs(
+        Prepared(("tiny",), False, second.settings, recovered, vad_installed=True)
+    )
     assert second.model.rowCount() == 1
     assert second.model.jobs[0].id == recovered[1][0].id
     second.vad.setChecked(True)

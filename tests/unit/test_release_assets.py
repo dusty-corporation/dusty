@@ -80,11 +80,11 @@ def test_prior_installer_is_verified_before_execution(tmp_path):
 
 
 def test_upgrade_audits_the_new_installed_version():
-    text = (ROOT / "tools/test_installer.ps1").read_text()
+    text = (ROOT / "tools/test_installer.ps1").read_text(encoding="utf-8")
     before, after = text.split("$Installer = $currentInstaller", 1)
     for gate in ("check_installed_payload.py", "test_network_isolation.ps1", "check_pe_imports.py"):
         assert gate not in before
-        assert after.index(gate) < after.index("Uninstall-App 'no'")
+        assert after.index(gate) < after.index("test_uninstall_ui.ps1")
     final = after.split("# A two-version upgrade", 1)[1]
     assert final.index("Install-App") < final.index("Complete-InstallerAudit")
     assert "current_installer_fresh_download_wfp='passed'" in final

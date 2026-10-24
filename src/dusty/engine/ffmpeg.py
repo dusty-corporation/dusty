@@ -11,6 +11,10 @@ from dusty.platform.win_process import run_job_process
 class DecoderError(RuntimeError):
     """A local input could not be probed or decoded."""
 
+    def __init__(self, message: str = "Audio decode failed", *, disk_full: bool = False):
+        super().__init__(message)
+        self.disk_full = disk_full
+
 
 @dataclass(frozen=True)
 class AudioProbe:
@@ -67,6 +71,20 @@ def transcode_audio(
     cancel: Cancellation | None = None,
 ) -> float:
     """Decode to 16 kHz mono PCM in the per-job work directory."""
+    disk_full = False
+
+    def failure(line: str) -> None:
+        nonlocal disk_full
+        text = line.lower()
+        disk_full |= any(
+            phrase in text
+            for phrase in (
+                "no space left on device",
+                "not enough space on the disk",
+                "disk is full",
+            )
+        )
+
     result = run_job_process(
         [
             str(ffmpeg.resolve()),
@@ -92,10 +110,11 @@ def transcode_audio(
             str(output_wav),
         ],
         cancel=cancel,
+        on_stderr=failure,
         timeout_sec=12 * 3600,
     )
     if result.cancelled:
         raise DecoderError("Decode cancelled")
     if result.exit_code or not output_wav.is_file():
-        raise DecoderError("Audio decode failed")
+        raise DecoderError("Audio decode failed", disk_full=disk_full)
     return result.elapsed_sec

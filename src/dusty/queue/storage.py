@@ -98,10 +98,13 @@ def load_batch(path: Path) -> tuple[BatchOptions, list[Job]] | None:
         )
         jobs = []
         for item in data["jobs"]:
+            relative = Path(item["relative_dir"]) if item["relative_dir"] else None
+            if relative and (relative.root or relative.drive or ".." in relative.parts):
+                raise ValueError("Invalid relative output directory")
             job = Job(
                 source=Path(item["source"]),
                 id=UUID(item["id"]),
-                relative_dir=Path(item["relative_dir"]) if item["relative_dir"] else None,
+                relative_dir=relative,
                 status=JobStatus(item["status"]),
                 failure=FailureCode(item["failure"]) if item["failure"] else None,
                 progress=float(item["progress"]),

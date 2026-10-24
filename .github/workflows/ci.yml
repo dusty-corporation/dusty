@@ -4,8 +4,18 @@ on:
   push:
     branches: ['**']
   pull_request:
+  workflow_dispatch:
+    inputs:
+      m6_engine_candidate:
+        type: boolean
+        default: false
+        description: Validate exact M6 native candidate without activating production pins
   workflow_call:
     inputs:
+      m6_engine_candidate:
+        type: boolean
+        required: false
+        default: false
       release_tag:
         type: string
         required: false
@@ -24,6 +34,7 @@ env:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   checks:
@@ -49,12 +60,29 @@ jobs:
           key: ${{ runner.os }}-m2-assets-${{ hashFiles('native/versions.toml') }}
       - name: Fetch verified development assets
         run: uv run python tools/fetch_dev_binaries.py
+      - name: Stage exact M6 candidate for validation only
+        if: inputs.m6_engine_candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ($env:GITHUB_REF_NAME -ne 'm6-hardening') { throw 'Candidate validation is M6 only' }
+          $candidate = Get-Content native/m6-engine-candidate.json -Raw | ConvertFrom-Json
+          $nativeRun = gh run view $candidate.run_id --json headSha,conclusion | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or $nativeRun.conclusion -ne 'success' -or $nativeRun.headSha -ne $candidate.source_commit) { throw 'Candidate source run mismatch' }
+          gh run download $candidate.run_id --name whisper-cpu --dir build/m6-candidate-input/cpu
+          if ($LASTEXITCODE -ne 0) { throw 'CPU candidate download failed' }
+          gh run download $candidate.run_id --name whisper-vulkan --dir build/m6-candidate-input/vulkan
+          if ($LASTEXITCODE -ne 0) { throw 'Vulkan candidate download failed' }
+          uv run python -m tools.prepare_m6_candidate build/m6-candidate-input
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate verification failed' }
       - name: Lint
         run: uv run ruff check .
       - name: Format
         run: uv run ruff format --check .
       - name: Types
         run: uv run mypy
+      - name: Documentation consistency
+        run: uv run python tools/check_docs.py
       - name: Tests and strict-package coverage
         run: uv run python tools/measure_coverage.py
         env:
@@ -63,6 +91,10 @@ jobs:
         run: uv run pytest -q -m real_network tests/integration/test_downloader_network.py
         env:
           DUSTY_CI_REAL_NETWORK: '1'
+      - name: CI-only live bundled root chain canary
+        run: uv run python -m dusty_fetch.tls_canary
+        env:
+          DUSTY_CI_CA_CANARY: '1'
       - name: Network isolation
         run: uv run python tools/check_no_network.py
       - name: Model host exclusion
@@ -94,6 +126,21 @@ jobs:
           key: ${{ runner.os }}-m2-assets-${{ hashFiles('native/versions.toml') }}
       - name: Fetch verified development assets
         run: uv run python tools/fetch_dev_binaries.py
+      - name: Stage exact M6 candidate for validation only
+        if: inputs.m6_engine_candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ($env:GITHUB_REF_NAME -ne 'm6-hardening') { throw 'Candidate validation is M6 only' }
+          $candidate = Get-Content native/m6-engine-candidate.json -Raw | ConvertFrom-Json
+          $nativeRun = gh run view $candidate.run_id --json headSha,conclusion | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or $nativeRun.conclusion -ne 'success' -or $nativeRun.headSha -ne $candidate.source_commit) { throw 'Candidate source run mismatch' }
+          gh run download $candidate.run_id --name whisper-cpu --dir build/m6-candidate-input/cpu
+          if ($LASTEXITCODE -ne 0) { throw 'CPU candidate download failed' }
+          gh run download $candidate.run_id --name whisper-vulkan --dir build/m6-candidate-input/vulkan
+          if ($LASTEXITCODE -ne 0) { throw 'Vulkan candidate download failed' }
+          uv run python -m tools.prepare_m6_candidate build/m6-candidate-input
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate verification failed' }
       - name: Validate WFP event parser
         run: ./tests/offline/test_wfp_events.ps1
       - name: Firewall and WFP offline acceptance
@@ -161,8 +208,23 @@ jobs:
             build/bin
             build/models
           key: ${{ runner.os }}-m2-assets-${{ hashFiles('native/versions.toml') }}
-      - name: Fetch pinned engine-v2 inputs
+      - name: Fetch pinned production engine inputs
         run: uv run python tools/fetch_dev_binaries.py
+      - name: Stage exact M6 candidate for validation only
+        if: inputs.m6_engine_candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ($env:GITHUB_REF_NAME -ne 'm6-hardening') { throw 'Candidate validation is M6 only' }
+          $candidate = Get-Content native/m6-engine-candidate.json -Raw | ConvertFrom-Json
+          $nativeRun = gh run view $candidate.run_id --json headSha,conclusion | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or $nativeRun.conclusion -ne 'success' -or $nativeRun.headSha -ne $candidate.source_commit) { throw 'Candidate source run mismatch' }
+          gh run download $candidate.run_id --name whisper-cpu --dir build/m6-candidate-input/cpu
+          if ($LASTEXITCODE -ne 0) { throw 'CPU candidate download failed' }
+          gh run download $candidate.run_id --name whisper-vulkan --dir build/m6-candidate-input/vulkan
+          if ($LASTEXITCODE -ne 0) { throw 'Vulkan candidate download failed' }
+          uv run python -m tools.prepare_m6_candidate build/m6-candidate-input
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate verification failed' }
       - name: Build separate onedir bundles and verify VC redist provenance
         run: |
           uv run python -m tools.build_bundle 2>&1 | Tee-Object -FilePath build/packaging-build.log
@@ -269,6 +331,7 @@ jobs:
             build/installer/sbom.cdx.json
             build/installer/THIRD_PARTY_NOTICES.md
             build/installer/acceptance/*.json
+            build/installer/acceptance/*.log
             build/installer/runtime-inputs.json
           if-no-files-found: warn
       - name: Preserve gated installer page review only

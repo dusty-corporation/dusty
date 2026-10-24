@@ -85,22 +85,29 @@ def generate(output: Path, bundle: Path) -> Path:
     )
     consent_cases = []
     download_cases = []
-    for mask in range(1, 1 << len(manifest.models)):
+    already_cases = []
+    for mask in range(1, 1 << (len(manifest.models) + 1)):
         chosen = [
             (key, item) for i, (key, item) in enumerate(manifest.models.items()) if mask & (1 << i)
         ]
-        names = [M.MODEL_TECHNICAL[key] for key, _ in chosen] + [M.VOICE_MODEL]
-        total = sum(item.size_bytes for _, item in chosen) + raw["vad"][0]["size_bytes"]
-        consent = M.DOWNLOAD_CONFIRM.format(
-            names=M.DOWNLOAD_NAMES_JOIN.join(names), size=format_size(total)
-        )
+        voice = bool(mask & (1 << len(manifest.models)))
+        names = [M.MODEL_TECHNICAL[key] for key, _ in chosen] + ([M.VOICE_MODEL] if voice else [])
+        total = sum(item.size_bytes for _, item in chosen)
+        if voice:
+            total += raw["vad"][0]["size_bytes"]
+        consent = M.DOWNLOAD_CONFIRM.format(names=M.join_names(names), size=format_size(total))
         consent_cases.append(f"    {mask}: Result := {pascal(consent)};")
         heading = (
             M.INSTALLER["DownloadHeading"]
-            .replace("%1", M.DOWNLOAD_NAMES_JOIN.join(names))
+            .replace("%1", M.join_names(names))
             .replace("%2", format_size(total))
         )
         download_cases.append(f"    {mask}: Result := {pascal(heading)};")
+        if mask < (1 << len(manifest.models)):
+            already = M.INSTALLER["AlreadyDownloaded"].replace(
+                "%1", M.join_names([*names, M.VOICE_MODEL])
+            )
+            already_cases.append(f"    {mask}: Result := {pascal(already)};")
     release_tag = os.environ.get("DUSTY_RELEASE_TAG", "")
     if release_tag:
         package, display_version, numeric_version = versions(release_tag)
@@ -128,6 +135,8 @@ def generate(output: Path, bundle: Path) -> Path:
         "MIN_RAM": str(raw["models"][0]["recommended_min_ram_gb"] * 1_000_000_000),
         "CONSENT_CASES": "\n".join(consent_cases),
         "DOWNLOAD_CASES": "\n".join(download_cases),
+        "ALREADY_CASES": "\n".join(already_cases),
+        "VOICE_BIT": str(1 << len(manifest.models)),
         "MESSAGES": "\n".join(f"{key}={value}" for key, value in M.INSTALLER.items()),
         "INNO_LICENSE": str(ROOT / "packaging/licenses/inno/license.txt"),
         "INSTALLER_NOTICES": str((output / "THIRD_PARTY_NOTICES.md").resolve()),

@@ -140,8 +140,12 @@ var
   Selected, Downloads: array of Integer;
   DownloadIndex, TestIndex, Smallest, Stage: Integer;
   Busy, FinishedWithout, TestFailed, ModelsTouched, ProbeStarted: Boolean;
+  DownloadPlanReady, PlanStartRequested, MissingVoice: Boolean;
+  MissingModels: array of Boolean;
+  NeededMask: Integer;
   CpuRetry: Boolean;
   ProbeRoot: String;
+  RecommendedModel: String;
   ProbeBegan: Int64;
   ReviewShown: Boolean;
   ModelBytes: array of Int64;
@@ -198,7 +202,7 @@ begin
     SuppressibleMsgBox(CustomMessage('UninstallProtected'), mbError, MB_OK, IDOK);
     Exit;
   end;
-  if UninstallSilent then begin
+  if UninstallSilent and (ExpandConstant('{param:DUSTYCONFIRM|}') <> 'yes') then begin
     if ExpandConstant('{param:REMOVEMODELS|}') = 'yes' then begin
       RemoveModels := True;
       Result := True;

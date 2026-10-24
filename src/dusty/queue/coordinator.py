@@ -1,5 +1,6 @@
 """Run one offline file at a time through the shared headless pipeline."""
 
+import errno
 import logging
 import shutil
 import threading
@@ -285,18 +286,22 @@ class Coordinator:
         except OutputExistsError:
             job.failure = FailureCode.OUTPUT_EXISTS_SKIPPED
             job.status = JobStatus.SKIPPED
-        except DecoderError:
+        except DecoderError as exc:
             if cancel and cancel.is_set():
                 job.status = JobStatus.CANCELLED
             else:
-                job.failure = FailureCode.DECODE_ERROR
+                job.failure = FailureCode.DISK_FULL if exc.disk_full else FailureCode.DECODE_ERROR
         except EngineError as exc:
             job.failure = FailureCode.GPU_ERROR if exc.gpu_error else FailureCode.ENGINE_ERROR
             if exc.cancelled:
                 job.status = JobStatus.CANCELLED
                 job.failure = None
-        except OSError:
-            job.failure = FailureCode.OUTPUT_UNWRITABLE
+        except OSError as exc:
+            job.failure = (
+                FailureCode.DISK_FULL
+                if exc.errno == errno.ENOSPC or getattr(exc, "winerror", None) == 112
+                else FailureCode.OUTPUT_UNWRITABLE
+            )
         except Exception:
             job.failure = FailureCode.INTERNAL_ERROR
         finally:

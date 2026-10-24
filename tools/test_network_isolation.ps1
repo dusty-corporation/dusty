@@ -119,6 +119,11 @@ try {
         $null = Invoke-TestPython -Executable (Join-Path $Bundle 'dusty/dusty.exe') -Arguments @('--self-test', '--backend', 'auto', '--model', 'tiny')
         $log = Join-Path $env:LOCALAPPDATA 'Dusty/logs/dusty.log'
         if (-not (Select-String -LiteralPath $log -Pattern 'status=done' -Quiet)) { throw 'Packaged self-test success log missing' }
+        $env:QT_QPA_PLATFORM = 'offscreen'
+        $canary = Join-Path $work 'canary-check'
+        $null = Invoke-TestPython -Executable (Join-Path $Bundle 'dusty/dusty.exe') -Arguments @('--check-hardening', '--out', $canary)
+        $canaryResult = Get-Content -LiteralPath (Join-Path $canary 'summary.json') -Raw | ConvertFrom-Json
+        if ($canaryResult.packaged_canary -ne $true -or $canaryResult.guard_installed -ne $true -or $canaryResult.native_diagnostic_capture -ne $true) { throw 'Packaged canary/capture check failed' }
     } else {
         $selftest = Invoke-TestPython -Arguments @('-m', 'dusty', '--self-test', '--backend', 'auto', '--model', 'tiny')
         if ($selftest -ne 'OK') { throw 'Offline self-test did not report success' }
@@ -134,6 +139,7 @@ try {
     $violations = @(Get-DustyConnectionEvents -Events $events -Programs $programs -AfterRecordId $marker -ExcludeProcessId $controlPid)
     $summary = @{calibration_blocked_event=$true; selftest='passed'; model_free_probe='passed'; real_gpu_found=$probe.real_gpu_found; packaged=[bool]$Bundle; installed_models=[bool]$InstalledModels; connection_events=$violations.Count}
     if (-not $Bundle) { $summary.batch = 'passed'; $summary.gui = 'passed' }
+    else { $summary.packaged_canary = 'passed'; $summary.native_diagnostic_capture = 'passed' }
     $summary | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $work 'summary.json') -Encoding utf8
     if ($violations.Count) { throw "S0: processing_connection_events=$($violations.Count)" }
     $summary | ConvertTo-Json -Compress

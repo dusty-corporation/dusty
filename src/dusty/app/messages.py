@@ -4,6 +4,13 @@ from dataclasses import dataclass
 
 from dusty.core.types import FailureCode
 
+
+def join_names(names: list[str]) -> str:
+    if len(names) < 3:
+        return " and ".join(names)
+    return ", ".join(names[:-1]) + " and " + names[-1]
+
+
 APP_NAME = "Dusty"
 FILE_FILTER = (
     "Recordings (*.mp3 *.m4a *.aac *.wav *.flac *.ogg *.oga *.opus *.wma *.webm *.mp4 "
@@ -11,6 +18,11 @@ FILE_FILTER = (
 )
 PRIVACY_TITLE = "Privacy and accuracy"
 ABOUT_VERSION = "Dusty {version}"
+ABOUT_DESCRIPTION = "Transcribe recordings privately on this computer."
+ABOUT_LICENSE = "License: Apache-2.0"
+REPOSITORY_ADDRESS = "https://github.com/dusty-corporation/dusty"
+THIRD_PARTY_NOTICES = "Third-party notices"
+NOTICES_UNAVAILABLE = "The bundled notices could not be opened. Reinstall Dusty to restore them."
 TAGLINE = "Private transcription that never leaves your computer."
 PRIVACY = (
     "Dusty processes your recordings entirely on this computer. After installation, it "
@@ -525,10 +537,23 @@ FETCH_ERRORS = {
     "START_FAILED": "The downloader could not start. Check the installed files.",
     "PROTOCOL": "The downloader did not finish correctly. Try the download again.",
     "DELETE": "The downloaded model could not be deleted.",
+    "CANCEL_CLEANUP": (
+        "The download stopped, but its partial file could not be removed. "
+        "Close other programs using the download and try again."
+    ),
 }
 
 # Inno Setup custom messages are generated from this same plain-language source.
 INSTALLER = {
+    "UninstallRegistrationFailed": (
+        "Dusty could not finish setting up its uninstall command. "
+        "Close Setup and try installing again."
+    ),
+    "PartialKept": (
+        "The download stopped, but its partial file could not be removed. "
+        "Close other programs using the download before trying again. "
+        "Your verified models have been kept."
+    ),
     "UninstallProtected": (
         "Dusty could not confirm that its installation folder is safe to remove. "
         "Uninstall has stopped to protect your files. Ask the person who installed "
@@ -584,16 +609,14 @@ INSTALLER.update(
     LicenseNotices="Third-party notices",
     LicenseMicrosoft="Microsoft runtime terms",
     BestFor="Best for: %1",
-    CheckingGraphics=(
-        "Checking the graphics device... Small is the safe choice if this check cannot finish."
-    ),
+    CheckingGraphics="Checking this computer...",
     LowMemory=(
         "This computer has less memory than these models recommend. You can "
         "still install Dusty, but transcription may be slow or may not finish."
     ),
     DownloadConsent="Download %1 from github.com (%2)?",
     DownloadAction="Download",
-    DownloadPage="Download transcription models",
+    DownloadPage="Download or check transcription models",
     DownloadPageHelp="Dusty needs at least one model to transcribe.",
     DownloadHeading="Downloading %1 (%2)",
     DownloadAmount=DOWNLOAD_PROGRESS.format(done="%1", total="%2"),
@@ -607,6 +630,9 @@ INSTALLER.update(
     UninstallAction="Uninstall",
     DownloadWorking="Downloading %1",
     CheckingModel="Checking %1",
+    CheckingInstalled="Checking the downloaded models...",
+    CheckAndTest="Check and test",
+    AlreadyDownloaded="%1 are already downloaded. Dusty will check and test them.",
     GpuSelfTestFailed=(
         "The test on the graphics card did not pass. You can try again, "
         "use the processor instead (slower), or finish without a model."

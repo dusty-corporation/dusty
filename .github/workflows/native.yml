@@ -86,7 +86,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Pinned fixture assets failed' }
           Copy-Item build/native/package/cpu/*.exe build/bin/cpu -Force
           Copy-Item build/native/package/cpu/*.dll build/bin/cpu -Force
-          uv run pytest tests/integration/test_engine_smoke.py tests/integration/test_vad_silence.py -s
+          uv run pytest tests/integration/test_engine_smoke.py tests/integration/test_vad_silence.py tests/integration/test_m6_hardening.py -s
           if ($LASTEXITCODE -ne 0) { throw 'Native timestamp regression failed' }
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

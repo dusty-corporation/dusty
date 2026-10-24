@@ -23,7 +23,7 @@ class Prepared:
     vulkan_ok: bool
     settings: dict[str, Any]
     recovered: tuple[BatchOptions, list[Job]] | None = None
-    vad_installed: bool = True
+    vad_installed: bool = False
 
 
 class PrepareWorker(QThread):

@@ -2,6 +2,7 @@
 function InitializeUninstall: Boolean; forward;
 procedure FinishStopped; forward;
 procedure StopModelSetup(Confirm: Boolean); forward;
+procedure DownloadClick(Sender: TObject); forward;
 #ifdef ReviewOnly
 procedure ReviewTick; forward;
 #endif
@@ -25,7 +26,7 @@ begin
   Result.OnClick := Handler;
 end;
 
-function ConsentText: String;
+function AlreadyText: String;
 var I, Mask, Bit: Integer;
 begin
   Mask := 0; Bit := 1;
@@ -35,22 +36,33 @@ begin
   end;
   Result := '';
   case Mask of
+@@ALREADY_CASES@@
+  end;
+end;
+
+function ConsentText: String;
+begin
+  if NeededMask = 0 then begin Result := AlreadyText; Exit; end;
+  Result := '';
+  case NeededMask of
 @@CONSENT_CASES@@
   end;
 end;
 
 function DownloadText: String;
-var I, Mask, Bit: Integer;
 begin
-  Mask := 0; Bit := 1;
-  for I := 0 to GetArrayLength(ModelIds) - 1 do begin
-    if ModelsPage.Values[I] then Mask := Mask + Bit;
-    Bit := Bit * 2;
-  end;
+  if NeededMask = 0 then begin Result := AlreadyText; Exit; end;
   Result := '';
-  case Mask of
+  case NeededMask of
 @@DOWNLOAD_CASES@@
   end;
+end;
+
+function CurrentDownloadWanted: Boolean;
+begin
+  if DownloadIndex >= GetArrayLength(Downloads) then begin Result := False; Exit; end;
+  if Downloads[DownloadIndex] < 0 then Result := MissingVoice
+  else Result := MissingModels[Downloads[DownloadIndex]];
 end;
 
 function SizeText(Bytes: Int64): String;
@@ -65,6 +77,16 @@ begin
   Result := FmtMessage(UnitName, [IntToStr(Tenths div 10) + '.' + IntToStr(Tenths mod 10)]);
 end;
 
+function TestedDefaultId: String;
+var I: Integer;
+begin
+  Result := '';
+  for I := 0 to GetArrayLength(Selected) - 1 do
+    if ModelIds[Selected[I]] = RecommendedModel then Result := RecommendedModel;
+  if (Result = '') and (GetArrayLength(Selected) > 0) then
+    Result := ModelIds[Selected[0]];
+end;
+
 function SuccessText: String;
 begin
   if GetArrayLength(Selected) > 1 then Result := CustomMessage('SetupCompletePlural')
@@ -75,7 +97,7 @@ procedure ShowAmount;
 var Bytes, Current: Int64; FileName: String;
 begin
   Current := 0;
-  if (Stage >= 0) and (Stage <= 2) and (DownloadIndex < GetArrayLength(Downloads)) then begin
+  if (Stage >= 1) and (Stage <= 2) and CurrentDownloadWanted then begin
     if Downloads[DownloadIndex] < 0 then FileName := '@@VAD_FILE@@'
     else FileName := ModelFiles[Downloads[DownloadIndex]];
     FileName := ExpandConstant('{localappdata}\Dusty\models\') + FileName;
@@ -135,6 +157,9 @@ begin
   RetryButton.Visible := True;
   CpuButton.Visible := IsTest and GpuFailed;
   WithoutButton.Visible := True;
+  { The byte line describes download progress, even after a model test fails. }
+  if TotalModelBytes > 0 then
+    Meter.Position := CompletedModelBytes * 100 div TotalModelBytes;
   WizardForm.NextButton.Enabled := False;
 end;
 
@@ -189,8 +214,15 @@ begin
 end;
 
 procedure ShowMemoryWarning;
-var Memory: TMemoryStatus;
+var Memory: TMemoryStatus; I: Integer;
 begin
+  for I := 0 to GetArrayLength(ModelIds) - 1 do begin
+    if not ModelsTouched then ModelsPage.Values[I] := ModelIds[I] = RecommendedModel;
+    if ModelIds[I] = RecommendedModel then ModelsPage.CheckListBox.ItemCaption[I] := ModelRecommendedLabels[I] + ModelDetails[I]
+    else ModelsPage.CheckListBox.ItemCaption[I] := ModelLabels[I] + ModelDetails[I];
+  end;
+  ModelsPage.CheckListBox.Enabled := True;
+  if WizardForm.CurPageID = ModelsPage.ID then WizardForm.NextButton.Enabled := True;
   MemoryNotice.Caption := '';
   Memory.Length := 64;
   if WinMemoryStatus(Memory) then
@@ -204,6 +236,37 @@ begin
     Quoted(ExpandConstant('{tmp}\model-status.json'))) then Stage := 0;
 end;
 
+procedure QueryDownloadPlan(StartNow: Boolean);
+begin
+  PlanStartRequested := StartNow;
+  DownloadPlanReady := False; Busy := True; Stage := -5;
+  Consent.Caption := CustomMessage('CheckingInstalled');
+  Phase.Caption := ''; WizardForm.NextButton.Enabled := False;
+  if not StartChild(ExpandConstant('{app}\dusty\dusty.exe'), '--installer-status --out ' +
+    Quoted(ExpandConstant('{tmp}\download-plan.json'))) then Failure(False);
+end;
+
+procedure ApplyDownloadPlan(S: AnsiString);
+var I, Bit: Integer;
+begin
+  SetArrayLength(MissingModels, GetArrayLength(ModelIds));
+  NeededMask := 0; Bit := 1; TotalModelBytes := 0;
+  for I := 0 to GetArrayLength(ModelIds) - 1 do begin
+    MissingModels[I] := ModelsPage.Values[I] and (Pos('"' + ModelIds[I] + '":"installed"', String(S)) = 0);
+    if MissingModels[I] then begin
+      NeededMask := NeededMask + Bit;
+      TotalModelBytes := TotalModelBytes + ModelBytes[I];
+    end;
+    Bit := Bit * 2;
+  end;
+  MissingVoice := Pos('"silero-vad":"installed"', String(S)) = 0;
+  if MissingVoice then begin
+    NeededMask := NeededMask + @@VOICE_BIT@@;
+    TotalModelBytes := TotalModelBytes + @@VAD_BYTES@@;
+  end;
+  DownloadPlanReady := True;
+end;
+
 procedure PollChild(A, B, C, D: LongWord);
 var Code: LongWord; I: Integer; Memory: TMemoryStatus; S: AnsiString; Prefix, Expected: Int64; Part: String;
 begin
@@ -211,6 +274,20 @@ begin
   ReviewTick;
   Exit;
 #endif
+  { Return the page to Windows before extraction so every catalog row paints. }
+  if Stage = -4 then begin
+    if WizardForm.CurPageID <> ModelsPage.ID then Exit;
+    Stage := 0;
+    try ExtractTemporaryFiles('{tmp}\probe\*');
+    except ShowMemoryWarning; Exit; end;
+    ProbeRoot := ExpandConstant('{tmp}\probe');
+    Stage := -1; ProbeBegan := Tick;
+    if not StartChild(ProbeRoot + '\dusty\dusty.exe', '--probe-vulkan --out ' +
+      Quoted(ExpandConstant('{tmp}\probe-result.json'))) then begin
+      Stage := 0; ShowMemoryWarning;
+    end;
+    Exit;
+  end;
   { Explicit, disposable CI acceptance: stop a real transfer after bytes arrive. }
   if WizardSilent and (GetEnv('GITHUB_ACTIONS') = 'true') and
      (ExpandConstant('{param:TESTCANCEL|}') = 'yes') and (Stage = 1) and not StopRequested then begin
@@ -225,6 +302,16 @@ begin
   end;
   if (Child.Process = 0) or (WaitChild(Child.Process, 0) <> 0) then Exit;
   Code := 1; ChildExit(Child.Process, Code); ReleaseChild;
+  if Stage = -5 then begin
+    if (Code <> 0) or not LoadStringFromFile(ExpandConstant('{tmp}\download-plan.json'), S) then begin Failure(False); Exit; end;
+    ApplyDownloadPlan(S); Busy := False; Stage := 0;
+    Consent.Caption := ConsentText;
+    if NeededMask = 0 then WizardForm.NextButton.Caption := CustomMessage('CheckAndTest')
+    else WizardForm.NextButton.Caption := CustomMessage('DownloadAction');
+    WizardForm.NextButton.Enabled := True;
+    if PlanStartRequested then DownloadClick(nil);
+    Exit;
+  end;
   if Stage = -3 then begin
     if (Code = 0) and LoadStringFromFile(ExpandConstant('{tmp}\model-status.json'), S) then
       for I := 0 to GetArrayLength(ModelIds) - 1 do
@@ -233,16 +320,20 @@ begin
     Stage := 0; Exit;
   end;
   if Stage = -1 then begin
+    ShowMemoryWarning; { Restore Small before applying a successful GPU result. }
     MemoryNotice.Caption := '';
     Memory.Length := 64;
     if WinMemoryStatus(Memory) then begin
       if Memory.TotalPhysical < @@MIN_RAM@@ then MemoryNotice.Caption := CustomMessage('LowMemory');
       if (Code = 0) and (Memory.TotalPhysical >= @@MIN_RAM@@) then
+      begin
+        RecommendedModel := 'large-v3-turbo-q8_0';
         for I := 0 to GetArrayLength(ModelIds) - 1 do begin
           if not ModelsTouched then ModelsPage.Values[I] := ModelIds[I] = 'large-v3-turbo-q8_0';
           if ModelIds[I] = 'large-v3-turbo-q8_0' then ModelsPage.CheckListBox.ItemCaption[I] := ModelRecommendedLabels[I] + ModelDetails[I]
           else ModelsPage.CheckListBox.ItemCaption[I] := ModelLabels[I] + ModelDetails[I];
         end;
+      end;
     end;
     CheckExistingModels;
     Exit;
@@ -265,11 +356,16 @@ begin
     Stage := 0; BeginFetch('verify'); Exit;
   end;
   if Stage <= 2 then begin
-    if (Stage = 0) and (Code <> 0) then begin Stage := 1; BeginFetch('download'); Exit; end;
+    if (Stage = 0) and (Code <> 0) then begin
+      if not CurrentDownloadWanted then begin Failure(False); Exit; end;
+      Stage := 1; BeginFetch('download'); Exit;
+    end;
     if Code <> 0 then begin Failure(False); Exit; end;
     if Stage = 1 then begin Stage := 2; BeginFetch('verify'); Exit; end;
-    if Downloads[DownloadIndex] < 0 then CompletedModelBytes := CompletedModelBytes + @@VAD_BYTES@@
-    else CompletedModelBytes := CompletedModelBytes + ModelBytes[Downloads[DownloadIndex]];
+    if CurrentDownloadWanted then begin
+      if Downloads[DownloadIndex] < 0 then CompletedModelBytes := CompletedModelBytes + @@VAD_BYTES@@
+      else CompletedModelBytes := CompletedModelBytes + ModelBytes[Downloads[DownloadIndex]];
+    end;
     DownloadIndex := DownloadIndex + 1;
     ShowAmount;
     if DownloadIndex < GetArrayLength(Downloads) then begin Stage := 0; BeginFetch('verify'); end
@@ -284,7 +380,7 @@ begin
     if Stage = 4 then begin
       Stage := 6;
       if not StartChild(ExpandConstant('{app}\dusty\dusty.exe'),
-        '--installer-pass --model ' + Quoted(ModelIds[Selected[0]])) then Failure(True);
+        '--installer-pass --model ' + Quoted(TestedDefaultId)) then Failure(True);
     end
     else begin
       TestIndex := TestIndex + 1;
@@ -301,6 +397,7 @@ begin
 #ifdef ReviewOnly
   Exit; { Native preview controls must never start a real transfer. }
 #endif
+  if not DownloadPlanReady then begin QueryDownloadPlan(True); Exit; end;
   SetArrayLength(Selected, 0); Smallest := -1;
   for I := 0 to GetArrayLength(ModelIds) - 1 do if ModelsPage.Values[I] then begin
     Count := GetArrayLength(Selected); SetArrayLength(Selected, Count + 1); Selected[Count] := I;
@@ -311,11 +408,9 @@ begin
   SetArrayLength(Downloads, GetArrayLength(Selected) + 1);
   for I := 0 to GetArrayLength(Selected) - 1 do Downloads[I] := Selected[I];
   Downloads[GetArrayLength(Selected)] := -1;
-  TotalModelBytes := @@VAD_BYTES@@; CompletedModelBytes := 0;
-  for I := 0 to GetArrayLength(Selected) - 1 do
-    TotalModelBytes := TotalModelBytes + ModelBytes[Selected[I]];
+  CompletedModelBytes := 0;
   DownloadStarted := True; Consent.Caption := DownloadText;
-  Meter.Visible := True; Amount.Visible := True;
+  Meter.Visible := TotalModelBytes > 0; Amount.Visible := TotalModelBytes > 0;
   WizardForm.BackButton.Enabled := False;
   Busy := True; DownloadIndex := 0; Stage := -2;
   Meter.Position := 0; Outcome.Caption := '';
@@ -331,12 +426,13 @@ begin
   Exit;
 #endif
   RetryButton.Visible := False; CpuButton.Visible := False; WithoutButton.Visible := False;
+  if Stage = -5 then begin QueryDownloadPlan(PlanStartRequested); Exit; end;
   Busy := True;
   if Stage = 5 then begin
     if not StartChild(ExpandConstant('{app}\dusty\dusty.exe'), '--installer-clear') then Failure(True);
   end else if Stage = 6 then begin
     if not StartChild(ExpandConstant('{app}\dusty\dusty.exe'),
-      '--installer-pass --model ' + Quoted(ModelIds[Selected[0]])) then Failure(True);
+      '--installer-pass --model ' + Quoted(TestedDefaultId)) then Failure(True);
   end else if Stage >= 3 then begin CpuRetry := False; BeginTest; end else DownloadClick(Sender);
 end;
 
@@ -357,6 +453,8 @@ begin
   Success := Exec(ExpandConstant('{app}\dusty\dusty.exe'),
     '--installer-cancel-part --model ' + Quoted(CurrentId),
     ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, Code);
+  if (not Success) or (Code <> 0) then
+    SuppressibleMsgBox(CustomMessage('PartialKept'), mbInformation, MB_OK, IDOK);
 end;
 
 procedure WithoutClick(Sender: TObject);
@@ -436,7 +534,7 @@ end;
 
 procedure ModelsClick(Sender: TObject);
 begin
-  ModelsTouched := True;
+  ModelsTouched := True; DownloadPlanReady := False;
   ShowMemoryWarning;
 end;
 
@@ -454,6 +552,7 @@ end;
 procedure InitializeWizard;
 var I: Integer; Requested: String; Button: TNewButton;
 begin
+  RecommendedModel := 'small';
   ModelsPage := CreateInputOptionPage(wpLicense, CustomMessage('ChooseModels'),
     CustomMessage('ChooseModelsHelp'), '', False, True);
   SetArrayLength(ModelIds, @@MODEL_COUNT@@); SetArrayLength(ModelNames, @@MODEL_COUNT@@);
@@ -514,16 +613,17 @@ begin
     AccuracyNotice.Parent := ReturnModelsPage.Surface;
     MemoryNotice.Parent := ReturnModelsPage.Surface;
   end;
-  if (Page = ModelsPage.ID) and not ProbeStarted then begin
+  if (Page = ModelsPage.ID) and not ProbeStarted and not WizardSilent then begin
     ProbeStarted := True;
 #ifndef ReviewOnly
     MemoryNotice.Caption := CustomMessage('CheckingGraphics');
-    try ExtractTemporaryFiles('{tmp}\probe\*');
-    except ShowMemoryWarning; Exit; end;
-    ProbeRoot := ExpandConstant('{tmp}\probe');
-    Stage := -1; ProbeBegan := Tick;
-    if not StartChild(ProbeRoot + '\dusty\dusty.exe', '--probe-vulkan --out ' +
-      Quoted(ExpandConstant('{tmp}\probe-result.json'))) then Stage := 0;
+    for I := 0 to GetArrayLength(ModelIds) - 1 do begin
+      if not ModelsTouched then ModelsPage.Values[I] := False;
+      ModelsPage.CheckListBox.ItemCaption[I] := ModelLabels[I] + ModelDetails[I];
+    end;
+    ModelsPage.CheckListBox.Enabled := False;
+    WizardForm.NextButton.Enabled := False;
+    Stage := -4; { PollChild starts extraction on a later event-loop turn. }
 #endif
   end;
   if Page = DownloadPage.ID then begin
@@ -535,10 +635,12 @@ begin
       Consent.Caption := DownloadText;
       WizardForm.NextButton.Caption := SetupMessage(msgButtonNext);
     end else begin
-      Consent.Caption := ConsentText;
-      WizardForm.NextButton.Caption := CustomMessage('DownloadAction');
+      Consent.Caption := CustomMessage('CheckingInstalled');
+#ifndef ReviewOnly
+      QueryDownloadPlan(False);
+#endif
     end;
-    Meter.Visible := DownloadStarted; Amount.Visible := DownloadStarted;
+    Meter.Visible := DownloadStarted and (TotalModelBytes > 0); Amount.Visible := Meter.Visible;
 #ifdef ReviewOnly
     Mode := ExpandConstant('{param:REVIEWSTATE|consent}');
     Phase.Caption := CustomMessage('ReviewOnly');
@@ -598,6 +700,7 @@ begin
   Result := True;
   if StopRequested then Exit;
   if (CurPageID = ModelsPage.ID) or (CurPageID = ReturnModelsPage.ID) then begin
+    if (Stage = -4) or (Stage = -1) then begin Result := False; Exit; end;
     Count := 0; for I := 0 to GetArrayLength(ModelIds) - 1 do if ModelsPage.Values[I] then Count := Count + 1;
     Result := Count > 0;
     if not Result then MemoryNotice.Caption := CustomMessage('NeedModel');
@@ -647,6 +750,18 @@ end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
+#ifndef ReviewOnly
+  if CurStep = ssDone then begin
+    if not RegWriteStringValue(HKCU,
+      'Software\Microsoft\Windows\CurrentVersion\Uninstall\{7B3110E8-7983-41AC-A0ED-F6EB13DBB72A}_is1',
+      'UninstallString', Quoted(ExpandConstant('{uninstallexe}')) + ' /SILENT /DUSTYCONFIRM=yes') then
+      RaiseException(CustomMessage('UninstallRegistrationFailed'));
+    if not RegWriteStringValue(HKCU,
+      'Software\Microsoft\Windows\CurrentVersion\Uninstall\{7B3110E8-7983-41AC-A0ED-F6EB13DBB72A}_is1',
+      'QuietUninstallString', Quoted(ExpandConstant('{uninstallexe}')) + ' /SILENT /DUSTYCONFIRM=yes') then
+      RaiseException(CustomMessage('UninstallRegistrationFailed'));
+  end;
+#endif
   if (CurStep = ssPostInstall) and WizardSilent then begin
     DownloadClick(nil);
     while Busy do begin Sleep(100); PollChild(0, 0, 0, 0); end;

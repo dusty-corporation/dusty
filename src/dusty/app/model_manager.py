@@ -168,25 +168,27 @@ class ModelWorker(QThread):
                         part = self.paths.models_dir / (
                             model_files(self.registry)[key][0] + ".part"
                         )
-                        if not linked(part):
-                            part.unlink(missing_ok=True)
                         self.failure = "CANCELLED"
+                        try:
+                            if linked(part):
+                                raise OSError("Linked partial retained")
+                            part.unlink(missing_ok=True)
+                        except OSError:
+                            self.failure = "CANCEL_CLEANUP"
                     elif process.exit_code or "complete" not in events:
                         self.failure = self.failure or "PROTOCOL"
                     if self.failure:
                         break
-                    self.registry._verified.pop(
-                        self.registry.directory / model_files(self.registry)[key][0], None
-                    )
+                    self.registry.invalidate(file_name=model_files(self.registry)[key][0])
             elif self.action == "delete":
                 key = self.ids[0]
                 path = self.registry.directory / model_files(self.registry)[key][0]
                 if linked(path):
                     raise ValueError("Model symlink")
                 path.unlink(missing_ok=True)
-                self.registry._verified.pop(path, None)
+                self.registry.invalidate(file_name=path.name)
             else:
-                self.registry._verified.clear()
+                self.registry.invalidate()
         except (OSError, ValueError):
             self.failure = "DELETE" if self.action == "delete" else "START_FAILED"
         try:
