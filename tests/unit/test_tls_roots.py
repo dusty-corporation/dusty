@@ -7,11 +7,12 @@ from urllib.error import URLError
 
 import pytest
 from test_downloader import CERTS
+from test_downloader import tls as tls_fixture
 
 from dusty_fetch.downloader import Downloader
 from dusty_fetch.tls import ROOTS, bundled_pem, create_context, resource_dir
 
-pytest_plugins = ["test_downloader"]
+tls = tls_fixture
 
 
 def local_bundle(tmp_path):
