@@ -83,6 +83,10 @@ Command: rg -n '(rmtree|\.unlink\(|\.rmdir\(|DeleteFile|DelTree|Remove-Item)' sr
 Inno's own compiled file/uninstall inventory owns its extraction and installed
 payload files. It removes registered app files, not arbitrary transcript trees.
 Only Dusty's conservative data helper handles persistent user-data cleanup.
+Second review correction (ISSUE-025): inventory membership alone cannot protect
+a legacy transcript destination overlapping registered files. InitializeUninstall
+now invokes the guarded read-only destination preflight before any native
+deletion; protected/uncertain installation paths stop the entire uninstall.
 
 ## Owner actions for the morning
 

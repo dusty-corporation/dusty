@@ -115,3 +115,8 @@ files. These local temporaries are not transmitted.
 Legacy destinations recorded in preserved_paths stay protected during uninstall,
 including the whole subtree and its protection metadata. In that case removal
 reports retained data rather than guessing which contents are disposable.
+
+Before native uninstall removes registered application files, a separate
+preflight checks saved and preserved destinations against the installation
+folder. An overlap or unreadable protection metadata stops uninstall before
+application removal. No model manifest or networking is needed for this check.

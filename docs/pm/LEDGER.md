@@ -993,3 +993,8 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   receipts pass. Exact hashes and Owner VM commands are in the copied checklist.
 - Production/test/tool/workflow parity remains exact; no M6 acceptance, new
   feature, PR or publication. Reference branches remain untouched.
+
+## M5 ISSUE-025 carry-forward, 2026-10-24
+- Carried 7f7e036 uninstall preflight and its source, native acceptance and release receipt regressions from m5-installer.
+- Protected installation destinations now stop native uninstall before any registered payload is removed. Source gates passed on release run 40104236818; native gates pending.
+- Updated installation and privacy guidance. Existing m6-docs reference branch remains untouched.

@@ -91,3 +91,8 @@ It does not open Dusty automatically after a stopped setup.
 The uninstaller's Also remove downloaded models checkbox starts checked and
 shows the actual size. Uncheck it to keep verified models for reinstallation.
 Your chosen transcript folders are never uninstall targets.
+
+If a saved destination overlaps Dusty's installation folder, or its protection
+metadata cannot be read safely, uninstall stops before removing the application.
+Ask the person who installed Dusty to review the saved folders. Dusty does not
+move or delete those protected files automatically.

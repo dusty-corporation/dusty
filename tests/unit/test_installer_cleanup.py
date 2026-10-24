@@ -1,6 +1,7 @@
 """Uninstall cleanup preserves output content and refuses uncertain ownership."""
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -26,6 +27,26 @@ def test_uninstall_retains_sanitized_legacy_destination(tmp_path):
     assert not cleanup(paths, remove_models=True)
     assert sentinel.read_bytes() == b"synthetic private destination sentinel"
     assert (root / "settings.json").exists()
+
+
+def test_uninstall_keeps_metadata_for_protected_installed_payload(tmp_path):
+    from dusty.queue.storage import save_settings
+
+    root = tmp_path / "user"
+    install = tmp_path / "Programs/Dusty"
+    resources = install / "resources"
+    resources.mkdir(parents=True)
+    sentinel = resources / "models.json"
+    sentinel.write_text('{"private":"synthetic transcript"}')
+    save_settings(
+        root / "settings.json", {"schema_version": 1, "preserved_paths": [str(resources)]}
+    )
+    paths = replace(
+        RuntimePaths(tmp_path, root / "models", ROOT / "resources", root), install_dir=install
+    )
+    assert not cleanup(paths, remove_models=False)
+    assert (root / "settings.json").exists()
+    assert sentinel.read_text() == '{"private":"synthetic transcript"}'
 
 
 @pytest.mark.parametrize("remove_models", [False, True])

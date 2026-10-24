@@ -187,10 +187,17 @@ var
   Choice: TNewCheckBox;
   Help: TNewStaticText;
   Confirm, Cancel: TNewButton;
+  Code: Integer;
 begin
   Result := False;
   RemoveModels := True;
 #ifndef ReviewOnly
+  if not Exec(ExpandConstant('{app}\dusty\dusty.exe'), '--installer-can-uninstall',
+    ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, Code) then Code := 1;
+  if Code <> 0 then begin
+    SuppressibleMsgBox(CustomMessage('UninstallProtected'), mbError, MB_OK, IDOK);
+    Exit;
+  end;
   if UninstallSilent then begin
     if ExpandConstant('{param:REMOVEMODELS|}') = 'yes' then begin
       RemoveModels := True;

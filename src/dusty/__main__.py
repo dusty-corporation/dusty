@@ -33,12 +33,19 @@ def main(argv: list[str] | None = None) -> int:
         "model-size",
         "installer-status",
         "installer-cancel-part",
+        "installer-can-uninstall",
     ):
         parser.add_argument("--" + flag, action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
         "--uninstall-data", choices=("keep-models", "remove-models"), help=argparse.SUPPRESS
     )
     args = parser.parse_args(argv)
+
+    if args.installer_can_uninstall:
+        from dusty.installer_cleanup import uninstall_allowed
+        from dusty.runtime_paths import resolve_paths
+
+        return 0 if uninstall_allowed(resolve_paths()) else 1
 
     if args.installer_upgrade_root:
         from pathlib import Path

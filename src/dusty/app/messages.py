@@ -529,6 +529,11 @@ FETCH_ERRORS = {
 
 # Inno Setup custom messages are generated from this same plain-language source.
 INSTALLER = {
+    "UninstallProtected": (
+        "Dusty could not confirm that its installation folder is safe to remove. "
+        "Uninstall has stopped to protect your files. Ask the person who installed "
+        "Dusty to review your saved transcript folders before trying again."
+    ),
     "UpgradeFilesBlocked": (
         "Some files from the earlier installation could not be updated. Close Dusty and "
         "try again, or choose another installation folder. Your models and transcripts "
