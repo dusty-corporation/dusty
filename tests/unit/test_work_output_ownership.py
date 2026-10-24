@@ -228,3 +228,14 @@ def test_recording_outputs_cannot_recreate_lost_ownership(tmp_path, damage):
     assert not owned.cleanup(tmp_path / "user")
     assert file.read_text() == "preserve data"
     assert (marker.read_bytes() if marker.exists() else None) == before
+
+
+def test_record_cannot_adopt_a_changed_previously_owned_file(tmp_path):
+    owned = OwnedWork(tmp_path / "user/work", "job")
+    file = owned.path / "audio.wav"
+    file.write_bytes(b"generated")
+    owned.record("audio.wav")
+    file.write_bytes(b"user replacement")
+    owned.record("audio.wav")
+    assert not owned.cleanup(tmp_path / "user")
+    assert file.read_bytes() == b"user replacement"
