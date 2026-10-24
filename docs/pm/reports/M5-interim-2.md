@@ -1,47 +1,52 @@
-# M5 interim 2 - Native installer page review
+# M5 interim 2 - Native installer PM page round
 
 ## Owner actions for the morning
 
-1. PM: review the native light/100% page bundle linked below. Wording and layout
-   are frozen after this delivery pending your response, except correctness fixes.
-2. Owner: run docs/pm/M5-checklist.md on the fresh standard-user Windows 11 VM.
-   No installer has been run against the Owner's real app profile.
+1. Review the new page bundle below. No new wording decision is currently needed.
+2. Run M5-checklist.md using the repaired drafts named in the final M5 report.
+   Genuine native 100%/150% scaling and actual button/X behavior remain VM checks.
 
 ## Summary and evidence
 
-Step B implements the shared catalog/consent, three reachable license views,
-physical model-free GPU/RAM pre-selection, Auto testing of every selected model,
-one extra smallest-model CPU check, Retry/CPU retry/Finish without, and an
-uninstall checkbox with the real installed-model size. Owner ThinkPad Iris Xe
-probe PASS on 2026-10-23: `{"real_gpu_found":true,"model_file_opened":false}`.
+The PM page changes are implemented with shared messages and catalog sizes:
+Next=Download, pre-start Back/model changes, persistent Downloading heading,
+byte totals, processor retry, truthful singular/plural success and Finish without,
+checked current-user Open Dusty now, checked desktop shortcut, compact uninstall
+and the Voice detection sentence. No close-other-apps sentence remains.
 
-Local full source: 257 passed/1 expected skip, 94.6% measured core-package
-coverage (193.37 s). Ruff/format, mypy and all three policy checks pass.
-CI 40036996425 compiled the font/layout repair; final result and screenshot
-asset are being collected in the continuing overnight session.
+Gated native review: 7b8d28b, CI 40065869279 all jobs green. Packaged/installed
+PE/license/GUI/WFP, real-prefix normal cancel, retry and both uninstall variants
+passed. Full download Setup/GUI/native 0, fetch allowed 4/blocked 0; cancel audit
+0/0/0, fetch 2/0. ISSUE-020 preservation regressions remain enabled and green.
+Owner ThinkPad model-free probe PASS, 2026-10-23: real_gpu_found=true,
+model_file_opened=false. This is device initialization, not inference evidence.
 
-## Pages requested for review
+[Draft m5-screenshots release](https://github.com/dusty-corporation/dusty/releases/tag/untagged-a1e1f91641e95222b8da):
+`m5-installer-pages-pm-round-7b8d28b-light.zip`, 7,725,089 bytes,
+SHA-256 `27a3731c91478669cc5f13778b8ef432624c404cb2fb2adaf0fccb2905dbe1b0`.
+Archive gate passed: 21 actual native-control PNGs plus README only.
 
-Welcome; combined license agreement; separate third-party and Microsoft views;
-Choose model; low-RAM warning; install folder; shortcuts; ready; file installation;
-inline consent; download; per-model test progress; download failure; graphics-test
-failure with CPU retry; successful checks; Finish without acknowledgment;
-normal finish; finish after failed model setup; uninstall model-size checkbox.
+Pages: Welcome, three license views, catalog, low-memory warning, folder,
+shortcuts, ready, copying files, consent, downloading, model tests, download
+failure, graphics failure, success, Finish without acknowledgment, both finish
+pages, uninstall and the scrolled catalog. Review controls are disabled or safe
+no-ops. Progress/failure/low-memory/model-size states are explicitly synthetic;
+these images do not establish real failure-injection or VM acceptance.
 
-The review executable uses real Inno controls with installation disabled.
-Progress/error/low-memory and uninstall-size examples are synthetic review states,
-not evidence of a real download failure or clean-machine acceptance. The archive
-must contain only PNGs and README; profile/metadata files stay outside it.
+Scale limitation: process-effective 96 DPI on the unchanged 175% host display;
+Windows bitmap scaling remains visible. Captures were format-converted to PNG,
+never resized or edited. No native 100%/150% monitor acceptance is claimed.
+No Owner app profile or host settings were changed. Own preview process closed.
 
-## Questions for the PM
+The separate `m5-main-output-row-a75f1cf-light-dark-100-150.zip` has 16 real Qt
+client captures, both themes at device ratios 1/1.5, four destination states.
+It includes only PNGs and README, with source/provenance and synthetic paths noted.
 
-- Please approve or annotate the page wording/layout. No further cosmetic changes
-  will be made before that reply. The larger native model list uses explicit
-  wrapped shared descriptions rather than Inno's single-line secondary column.
-- Fresh VM testing must measure full model-page entry time, including temporary
-  payload extraction. Driver calls themselves have a five-second child deadline
-  and seven-second Setup deadline; the standalone probe does not measure disk
-  extraction. No unmeasured total-time claim is made.
+## Remaining evidence
 
-The old packaging-spike interim 2 is retained as
-M5-packaging-spike-interim-2.md. This report is the current M5 page review.
+M5's two-version draft run exposed obsolete versioned own-license copies
+(ISSUE-022). The strict inventory gate blocked the .8 draft. A narrow guarded
+pre-copy repair and preservation regressions are pushed; final tagged reruns
+are in progress. See M5-report.md for final runs and safe VM builds.
+The Owner still measures total first-page extraction time and native scaling;
+probe driver deadlines alone do not establish extraction time.

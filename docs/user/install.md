@@ -70,6 +70,11 @@ Your recordings and transcript folders are not removal targets. Unfamiliar
 files or unsafe folder arrangements are preserved rather than guessed at.
 The [privacy guide](../privacy.md) explains the locations and deletion limits.
 
+If Setup says earlier installation files could not be updated, close Dusty and
+retry. If the message remains, ask the Owner before removing or changing files.
+Setup preserves unfamiliar or changed files rather than guessing they are safe
+to remove. Model files and transcript folders are not upgrade cleanup targets.
+
 Normal Cancel or normal close removes the active partial download. After a crash
 or forced close, a recent partial may resume, but its full size and SHA-256 must
 still match before use. At startup, partials older than seven days are removed

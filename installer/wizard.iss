@@ -626,6 +626,25 @@ begin
 #endif
 end;
 
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var Code: Integer;
+begin
+  Result := '';
+#ifndef ReviewOnly
+  if DirExists(ExpandConstant('{app}\licenses\dusty')) then begin
+    try
+      ExtractTemporaryFiles('{tmp}\probe\*');
+      if not Exec(ExpandConstant('{tmp}\probe\dusty\dusty.exe'),
+        '--installer-upgrade-root ' + Quoted(ExpandConstant('{app}')), '', SW_HIDE,
+        ewWaitUntilTerminated, Code) then Code := 1;
+      if Code <> 0 then Result := CustomMessage('UpgradeFilesBlocked');
+    except
+      Result := CustomMessage('UpgradeFilesBlocked');
+    end;
+  end;
+#endif
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if (CurStep = ssPostInstall) and WizardSilent then begin

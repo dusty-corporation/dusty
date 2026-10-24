@@ -4,8 +4,8 @@
 
 The PM approved the repair on 2026-10-23. The implementation preserves legacy
 transcript destinations and replaces name-based recursive work cleanup with
-unique owned folders and exact content inventories. ISSUE-020 remains open until
-final source, packaged, installed WFP and uninstall gates pass. Installer page
+unique owned folders and exact content inventories. ISSUE-020 is resolved: final CI 40061186069 on 1b62946 passed all
+source, packaged, installed WFP and uninstall gates. Installer page
 polish has not started. No real Owner app-data files were inspected or changed.
 
 ## Root cause and repair
@@ -67,6 +67,7 @@ Command: rg -n '(rmtree|\.unlink\(|\.rmdir\(|DeleteFile|DelTree|Remove-Item)' sr
 | src/dusty/app/model_manager.py: part.unlink | Only the active manifest partial, after the downloader child exits on explicit normal cancellation, with reparse checks. |
 | src/dusty/app/model_manager.py: path.unlink | Explicit user-confirmed deletion of the selected manifest model; linked model folders/files rejected. |
 | src/dusty/installer_support.py: part.unlink | Normal installer cancellation of the current catalog model only; protection metadata and all reparse ancestors checked. |
+| src/dusty/installer_upgrade.py: file.unlink, texts.rmdir, texts.parent.rmdir | Upgrade-only obsolete own-license copies. Strict versioned namespace, exact LICENSE/NOTICE inventory, hashes match current bundled texts, protected/reparse checks, preflight all folders and recheck before unlink; empty directories only. Unknown/changed content blocks upgrade and is preserved. |
 | src/dusty/queue/outputs.py: temporary.unlink (two sites) | Exclusive random output temporary created by this invocation, never a deterministic pre-existing filename; linked output parent rejected. |
 | src/dusty/queue/outputs.py: target.unlink | Rollback only for outputs newly published by this operation, never overwrite mode; compare rendered-content hash and reject links before removal. |
 | src/dusty/queue/storage.py: temporary.unlink | Exclusive random atomic-write temporary; linked state paths rejected before writing. |
@@ -89,3 +90,19 @@ AMD SVM is now enabled, as reported by the Owner. Keep historical M5 drafts
 unpublished. Use the final repaired build identified in M5-report.md for VM testing
 once its gates pass; do not use an older affected draft for ordinary transcription.
 No PM decision is pending for the approved repair. Final evidence follows here.
+
+## Final repair acceptance (2026-10-24)
+
+CI https://github.com/dusty-corporation/dusty/actions/runs/40061186069 is green
+on 1b62946. Source: 293 passed, 2 expected skips, 286.55 s; separate CI-only
+network test: 1 passed. Required coverage 94.2% (all packages above 85%).
+Packaged layout/PE/license/GUI/WFP, installer-wide license, installed payload/PE/
+WFP, model-preserving same-version upgrade, both uninstall choices and output
+sentinel preservation passed. Calibrated Setup 0, GUI/probe 0, native 0, fetch
+allowed 4, blocked 0. two_distinct_versions=false is honestly retained; Part 3
+must establish the separate true-upgrade requirement.
+
+Final marker continuity checks prevent bookkeeping from recreating lost markers
+or adopting changes to previously recorded files. The full repair is on
+m6-docs-v2 8c199b0, with implementation parity checked and updated user/privacy
+guides. Part 2 may now proceed. Previous pending-status notes above are historical.

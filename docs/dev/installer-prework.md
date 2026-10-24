@@ -190,3 +190,15 @@ unchecked, never ExitProcess; custom exit code is 130. Failed defaults are clear
 before finishing. A CI-only explicit TESTCANCEL parameter is gated by silent mode
 and GITHUB_ACTIONS=true; it stops only after real prefix bytes arrive, exercising
 the same routine under calibrated WFP before retry/uninstall acceptance.
+
+### Versioned own-license upgrade copies
+
+The first true tagged upgrade (.4 to .8) exposed old version-named copies of
+Dusty's LICENSE/NOTICE. The exact installed-file gate rejected them; it stays
+unchanged. Inno's pinned PrepareToInstall event runs before copying files and
+may return an error string to stop installation. It now invokes the guarded
+extracted current app for a narrow migration. Only exact obsolete versioned
+own-license pairs matching the new bundled bytes are removed. All old folders
+are preflighted, hashes rechecked before unlink, reparse/protected/unknown or
+changed contents preserved, and directories removed only when empty. A blocked
+migration gives a shared plain message; models and transcripts are not targets.

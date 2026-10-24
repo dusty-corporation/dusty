@@ -962,3 +962,13 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   the explicit file list was approved. No existing documentation was overwritten.
 - Local M5 source: 297 passed/1 expected skip, 94.2% required coverage. This is
   documentation prework only, not M6 acceptance. Native M5 final gates pending.
+
+### M6 docs v2 final approved upgrade carry-forward
+
+- Current implementation parity with m5-installer 277a180: source, installer,
+  tests, tools and workflows match. ISSUE-022 repair/closure carried from the
+  successful v0.5.0-m5.9 release, CI 40067407725. No reference branch changed.
+- Updated first-run labels and full-path tooltip, and explained conservative
+  upgrade blocking without advising users to remove unfamiliar files.
+- .9 is draft; final .9 to .10 pair and fresh VM acceptance remain M5 work.
+  This branch remains documentation prework, not M6 acceptance or a PR.

@@ -54,3 +54,7 @@ promote an item to an issue if it affects correctness, privacy or licensing.
   traversal. Review concurrent path replacement and two simultaneous Dusty instances in M6.
 - Queue relative_dir is persisted input. Audit containment of restored relative paths under
   the explicitly chosen output folder, including manually edited queue metadata.
+- M5 local pytest-qt event-loop test emits Windows diagnostic 0x8001010d under
+  faulthandler, while completing with exit 0. Full source: 302 passed/1 skip;
+  targeted recheck: 1 passed. Review COM/window event interaction on this desktop
+  in M6. No cause, product crash or test suppression is claimed.
