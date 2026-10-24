@@ -1046,3 +1046,17 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Earlier sandbox full run: 20 failures, 275 passed, 1 skip; local TLS connection
   and junction operations were denied. Approved escalation reruns unchanged tests;
   no assertion, policy or safety check was skipped to bypass sandbox restrictions.
+
+### M5 final evidence collection checkpoint
+
+- Output row a75f1cf: all 29 GUI tests pass including always-visible TXT/Word.
+  Actual Qt light/dark device ratios 1/1.5, four states each, 16 PNGs plus README.
+  Uploaded m5-main-output-row-a75f1cf-light-dark-100-150.zip to confirmed draft
+  m5-screenshots; PNG-only gate passed. SHA-256
+  84552bcbff635ea4de685e9694bc147b930bfe5483d258aa48aad95092eb0c08.
+- Authorized test tag v0.5.0-m5.8 pushed at a75f1cf; release run 40066137913.
+  It must pass every gate before a draft or safe-build claim. A second repaired
+  draft follows success for the Owner's actual two-version VM test.
+- Replaced stale open-S0/frozen-page notes in M5-report.md with current resolved
+  repair and explicit pending final cancellation/release/VM evidence. No false
+  milestone acceptance, previous-unsafe-draft recommendation or PR.
