@@ -601,3 +601,29 @@ def test_start_stays_full_width_and_disabled_text_contrast(window, qtbot, tmp_pa
         name = M.RECOMMENDED.format(name=M.MODEL_NAMES[model_id])
         assert name.endswith(", recommended") and "(Recommended)" not in name
     apply_theme(QApplication.instance(), "light")
+
+
+@pytest.mark.parametrize("area", ["work", "models", "state", "logs"])
+def test_managed_source_and_output_refused(window, tmp_path, monkeypatch, area):
+    from dusty.queue import Coordinator
+
+    folder = window.paths.user_dir / area
+    folder.mkdir(parents=True)
+    errors = []
+    monkeypatch.setattr(window, "show_error", lambda **kw: errors.append(kw["text"]))
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a: str(folder))
+    original = window.output_dir
+    window.choose_output()
+    assert window.output_dir == original
+    window.add_paths([folder / "recording.wav"])
+    assert errors == [M.MANAGED_FOLDER, M.MANAGED_FOLDER]
+    source = tmp_path / "recording.wav"
+    source.write_bytes(b"public synthetic")
+    with pytest.raises(ValueError, match="Managed folders"):
+        Coordinator(window.paths, window.registry).run_batch(
+            [Job(source)], BatchOptions("tiny", folder)
+        )
+    with pytest.raises(ValueError, match="Managed folders"):
+        Coordinator(window.paths, window.registry).run_batch(
+            [Job(folder / "recording.wav")], BatchOptions("tiny", original, same_folder=True)
+        )

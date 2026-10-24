@@ -78,6 +78,9 @@ if ($Child) {
 $Engine = [IO.Path]::GetFullPath($Engine)
 $work = Join-Path $PSScriptRoot ('probe-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $work | Out-Null
+$markerPath = Join-Path $work '.dusty-owned.json'
+@{schema=1;directory=(Split-Path $work -Leaf);purpose='device-probe';files=@{}} |
+    ConvertTo-Json | Set-Content -LiteralPath $markerPath
 $permitPath=Join-Path $work 'go';$resultPath=Join-Path $work 'result.json'
 $job=[DustyProbe]::CreateJobObject([IntPtr]::Zero,[IntPtr]::Zero)
 $size=if([IntPtr]::Size -eq 8){144}else{112}
@@ -99,5 +102,31 @@ finally {
     [void][DustyProbe]::CloseHandle($job)
     [Runtime.InteropServices.Marshal]::FreeHGlobal($limits)
     if($process){$process.WaitForExit(2000)|Out-Null}
-    if((Split-Path ([IO.Path]::GetFullPath($work)) -Parent) -eq $PSScriptRoot){Remove-Item -LiteralPath $work -Recurse -Force}
+    # Never recurse: preserve the whole folder if any entry is not ours or linked.
+    $known = @('go', 'result.json', 'out', 'err', '.dusty-owned.json')
+    $safe = (Split-Path ([IO.Path]::GetFullPath($work)) -Parent) -eq $PSScriptRoot
+    $ancestor = Get-Item -LiteralPath $work
+    while ($ancestor) {
+        if ($ancestor.Attributes -band [IO.FileAttributes]::ReparsePoint) { $safe = $false }
+        $ancestor = $ancestor.Parent
+    }
+    $entries = @(Get-ChildItem -LiteralPath $work -Force)
+    foreach ($entry in $entries) {
+        if ($entry.PSIsContainer -or $entry.Name -notin $known -or
+            ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint)) { $safe = $false }
+    }
+    if ($safe) {
+        $marker = Get-Content -LiteralPath $markerPath -Raw | ConvertFrom-Json
+        $safe = $marker.schema -eq 1 -and $marker.directory -eq (Split-Path $work -Leaf) -and
+            $marker.purpose -eq 'device-probe'
+    }
+    if ($safe) {
+        foreach ($entry in $entries) {
+            if ($entry.Name -ne '.dusty-owned.json') {
+                Remove-Item -LiteralPath $entry.FullName -Force
+            }
+        }
+        Remove-Item -LiteralPath $markerPath -Force
+        Remove-Item -LiteralPath $work
+    } else { Write-Verbose 'work_cleanup=preserved' }
 }

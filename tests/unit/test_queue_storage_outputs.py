@@ -55,12 +55,19 @@ def test_same_folder_does_not_repeat_preserved_subfolders(tmp_path: Path) -> Non
 
 
 def test_startup_cleans_preparation_work_but_keeps_unknown_directories(tmp_path: Path) -> None:
-    for name in (str(uuid4()), "probe", "selftest", "unmanaged"):
+    from dusty.work_area import OwnedWork
+
+    legacy = (str(uuid4()), "probe", "selftest", "unmanaged")
+    for name in legacy:
         directory = tmp_path / name
         directory.mkdir()
         (directory / "temporary").write_bytes(b"generated fixture")
+    for purpose in ("job", "probe", "selftest"):
+        owned = OwnedWork(tmp_path, purpose)
+        (owned.path / "audio.wav").write_bytes(b"generated")
+        owned.record("audio.wav")
     cleanup_orphaned_work(tmp_path)
-    assert [path.name for path in tmp_path.iterdir()] == ["unmanaged"]
+    assert {path.name for path in tmp_path.iterdir()} == set(legacy)
 
 
 def test_queue_recovers_unfinished_and_preserves_done(tmp_path: Path) -> None:

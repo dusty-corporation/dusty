@@ -806,3 +806,94 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Stop all milestone implementation pending PM-approved cleanup-ownership repair.
   Existing user documentation is prework, not release acceptance. No user files,
   tags, releases, branches or runs were deleted; no production safety fix attempted.
+- Step B review delivered: draft m5-screenshots asset
+  m5-installer-pages-step-b-895e199-light-review.zip (7,861,054 bytes),
+  SHA-256 d09b2e4695fca10c5c0409dcee5cac70121bec5da1e8555b34c68aa57ca0578e.
+  Archive gate: 21 native PNGs + README only. Exact scale limitation is disclosed;
+  genuine 100%/150% display acceptance still needs the Owner VM. Interim 2 updated.
+- Local final pre-receipt suite b20470c: 259 passed/1 expected skip in 188.56 s,
+  94.6% coverage, offscreen configuration used in CI. Earlier isolated visible
+  Qt run printed COM diagnostic 0x8001010d but exited 0/1 test passed; this clean
+  full offscreen run did not print it. No application assertion was suppressed.
+- CI 40039950278 failed in the Qt test driver's exists/stat race after a partial
+  was removed. b20470c avoids that timer race; all cleanup/orphan assertions stay.
+- .3 draft CI passed but had two_distinct_versions=false: read-only GitHub tokens
+  cannot list draft releases. It is NOT true-upgrade acceptance evidence.
+- Automatic review rejected broadening validation/packaging to contents:write.
+  That proposal was removed, never committed. Safer cf9904e reads prior successful
+  release-workflow artifacts with contents:read/actions:read, verifies checksum,
+  and removes the token from the child environment. No repository settings changed.
+- Final .6 run 40041736046 must prove a real increasing-version upgrade, current
+  installed payload/PE/WFP, both uninstall choices, unchanged outputs and a fresh
+  CURRENT-installer download/probe audit. Asset staging now rejects missing/false
+  receipts. Focused receipt/upload regressions: 11 passed. No completion claimed.
+
+### M5 repeated-audit correction and synchronized documentation branch
+
+- .5 run 40041077970 failed installer acceptance: auditpol `Error 0x00000050`,
+  then `Installer audit backup failed`. Cause: the second calibrated audit reused
+  the first CSV filename. 7db67d4 gives each audit a unique backup and preserves
+  independent restoration. No connection violation was reported; no binary upload.
+- .7 run 40042648483 is the final corrected receipt/true-upgrade experiment.
+  The earlier chat run number 40042684409 was a mistaken ID and was immediately
+  corrected; it is not evidence. All report/evidence links use verified IDs.
+- m6-docs-v2 0e005ea pushed normally with final M5 code/test-helper corrections.
+  `git diff m5-installer..m6-docs-v2 -- src tools installer .github tests
+  pyproject.toml uv.lock` is empty. User docs differ; reference branches unchanged.
+- Non-urgent independent-audit notes added for explicit external license-browser
+  links and partial-deletion failure reporting. No new application work started.
+
+### S0 STOP - ISSUE-020, transcript preservation
+
+- Stopped normal M5/M6 work under AGENTS rule 2 / SPEC NN-7. Startup and installer
+  self-test recursively delete named work directories even when settings record
+  them as the chosen transcript destination. GUI folder selection does not reject
+  those destinations. The existing uninstaller's protection does not cover them.
+- Exact isolated command: uv run pytest tests/unit/test_work_output_ownership.py
+  -q --basetemp=build/issue020-repro. Result: 3 failed in 0.38 s. Synthetic public
+  sentinels only; no real Owner profile, recording or transcript was touched.
+- Enabled failing regressions retained; no xfail/skip or safety fix without the
+  PM's S0 decision. ISSUE-020 and M5-interim-8.md contain root cause and proposal.
+  M5-report.md now starts with the release-blocking finding and morning actions.
+- Cancellation requested for own active runs 40043241355, 40042984627,
+  40042648483, 40042645271 and 40042365579. No run/artifact/tag/release was deleted.
+- Screenshots and M6 docs prework are pushed, but neither is acceptance for the
+  affected code. Keep all M5 drafts unpublished and postpone VM installation.
+
+### Final incident containment checkpoint
+
+- All five requested workflow cancellations are confirmed completed/cancelled.
+- m5-installer incident regression commit c621c88 pushed; m6-docs-v2 5c8b285
+  also carries the enabled failing tests and S0 warnings, blocking packaging.
+- Reference heads remain 95dd90b (m5-packaging-spike) and c855b52 (m6-docs).
+  Working tree is on m5-installer; no product repair or further work after stop.
+- M5-report.md / M5-interim-8.md are the morning handoff. PM approval for the
+  cleanup-ownership repair is required before resuming. No final CI/VM/release
+  acceptance is claimed. Owner profile and output files were not touched.
+
+### ISSUE-020 repair authorized by PM (2026-10-23)
+
+- PM approved unique work ownership markers, explicit content inventories,
+  conservative unknown-content preservation, no reparse traversal, managed-area
+  source/output rejection and preservation of legacy internal destinations.
+- Repair in progress on m5-installer. Three original regressions stay enabled.
+  Part 2 page changes wait for all Part 1 gates, including installed WFP/uninstall.
+- Owner reports AMD SVM enabled on the desktop; VM setup no longer awaits that.
+- Damaged existing models must show "Needs download again" on Choose model.
+- Latest pre-repair CI 40044102299 fails the intentional preservation regressions.
+
+### ISSUE-020 first repair checkpoint
+
+- Implemented unique purpose-marked work folders and explicit SHA-256 inventories;
+  cleanup validates the entire flat inventory before deleting any file. No runtime
+  recursive deletion remains. Unknown, changed, unmarked, linked and protected work
+  is preserved with a path-free log line.
+- Startup clears legacy internal output selection, retains persistent protection,
+  and gives a one-time shared message. GUI and coordinator reject managed-area
+  source/output paths, including save-next-to-source and resolved aliases.
+- Focused ownership/probe tests: 39 passed. Lint, mypy (76 sources), all three
+  source policy checks passed. Full suite and CI pending; ISSUE-020 stays open.
+- Deterministic atomic temporary files replaced with exclusive random files;
+  repeated local bundle builds refuse existing destinations instead of rmtree.
+- Old name-only cleanup test fixtures now create explicit owned inventories;
+  crash recovery expects uncertain killed-writer output to survive, per PM rule.

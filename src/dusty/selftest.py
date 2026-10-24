@@ -1,20 +1,20 @@
 """Offline installed-app decode and transcription check."""
 
 import logging
-import shutil
 from typing import Literal
 
 from dusty.engine import probe_audio, run_whisper, transcode_audio
 from dusty.models import ModelRegistry, load_manifest
 from dusty.runtime_paths import RuntimePaths
+from dusty.work_area import OwnedWork
 
 
 def run_selftest(
     paths: RuntimePaths, model_id: str, *, backend: str = "auto", once: bool = False
 ) -> str:
     """Return a reason code, with no transcript or path in diagnostics."""
-    work = paths.user_dir / "work/selftest"
-    work.mkdir(parents=True, exist_ok=True)
+    owned = OwnedWork(paths.user_dir / "work", "selftest")
+    work = owned.path
     attempted = "cpu"
     try:
         registry = ModelRegistry(
@@ -67,4 +67,5 @@ def run_selftest(
         logging.getLogger("dusty").info("status=failed")
         return "SELFTEST_FAILED_" + attempted.upper() if once else "SELFTEST_FAILED"
     finally:
-        shutil.rmtree(work)
+        owned.record("audio.wav", "probe.json", "raw-cpu.json", "raw-vulkan.json")
+        owned.cleanup(paths.user_dir)

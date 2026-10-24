@@ -2,19 +2,20 @@
 
 import json
 import sys
-import tempfile
 from pathlib import Path
 
 from dusty.platform.win_process import run_job_process
 from dusty.runtime_paths import RuntimePaths
+from dusty.work_area import OwnedWork
 
 
 def probe(paths: RuntimePaths, output: Path) -> bool:
     """Driver hangs/crashes always fall back within a five-second child deadline."""
     output.parent.mkdir(parents=True, exist_ok=True)
     try:
-        with tempfile.TemporaryDirectory(prefix="dusty-probe-", dir=output.parent) as temp:
-            result = Path(temp) / "probe.json"
+        owned = OwnedWork(output.parent, "device-probe")
+        try:
+            result = owned.path / "probe.json"
             command = [str(Path(sys.executable).resolve())]
             if not getattr(sys, "frozen", False):
                 command += ["-m", "dusty"]
@@ -22,6 +23,9 @@ def probe(paths: RuntimePaths, output: Path) -> bool:
                 command + ["--probe-vulkan-child", "--out", str(result)], timeout_sec=5
             )
             ok = run.exit_code == 0 and json.loads(result.read_text())["real_gpu_found"] is True
+        finally:
+            owned.record("probe.json")
+            owned.cleanup(paths.user_dir)
     except (OSError, ValueError, KeyError):
         ok = False
     output.write_text(json.dumps({"real_gpu_found": ok}), encoding="utf-8")
