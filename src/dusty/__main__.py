@@ -31,6 +31,7 @@ def main(argv: list[str] | None = None) -> int:
         "installer-prepare",
         "model-size",
         "installer-status",
+        "installer-cancel-part",
     ):
         parser.add_argument("--" + flag, action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
@@ -67,6 +68,7 @@ def main(argv: list[str] | None = None) -> int:
         or args.installer_prepare
         or args.model_size
         or args.installer_status
+        or args.installer_cancel_part
     ):
         from pathlib import Path
 
@@ -79,7 +81,6 @@ def main(argv: list[str] | None = None) -> int:
             accept_tests(resolve_paths(), args.model)
         elif args.installer_prepare:
             from dusty.models import cleanup_stale_partials
-
             from dusty.work_area import sanitize_output
 
             paths = resolve_paths()
@@ -93,6 +94,10 @@ def main(argv: list[str] | None = None) -> int:
             Path(args.out).write_text(
                 json.dumps(model_status(resolve_paths()), separators=(",", ":")), encoding="utf-8"
             )
+        elif args.installer_cancel_part:
+            from dusty.installer_support import cancel_partial
+
+            cancel_partial(resolve_paths(), args.model)
         elif args.out:
             Path(args.out).write_text(model_size(resolve_paths()), encoding="utf-8")
         return 0
