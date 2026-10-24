@@ -74,6 +74,13 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
         "'UninstallString', Quoted(ExpandConstant('{uninstallexe}')) + ' /SILENT /DUSTYCONFIRM=yes'"
         in text
     )
+    assert (
+        "'QuietUninstallString', Quoted(ExpandConstant('{uninstallexe}'))"
+        " + ' /SILENT /DUSTYCONFIRM=yes'" in text
+    )
+    icons = text.split("[Icons]", 1)[1].split("[CustomMessages]", 1)[0]
+    assert "unins" not in icons.lower()
+    assert icons.count('Filename: "{app}\\dusty\\dusty.exe"') == 2
     code = text.split("[Code]", 1)[1]
     assert not re.search(r"(?m)^\s*\[", code), "Inno parses leading arrays as sections"
     assert not re.search(r"(?m)^\s*#\d", code), "Inno parses leading character codes as directives"

@@ -667,11 +667,16 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
 #ifndef ReviewOnly
-  if CurStep = ssDone then
+  if CurStep = ssDone then begin
     if not RegWriteStringValue(HKCU,
       'Software\Microsoft\Windows\CurrentVersion\Uninstall\{7B3110E8-7983-41AC-A0ED-F6EB13DBB72A}_is1',
       'UninstallString', Quoted(ExpandConstant('{uninstallexe}')) + ' /SILENT /DUSTYCONFIRM=yes') then
       RaiseException(CustomMessage('UninstallRegistrationFailed'));
+    if not RegWriteStringValue(HKCU,
+      'Software\Microsoft\Windows\CurrentVersion\Uninstall\{7B3110E8-7983-41AC-A0ED-F6EB13DBB72A}_is1',
+      'QuietUninstallString', Quoted(ExpandConstant('{uninstallexe}')) + ' /SILENT /DUSTYCONFIRM=yes') then
+      RaiseException(CustomMessage('UninstallRegistrationFailed'));
+  end;
 #endif
   if (CurStep = ssPostInstall) and WizardSilent then begin
     DownloadClick(nil);

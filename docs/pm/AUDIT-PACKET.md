@@ -172,3 +172,16 @@ keep-model checkbox action passed. ISSUE-028 normal/extended protection cases
 both passed with synthetic bytes/metadata intact. Later commits are docs only.
 This is explicit candidate mode, not production activation: ISSUE-026 remains
 S1 and normal engine-v2 CI still fails. No M5 code or frozen draft was changed.
+
+## PM-approved automatic ISSUE-027 capture
+
+privacy/native_diagnostics.py install_capture runs before Qt imports in the real
+processing/GUI entry, after the network guard. Cleanup/probe-only helpers return
+before capture setup. Capture observes only 0x8001010d; instruction module+offset,
+32 native module/offset frames, numeric thread and enumerated app phase. It never
+reads exception parameters, CPU-context data, Python locals or user state.
+EXCEPTION_CONTINUE_SEARCH always; faulthandler unchanged. Separate append-only
+128 KiB diagnostic file, protected/link/unfamiliar/full storage preserved.
+Real RaiseException tests prove original OSError dispatch and no canary data.
+Packaged CI labels its injected event ci-fixture; this is not a Qt reproduction.
+ISSUE-027 remains open S2 per PM. No network or new dependency.

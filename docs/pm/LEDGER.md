@@ -1308,3 +1308,30 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Staged licenses, patch, manifest, cache/build configuration, per-member build
   provenance and all-asset checksums in ignored build/engine-v3-draft. No new
   native compilation or production-pin activation. Draft upload is next.
+
+### M6 approved follow-up code checkpoint
+
+- Engine-v3 draft created with 12 assets; all staged package/member hashes match
+  gated candidate, native caches verified. No publication. .13/.14 draft notes
+  now say Not for distribution; M5 docs-only d5acc37 carries the same restriction.
+- Automatic passive HRESULT observer installed before Qt imports on GUI/processing
+  entry paths; cleanup helpers do not create/hold a diagnostic file. Fixed-schema
+  module basenames/offsets, native frames, numeric thread and enumerated context
+  only; bounded 128 KiB; continue-search always. 11 observer tests pass (0.84 s),
+  including real RaiseException, normal OSError propagation and startup order.
+  Synthetic fixture is explicitly labelled, not a Qt root-cause claim.
+- Added packaged WFP canary assertion for the observer and payload exclusion.
+- QuietUninstallString now gets the approved arguments as well as UninstallString.
+  New native CI audit enumerates all uninstall commands and actual Start Menu/
+  Desktop shortcut targets, rejecting bare routes. Full validation queued.
+
+### Owner fresh Windows VM finding / ISSUE-029
+
+- Owner Setup download failed at 0.0 MB. LocalMachine Root had 23 certificates,
+  without USERTrust/Sectigo; observed GitHub chain USERTrust ECC. Edge did not
+  populate the Windows store. Invoke-WebRequest retrieved the root (24 entries),
+  then Retry succeeded. M5 remains frozen/test-only, never distributed.
+- PM-approved M6-only repair: system store plus pinned bundled roots for actual
+  two-host ECC/RSA chains, no automatic root retrieval or dependency. Existing
+  TLS/hostname/allowlist/redirect/model-hash safeguards unchanged. Live canary
+  and absent-root local TLS tests queued. Full model list during probe queued.

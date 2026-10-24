@@ -36,6 +36,12 @@ legal, or other important decisions.
   downloads and holds the receipt. These are public model data, not recordings.
 - `%LOCALAPPDATA%/Dusty/logs/`: rotating redacted diagnostics with statuses and
   numeric timings, not recording names/paths, transcript text or vocabulary hints.
+- `%LOCALAPPDATA%/Dusty/logs/native-diagnostic.jsonl`: passive capture of one
+  exact Windows diagnostic, with module basenames/offsets, native frames, numeric
+  thread ID and a fixed app-phase label only. No arguments, Python locals,
+  recording paths, transcripts or prompts. Best effort, bounded to 128 KiB;
+  unsafe/unwritable/full storage is left alone. Nothing is uploaded and exception
+  dispatch is not suppressed. Cleanup helpers do not hold this file open.
 - Transcripts are saved only to the chosen destination. Clearing history or
   the queue does not delete recordings or exported transcripts.
 - App-managed folders cannot be selected for recordings or transcripts. If an

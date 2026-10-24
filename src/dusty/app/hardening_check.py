@@ -1,5 +1,6 @@
 """CI-only packaged GUI canary using the real batch worker and native engine."""
 
+import ctypes
 import hashlib
 import json
 import os
@@ -11,6 +12,7 @@ from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 
 from dusty.core import Job, JobStatus
+from dusty.privacy import native_diagnostics as diagnostics
 from dusty.privacy.logging import configure_logger
 from dusty.privacy.network_guard import is_installed
 from dusty.runtime_paths import resolve_paths
@@ -20,7 +22,11 @@ from .workers import Prepared
 
 
 def run(output: Path) -> int:
-    if os.environ.get("GITHUB_ACTIONS") != "true" or not is_installed():
+    if (
+        os.environ.get("GITHUB_ACTIONS") != "true"
+        or not is_installed()
+        or not diagnostics.is_installed()
+    ):
         return 2
     paths = resolve_paths()
     logger = configure_logger(paths.user_dir)
@@ -29,6 +35,24 @@ def run(output: Path) -> int:
     shutil.copyfile(paths.resources_dir / "selftest.wav", source)
     original = hashlib.sha256(source.read_bytes()).hexdigest()
     app = QApplication([])
+    # Explicit CI fixture, never a claim that the real Qt defect reproduced.
+    diagnostics.set_context("ci-fixture")
+    kernel = ctypes.WinDLL("kernel32")
+    kernel.RaiseException.argtypes = [
+        ctypes.c_ulong,
+        ctypes.c_ulong,
+        ctypes.c_ulong,
+        ctypes.c_void_p,
+    ]
+    secret = ctypes.create_unicode_buffer("CANARY_PATIENT_JANE_DOE CANARYMEDTERM")
+    info = (ctypes.c_size_t * 1)(ctypes.addressof(secret))
+    try:
+        kernel.RaiseException(0x8001010D, 0, 1, info)
+    except OSError:
+        pass  # Normal ctypes handling still happens after passive observation.
+    else:
+        return 1
+    diagnostics.set_context("gui-check")
     window = MainWindow(paths, interactive=False)
     window.apply_prepared(
         Prepared(
@@ -65,9 +89,21 @@ def run(output: Path) -> int:
         logs = "".join(
             p.read_text(encoding="utf-8") for p in (paths.user_dir / "logs").glob("dusty.log*")
         )
+        capture = paths.user_dir / "logs/native-diagnostic.jsonl"
+        captured = capture.read_text(encoding="ascii")
+        logs += captured
+
+        captured_events = [json.loads(line) for line in captured.splitlines()]
+        capture_ok = any(
+            event["phase"] == "ci-fixture"
+            and event["instruction"]["module"] != "unknown"
+            and event["frames"]
+            for event in captured_events
+        )
         job = window.model.jobs[0]
         ok = bool(
-            job.status == JobStatus.DONE
+            capture_ok
+            and job.status == JobStatus.DONE
             and len(job.outputs) == 2
             and all(p.is_file() for p in job.outputs)
             and "CANARY" not in logs
@@ -83,6 +119,7 @@ def run(output: Path) -> int:
                     "outputs_complete": job.status == JobStatus.DONE,
                     "source_unchanged": hashlib.sha256(source.read_bytes()).hexdigest() == original,
                     "guard_installed": is_installed(),
+                    "native_diagnostic_capture": bool(capture_ok),
                 }
             ),
             encoding="utf-8",

@@ -134,6 +134,13 @@ def main(argv: list[str] | None = None) -> int:
             else 1
         )
 
+    # Cleanup/probe helpers return above: they must not create or hold a new
+    # log during removal. Processing/GUI paths capture before any Qt imports.
+    from dusty.privacy.native_diagnostics import install_capture, set_context
+    from dusty.runtime_paths import resolve_paths
+
+    install_capture(resolve_paths().user_dir)
+
     if args.check_hardening:
         from pathlib import Path
 
@@ -151,6 +158,7 @@ def main(argv: list[str] | None = None) -> int:
         return run_download_check(args.model, Path(args.out))
 
     if args.self_test or args.installer_test:
+        set_context("self-test")
         from dusty.privacy.logging import configure_logger
         from dusty.runtime_paths import resolve_paths
         from dusty.selftest import run_selftest
@@ -166,6 +174,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if code.startswith("OK") else 1
 
     if args.headless_batch:
+        set_context("batch")
         if not args.out:
             parser.error("--out is required with --headless-batch")
         from pathlib import Path
@@ -180,6 +189,7 @@ def main(argv: list[str] | None = None) -> int:
             formats=("txt",),
         )
 
+    set_context("qt-startup")
     from PySide6.QtCore import QTimer
     from PySide6.QtWidgets import QApplication
 
@@ -190,6 +200,7 @@ def main(argv: list[str] | None = None) -> int:
     window = create_window()
     window.show()
     QTimer.singleShot(0, window.initialize)
+    set_context("event-loop")
     return app.exec()
 
 
