@@ -1282,3 +1282,16 @@ No M5 code backport. .13/.14 remain frozen Owner VM test drafts, not for
 distribution. After VM pass, M5 merges first and M6 immediately afterwards;
 no M5-only build is distributed. First real-use build is M7 from main after M6.
 Only report/ledger documentation changed here.
+
+### Owner VM results received, 2026-10-24
+
+Windows 11 Home 26H2/VirtualBox, standard DustyTester, .13/.14: reported PASS
+SmartScreen with MOTW/no UAC; three licenses; Small without GPU/Back; Tiny
+download/test after ISSUE-029 warmup; launch/welcome/fresh selection/shortcuts;
+offline reboot TXT/DOCX CPU; true upgrade identical model hashes/times and folder
+kept; normal cancel/close partial cleanup; forced kill fetch death/retain/resume;
+tamper Damaged/repair; offline failure/Retry/Finish-without keeps models/reconnect
+retry. Steps 13-15 covered by step 6/ThinkPad 150%/full uninstall. Step 12 manual
+keep-models NOT tested (checkbox left checked), not a defect; CI assertion stays.
+Cold-store, output-folder drift and incremental-count fixes only M6. Draft PR
+authorized, no ready/merge/publication. Frozen artifacts unchanged.
