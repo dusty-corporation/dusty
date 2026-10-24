@@ -62,9 +62,21 @@ CURRENT-installer download/probe audit with zero Setup/GUI/native events. Missin
 or false receipts prevent draft creation. A normal-cancel receipt must also pass:
 the real downloader writes a partial, the shared Cancel/X routine stops it,
 the active partial is removed, retry succeeds and the output sentinel survives.
+The final M5 staging gate also requires both legacy app-data destination and
+protected registered-installation receipts. A native uninstaller must stop
+before deleting any protected installed payload or its protection metadata.
 The first successful build can have no
 prior upgrade input. Intermediate experiments are not two-version evidence.
 
 Each calibrated WFP phase uses a unique repository-local audit-policy CSV and
 restores its own snapshot. Reusing a file fails auditpol with 0x00000050; the
 expanded two-audit lifecycle is the regression for this correction.
+
+## M6 work and frozen M5 artifacts
+
+M5 .13/.14 remain frozen pending Owner VM results. M6 work happens on
+m6-hardening and is not permission to push a new test tag or publish a release.
+Branch CI can produce gated unsigned review artifacts without a release.
+ISSUE-026 / proposed ADR 0024 needs a newly verified UTF-8 native build and
+Owner activation; until then public engine-v2 fails its enabled Unicode-profile
+regression. Do not call a native-only candidate an app release or green full CI.

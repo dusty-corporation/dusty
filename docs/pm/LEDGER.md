@@ -1061,3 +1061,23 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   malformed paths quarantine without output planning escaping the chosen folder.
 - V1 graphics-failure progress bar now represents the completed download bytes,
   matching its amount line. Generator regression plus 17 queue/installer tests pass.
+
+### M6 ownership and documentation checkpoint
+
+- New OS-held work lease prevents a second startup deleting live work; forced
+  owner death releases it for normal verified cleanup. All 90 ownership/storage/
+  adversarial tests pass (6.16 s). Existing abandoned-work fixture now explicitly
+  releases its owner; separate real-process test covers active and killed owners.
+- Preparation defaults missing voice detection to false; all production callers
+  compute it, existing positive fixtures now declare it. 67 GUI/manager tests pass
+  (50.96 s), mypy 79 sources passes. No missing-voice state can be implied true.
+- User/developer docs reviewed against current messages and behavior. New docs
+  gate checks bold UI labels, exact SPEC privacy/accuracy/HIPAA wording, model
+  labels and relative links; four deliberate drift cases fail as intended, all
+  five tests pass. Build/model-conversion guide and exact offline Owner checklist
+  added; M5 frozen pair and native activation limitations are explicit.
+- Initial independent audit packet maps architecture, threat model, safety paths,
+  gates, ADR exceptions and known gaps. Continue remaining audit/test work; no
+  full M6 acceptance or Owner sign-off claimed.
+- Native candidate CI 40110881732 CPU and Vulkan GREEN, including enabled Unicode
+  profile regression in the CPU build. Production engine-v2 is still unchanged.

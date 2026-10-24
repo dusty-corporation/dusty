@@ -39,6 +39,6 @@ recordings with the same name added to one run get numbered outputs automaticall
 
 Read the transcript before relying on it. Check names, numbers and medical terms
 against the recording. A Word document contains a title, a subtitle and paragraphs
-with optional time prefixes. Captions contain approximate time ranges, not a
+with time prefixes. Captions contain approximate time ranges, not a
 guarantee of word-perfect timing. Translate to English is automatic translation;
 it is not a replacement for an interpreter in important conversations.

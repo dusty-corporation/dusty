@@ -6,8 +6,9 @@
 3. Check **Saving to** below the recording list. If it says **No folder chosen
    yet**, use **Choose folder...**. A long path is shortened in the middle;
    point at it for the complete path. Closing the welcome does not choose a folder.
-4. If you need a model, use **Manage models** or **Download recommended model**. Confirm the
-   explicit GitHub download and wait for **Installed**.
+4. If you need a model, use **Manage models**. When none is installed, the main
+   window also offers the recommended download. Confirm the GitHub download and
+   wait for **Installed**.
 5. Add a short recording, check your choices in **Options...**, and press **Start**.
 
 Start explains just above the button when a folder, model or recording is missing.

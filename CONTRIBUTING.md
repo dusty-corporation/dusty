@@ -15,6 +15,7 @@ uv run python tools/fetch_dev_binaries.py
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy
+uv run python tools/check_docs.py
 uv run python tools/measure_coverage.py
 uv run python tools/check_no_network.py
 uv run python tools/check_no_huggingface.py
@@ -27,6 +28,8 @@ build/ before a manual run. Tests already isolate their app data. Never commit
 models, binaries, long audio or raw benchmark outputs. See docs/dev for native,
 model-conversion, downloader and packaging details. WFP/firewall tests belong on
 the disposable CI runner, not a contributor's daily computer.
+Start with [Build from source](docs/dev/build-from-source.md). The
+[audit packet](docs/pm/AUDIT-PACKET.md) maps safety-critical code and all gates.
 
 ## Changes and review
 
