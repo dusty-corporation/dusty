@@ -1492,3 +1492,15 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   not briefly count existing bytes as a new transfer; meter reads current bytes
   only during download/post-download verification, never initial verify.
 - Full candidate rerun required after reader/one-condition correction.
+
+### M6 rebase route verified without changing real branches
+
+- Local ignored clone only: rebase 64 commits onto frozen M5 dcf7f98 from common
+  base 20cce6b. Resolve known overlaps from original M6 snapshot, already verified
+  to include every frozen M5 code/config/native change. 127 conflict events across
+  31 files, completed as 0160516. dcf7f98 ancestor check passes, status clean.
+- Original 932949e and rehearsal share complete tree hash
+  1b91cecf3ad13e5e086da27572352d2f5d46379b; full diff exit 0. No real-branch rebase,
+  force push, PR or merge. Actual main rebase remains after the Owner merges M5,
+  with newest-snapshot preservation and full gates required again.
+- Final candidate validation 40134555055 at 932949e is running.

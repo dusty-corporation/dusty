@@ -242,3 +242,22 @@ any rebase, especially guides, privacy, CONTRIBUTING, ledger and reports. Resolv
 milestone/report conflicts to the latest M6 brief and mirrored M5 VM evidence;
 retain unrelated main changes. Re-run all gates on the actual rebased head.
 No history rewrite, M5 merge or M6 PR was performed during preparation.
+
+
+## Verified local rebase rehearsal
+
+An ignored clone build/m6-rebase-rehearsal-932949e replayed 64 commits with
+`git rebase --onto dcf7f98 20cce6b`. Git long-path support was enabled in that
+clone before checkout; no system setting or real-branch change. Known historical
+conflicts (127 events, 31 files) were resolved from the preserved original M6
+snapshot, which already includes every frozen M5 source/config change. Result
+0160516 has dcf7f98 as an ancestor and exactly the same complete tree as 932949e:
+`1b91cecf3ad13e5e086da27572352d2f5d46379b`. Full tree diff exit 0, clean status.
+No rehearsal commit was pushed. All original history/branches remain untouched.
+
+After the Owner merges M5, first verify main matches that M5 source baseline,
+preserve the newest pushed M6 snapshot and repeat on the actual target. Use the
+snapshot for known overlaps, including guides/privacy/CONTRIBUTING and the latest
+brief/report; preserve unrelated main changes rather than blindly taking a side.
+Compare final content and run all gates on the actual rebased head. Rehearsal
+success is evidence of a content-preserving route, not an executed main rebase.
