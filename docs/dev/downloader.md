@@ -140,3 +140,13 @@ processing acceptance still blocks Python. In split-package form the GUI image
 stays blocked while the separate downloader is allowed. That phase additionally
 checks all events from the GUI executable. `--check-model-download` is a hidden
 CI-only acceptance entry, not a user-facing feature; ordinary use is rejected.
+
+## Ownership of abandoned prefixes (ISSUE-020)
+
+Automatic age cleanup now also requires a matching SHA-256 receipt written by a
+transfer attempt into its existing .lock file. Unknown or changed old prefixes
+are preserved. A forced crash before the receipt is written may leave a prefix
+that is kept beyond seven days because ownership is uncertain. Recent prefixes
+still resume; the entire model must pass its original manifest size/hash checks.
+Normal Cancel/close still removes the active partial. Linked destinations and
+reparse-point ancestors are refused. See work-cleanup.md for the complete rule.

@@ -1,13 +1,13 @@
 """Probe Vulkan locally and cache only non-sensitive status and signatures."""
 
 import hashlib
-import shutil
 from pathlib import Path
 
 from dusty.models import ModelCorrupt, ModelMissing, ModelRegistry
 from dusty.platform.gpu_signature import display_driver_signature
 from dusty.queue.storage import load_settings, save_settings
 from dusty.runtime_paths import RuntimePaths
+from dusty.work_area import OwnedWork
 
 from .ffmpeg import probe_audio, transcode_audio
 from .whisper import EngineError, run_whisper
@@ -38,8 +38,8 @@ def probe_vulkan(
             cached.get(key) == value for key, value in identity.items()
         ):
             return cached.get("ok") is True
-    work = paths.user_dir / "work/probe"
-    work.mkdir(parents=True, exist_ok=True)
+    owned = OwnedWork(paths.user_dir / "work", "probe")
+    work = owned.path
     ok = False
     device_name = None
     try:
@@ -65,7 +65,8 @@ def probe_vulkan(
     except (OSError, EngineError, ValueError, ModelMissing, ModelCorrupt):
         ok = False
     finally:
-        shutil.rmtree(work)
+        owned.record("audio.wav", "raw.json")
+        owned.cleanup(paths.user_dir)
     settings["backend_probe"] = {**identity, "ok": ok, "device_name": device_name}
     save_settings(settings_path, settings)
     return ok

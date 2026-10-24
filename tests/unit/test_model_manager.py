@@ -208,7 +208,12 @@ def test_main_prompts_live_update_and_preserves_explicit_choice(models, qtbot, m
     qtbot.addWidget(view)
     view.show()
     view.apply_prepared(
-        Prepared((), False, {"output_dir": str(models.paths.user_dir)}, vad_installed=False)
+        Prepared(
+            (),
+            False,
+            {"output_dir": str(models.paths.user_dir.parent / "outputs")},
+            vad_installed=False,
+        )
     )
     assert view.start_hint.text() == M.NO_MODELS
     assert view.download_recommended_button.isVisible() and not view.start_button.isEnabled()
@@ -301,12 +306,16 @@ def test_main_window_close_cancels_model_child_without_orphan(models, qtbot, mon
 
     def drive():
         dialog = view.model_manager
-        if dialog is None:
+        if dialog is None or view.closing:
             return
+        try:
+            partial_bytes = part.stat().st_size
+        except FileNotFoundError:
+            partial_bytes = 0  # The cancelled child may remove it between timer ticks.
         if not started and not dialog.busy and bool(dialog.workers):
             started.append(True)
             QTimer.singleShot(0, dialog.download_button.click)
-        elif part.exists() and part.stat().st_size > 0 and not view.closing:
+        elif partial_bytes > 0:
             view.close()
 
     timer = QTimer()
@@ -707,6 +716,9 @@ def test_gui_startup_removes_stale_partial_and_keeps_recent_prefix(models, qtbot
 
     stale = models.paths.models_dir / "abandoned-model.bin.part"
     stale.write_bytes(b"old prefix")
+    from dusty_fetch.downloader import record_partial
+
+    record_partial(stale)
     old = time.time() - 8 * 24 * 60 * 60
     os.utime(stale, (old, old))
     recent = models.file.with_suffix(".bin.part")
@@ -812,3 +824,31 @@ def test_forced_gui_death_kills_fetch_job_and_recent_partial_resumes(models, qtb
     wait_done(dialog, qtbot)
     assert models.tls.requests == [None, f"bytes={offset}-"]
     assert models.file.read_bytes() == DATA and not part.exists()
+
+
+def test_failed_installer_test_keeps_models_and_shows_empty_options_choice(models, qtbot):
+    from dusty.installer_support import clear_failed_selection
+    from dusty.queue.storage import load_settings, save_settings
+
+    models.file.write_bytes(DATA)
+    file = models.paths.user_dir / "settings.json"
+    save_settings(
+        file,
+        {
+            "schema_version": 1,
+            "model_id": "tiny",
+            "output_dir": str(models.paths.user_dir / "outputs"),
+            "vad": False,
+        },
+    )
+    clear_failed_selection(models.paths)
+    view = MainWindow(models.paths, interactive=False)
+    qtbot.addWidget(view)
+    view.apply_prepared(Prepared(("tiny",), False, load_settings(file)))
+    assert models.file.read_bytes() == DATA
+    assert view.model_choice.currentData() is None
+    assert view.start_hint.text() == M.CHOOSE_MODEL
+    assert view.warning.text() == M.INSTALLER_TEST_WARNING
+    view.model_choice.setCurrentIndex(view.model_choice.findData("tiny"))
+    view._selftest_result(True)
+    assert load_settings(file)["installer_test_failed"] is False

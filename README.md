@@ -1,12 +1,38 @@
 # Dusty
 
-Dusty is a planned free, open-source, offline Windows transcription app using whisper.cpp. M0 provides the development foundation and an empty Qt window; transcription is not implemented yet.
+Private transcription that never leaves your computer.
 
-See `docs/pm/SPEC.md` for the engineering plan.
+Dusty is a free, open-source Windows app for transcribing recordings locally.
+It supports Text, Word, subtitle and JSON exports, Vulkan acceleration with CPU
+fallback, and optional silent-part skipping. Models download only when requested
+in Setup or Model Manager. Recordings and transcripts are not uploaded.
+
+Current builds are unsigned drafts for testing, not a published V1 release.
+See [the M5 checklist](docs/pm/M5-checklist.md) for clean-machine testing and
+[the engineering specification](docs/pm/SPEC.md) for scope and limitations.
+
+## Windows SmartScreen warning
+
+Dusty is free and open source. These test installers have no paid code-signing
+certificate, so Windows may show "Windows protected your PC". First check the
+installer against the SHA256SUMS.txt supplied with the same build:
+
+```powershell
+Get-FileHash .\Dusty-*-draft-unsigned.exe -Algorithm SHA256
+```
+
+Compare the entire SHA256 with the entry for that exact filename. If it differs,
+do not run the installer. A checksum detects a changed file; it does not prove
+that the original file is safe.
+
+After checking the expected build, select "More info", then "Run anyway" in the
+SmartScreen dialog. If your organization prevents this, ask its administrator;
+do not turn off Windows security. Dusty installs for your Windows account and
+does not need administrator privileges.
 
 ## License
 
-Dusty's own code is licensed under Apache-2.0. See [LICENSE](LICENSE) and
-[NOTICE](NOTICE). The Owner, the sole contributor, authorized the change to
-provide an explicit patent grant for future contributors. Third-party components
-retain their own licenses and notices.
+Dusty's own code is [Apache-2.0](LICENSE), with [NOTICE](NOTICE). Third-party
+components retain their licenses. Each draft release includes complete
+THIRD_PARTY_NOTICES.md, a CycloneDX SBOM and retained installer component sources.
+The Visual C++ runtime protective terms are also reachable in Setup.

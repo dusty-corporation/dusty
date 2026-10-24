@@ -1,18 +1,21 @@
 """Offline installed-app decode and transcription check."""
 
 import logging
-import shutil
 from typing import Literal
 
 from dusty.engine import probe_audio, run_whisper, transcode_audio
 from dusty.models import ModelRegistry, load_manifest
 from dusty.runtime_paths import RuntimePaths
+from dusty.work_area import OwnedWork
 
 
-def run_selftest(paths: RuntimePaths, model_id: str, *, backend: str = "auto") -> str:
+def run_selftest(
+    paths: RuntimePaths, model_id: str, *, backend: str = "auto", once: bool = False
+) -> str:
     """Return a reason code, with no transcript or path in diagnostics."""
-    work = paths.user_dir / "work/selftest"
-    work.mkdir(parents=True, exist_ok=True)
+    owned = OwnedWork(paths.user_dir / "work", "selftest")
+    work = owned.path
+    attempted = "cpu"
     try:
         registry = ModelRegistry(
             load_manifest(paths.resources_dir / "models.json"), paths.models_dir
@@ -25,7 +28,14 @@ def run_selftest(paths: RuntimePaths, model_id: str, *, backend: str = "auto") -
         wav = work / "audio.wav"
         transcode_audio(paths.bin_dir / "ffmpeg/ffmpeg.exe", fixture, wav)
         backends: list[Literal["cpu", "vulkan"]] = ["cpu"]
-        if backend in {"auto", "vulkan"}:
+        if once:
+            if backend == "auto":
+                from dusty.installer_support import probe as device_probe
+
+                backends = ["vulkan"] if device_probe(paths, work / "probe.json") else ["cpu"]
+            else:
+                backends = ["vulkan"] if backend == "vulkan" else ["cpu"]
+        elif backend in {"auto", "vulkan"}:
             from dusty.engine.backend import probe_vulkan
 
             if probe_vulkan(paths, registry, model_id=model_id):
@@ -33,6 +43,7 @@ def run_selftest(paths: RuntimePaths, model_id: str, *, backend: str = "auto") -
             elif backend == "vulkan":
                 return "GPU_ERROR"
         for selected in backends:
+            attempted = selected
             result = run_whisper(
                 paths.bin_dir / selected / "whisper-cli.exe",
                 model,
@@ -49,11 +60,12 @@ def run_selftest(paths: RuntimePaths, model_id: str, *, backend: str = "auto") -
             )
             text = " ".join(segment.text.lower() for segment in result.transcript.segments)
             if "fellow americans" not in text or "your country" not in text:
-                return "TEXT_MISMATCH"
+                return "TEXT_MISMATCH_" + attempted.upper() if once else "TEXT_MISMATCH"
         logging.getLogger("dusty").info("status=done")
-        return "OK"
+        return "OK_" + backends[0].upper() if once else "OK"
     except Exception:
         logging.getLogger("dusty").info("status=failed")
-        return "SELFTEST_FAILED"
+        return "SELFTEST_FAILED_" + attempted.upper() if once else "SELFTEST_FAILED"
     finally:
-        shutil.rmtree(work)
+        owned.record("audio.wav", "probe.json", "raw-cpu.json", "raw-vulkan.json")
+        owned.cleanup(paths.user_dir)

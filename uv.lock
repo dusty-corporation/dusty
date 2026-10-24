@@ -114,7 +114,6 @@ version = "0.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "pyside6" },
-    { name = "python-docx" },
 ]
 
 [package.dev-dependencies]
@@ -125,14 +124,12 @@ dev = [
     { name = "pyinstaller" },
     { name = "pytest" },
     { name = "pytest-qt" },
+    { name = "python-docx" },
     { name = "ruff" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "pyside6", specifier = "==6.9.2" },
-    { name = "python-docx", specifier = "==1.2.0" },
-]
+requires-dist = [{ name = "pyside6", specifier = "==6.9.2" }]
 
 [package.metadata.requires-dev]
 dev = [
@@ -142,6 +139,7 @@ dev = [
     { name = "pyinstaller", specifier = "==6.16.0" },
     { name = "pytest", specifier = "==8.4.2" },
     { name = "pytest-qt", specifier = "==4.5.0" },
+    { name = "python-docx", specifier = "==1.2.0" },
     { name = "ruff", specifier = "==0.13.1" },
 ]
 

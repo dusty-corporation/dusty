@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import ssl
+import stat
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -112,8 +113,22 @@ def load_asset(manifest: Path, model_id: str, policy: HostPolicy) -> Asset:
         raise FetchError(Exit.INVALID) from exc
 
 
+def linked(path: Path) -> bool:
+    """Reject all reparse-point ancestors before reading, writing or removing."""
+    for item in (path, *path.parents):
+        try:
+            info = item.lstat()
+        except FileNotFoundError:
+            continue
+        if stat.S_ISLNK(info.st_mode) or (
+            getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+        ):
+            return True
+    return False
+
+
 def matches(path: Path, asset: Asset) -> bool:
-    if path.is_symlink():
+    if linked(path):
         raise FetchError(Exit.IO)
     if not path.is_file() or path.stat().st_size != asset.size:
         return False
@@ -124,10 +139,27 @@ def matches(path: Path, asset: Asset) -> bool:
     return digest.hexdigest() == asset.sha256
 
 
+def record_partial(path: Path) -> None:
+    """Retain a hash receipt for age-based cleanup of a completed transfer attempt."""
+    if linked(path) or not path.is_file():
+        return
+    lock = path.with_name(path.name.removesuffix(".part") + ".lock")
+    if linked(lock):
+        return
+    with path.open("rb") as stream:
+        digest = hashlib.file_digest(stream, "sha256").hexdigest()
+    receipt = {"schema": 1, "purpose": "model-download", "file": path.name, "sha256": digest}
+    # Byte zero remains the OS locking byte. Updating the receipt does not unlock.
+    with lock.open("r+b" if lock.exists() else "w+b") as stream:
+        stream.seek(1)
+        stream.write(json.dumps(receipt).encode("ascii"))
+        stream.truncate()
+
+
 @contextmanager
 def download_lock(path: Path):
     """OS-released lock survives cancellation without a stale PID lock protocol."""
-    if path.is_symlink():
+    if linked(path):
         raise FetchError(Exit.IO)
     with path.open("a+b") as handle:
         if handle.tell() == 0:
@@ -179,10 +211,12 @@ class Downloader:
         cancelled: Callable[[], bool] = lambda: False,
     ) -> None:
         self.policy.validate(asset.url)
+        if linked(destination):
+            raise FetchError(Exit.IO)
         destination.mkdir(parents=True, exist_ok=True)
         final = destination / asset.file_name
         part = destination / (asset.file_name + ".part")
-        if final.is_symlink() or part.is_symlink():
+        if linked(final) or linked(part):
             raise FetchError(Exit.IO)
         with download_lock(destination / (asset.file_name + ".lock")):
             try:
@@ -201,7 +235,10 @@ class Downloader:
                     part.unlink()
                     raise FetchError(Exit.MISMATCH)
                 if offset < asset.size:
-                    self._transfer(asset, part, offset, emit, cancelled)
+                    try:
+                        self._transfer(asset, part, offset, emit, cancelled)
+                    finally:
+                        record_partial(part)
                 if cancelled():
                     raise FetchError(Exit.CANCELLED)
                 emit({"event": "verifying", "bytes": asset.size, "total": asset.size})

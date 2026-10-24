@@ -12,8 +12,17 @@ PATTERN = re.compile(
     re.I,
 )
 ROOT_FILES = ("pyproject.toml", "uv.lock")
-SOURCE_DIRS = ("src", "tools", "tests", ".github", "native", "modelpipeline", "installer")
-SCANNED_EXTENSIONS = {".py", ".toml", ".yml", ".yaml", ".json", ".ps1", ".sh", ".iss"}
+SOURCE_DIRS = (
+    "src",
+    "tools",
+    "tests",
+    ".github",
+    "native",
+    "modelpipeline",
+    "installer",
+    "packaging",
+)
+SCANNED_EXTENSIONS = {".py", ".toml", ".yml", ".yaml", ".json", ".ps1", ".sh", ".iss", ".spec"}
 
 
 def check(root: Path) -> list[str]:

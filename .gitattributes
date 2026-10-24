@@ -24,6 +24,7 @@
 *.pt binary
 *.png binary
 *.ico binary
+*.pdf binary
 *.jpg binary
 *.jpeg binary
 *.dll binary

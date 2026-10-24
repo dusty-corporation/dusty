@@ -14,6 +14,7 @@ from dusty.core.types import Cancellation, CollisionPolicy
 from dusty.models import ModelCorrupt, ModelMissing, ModelRegistry, can_translate
 from dusty.platform.power import prevent_sleep
 from dusty.runtime_paths import RuntimePaths
+from dusty.work_area import OwnedWork, cleanup_owned, linked, managed_destination, protected_paths
 
 from .outputs import OutputExistsError, output_targets, write_outputs
 from .storage import save_batch
@@ -30,19 +31,13 @@ class _CancellationGroup:
 
 
 def cleanup_orphaned_work(work_root: Path) -> None:
-    """Remove abandoned job directories and the two named public self-test work areas."""
-    from uuid import UUID
-
-    if not work_root.is_dir():
+    """Preserve legacy/unrecognized work; remove only a matching owned inventory."""
+    if linked(work_root) or not work_root.is_dir():
         return
+    protected = protected_paths(work_root.parent)
     for candidate in work_root.iterdir():
         if candidate.is_dir():
-            if candidate.name not in {"probe", "selftest"}:
-                try:
-                    UUID(candidate.name)
-                except ValueError:
-                    continue
-            shutil.rmtree(candidate)
+            cleanup_owned(candidate, protected=protected)
 
 
 class Coordinator:
@@ -73,6 +68,12 @@ class Coordinator:
             raise ValueError("Selected model cannot translate")
         if options.threads < 1:
             raise ValueError("Threads must be positive")
+        for job in jobs:
+            if managed_destination(job.source, self.paths) or any(
+                managed_destination(target, self.paths)
+                for target in output_targets(job, replace(options, collision="overwrite"))
+            ):
+                raise ValueError("Managed folders cannot contain recordings or transcripts")
         self.work_root.mkdir(parents=True, exist_ok=True)
         save_batch(self.state_path, options, jobs)
         preexisting = {
@@ -164,8 +165,8 @@ class Coordinator:
             transcode_audio,
         )
 
-        work = self.work_root / str(job.id)
-        work.mkdir(parents=True, exist_ok=False)
+        owned = OwnedWork(self.work_root, "job")
+        work = owned.path
         try:
             job.status = JobStatus.PREFLIGHT
             changed()
@@ -201,6 +202,7 @@ class Coordinator:
             decode_sec = transcode_audio(
                 self.paths.bin_dir / "ffmpeg/ffmpeg.exe", job.source, wav, cancel=cancel
             )
+            owned.record("audio.wav")
             if probe.duration_sec == 0:
                 probe = probe_audio(self.paths.bin_dir / "ffmpeg/ffprobe.exe", wav, cancel=cancel)
                 job.duration_sec = probe.duration_sec
@@ -300,5 +302,6 @@ class Coordinator:
         finally:
             if job.failure and job.status not in {JobStatus.SKIPPED, JobStatus.CANCELLED}:
                 job.status = JobStatus.FAILED
-            shutil.rmtree(work)
+            owned.record("audio.wav", "raw.json")
+            owned.cleanup(self.paths.user_dir)
             changed()

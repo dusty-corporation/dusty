@@ -8,7 +8,14 @@ from typing import cast
 from uuid import UUID
 
 from PySide6.QtCore import QByteArray, QEvent, Qt, QThread, QTimer, QUrl, Slot
-from PySide6.QtGui import QAction, QCloseEvent, QDesktopServices, QKeyEvent, QStandardItemModel
+from PySide6.QtGui import (
+    QAction,
+    QCloseEvent,
+    QDesktopServices,
+    QKeyEvent,
+    QResizeEvent,
+    QStandardItemModel,
+)
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -65,6 +72,35 @@ from .presentation import TERMINAL, counts, eta_seconds, overall_progress
 from .table import ProgressDelegate, QueueModel
 from .theme import application_icon, apply_theme
 from .workers import BatchWorker, Prepared, PrepareWorker, ScanWorker, SelfTestWorker
+
+
+class ElidedLabel(QLabel):
+    """Keep the complete destination accessible while fitting one visible line."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.full_text = ""
+        self.setTextFormat(Qt.TextFormat.PlainText)
+        self.setWordWrap(False)
+        self.setMinimumWidth(0)
+        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+
+    def set_full_text(self, text: str, description: str) -> None:
+        self.full_text = text
+        self.setToolTip(description)
+        self.setAccessibleDescription(description)
+        self._elide()
+
+    def _elide(self) -> None:
+        self.setText(
+            self.fontMetrics().elidedText(
+                self.full_text, Qt.TextElideMode.ElideMiddle, self.contentsRect().width()
+            )
+        )
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        super().resizeEvent(event)
+        self._elide()
 
 
 class MainWindow(QMainWindow):
@@ -237,12 +273,11 @@ class MainWindow(QMainWindow):
         self.output_row = QWidget()
         output_layout = QHBoxLayout(self.output_row)
         output_layout.setContentsMargins(0, 0, 0, 0)
-        output_layout.addWidget(self._label(M.OUTPUT))
-        self.output_label = self._label(M.NO_OUTPUT)
-        output_layout.addWidget(self.output_label)
-        self.output_button = self._button(M.CHOOSE_FOLDER, self.choose_output)
+        output_layout.setSpacing(layout.spacing())
+        self.output_button = self._button(M.CHOOSE_OUTPUT_BUTTON, self.choose_output)
         output_layout.addWidget(self.output_button)
-        output_layout.addStretch(1)
+        self.output_label = ElidedLabel()
+        output_layout.addWidget(self.output_label, 1)
         layout.addWidget(self.output_row)
         self.format_row = QWidget()
         formats_layout = QHBoxLayout(self.format_row)
@@ -260,6 +295,11 @@ class MainWindow(QMainWindow):
         options_bar = QHBoxLayout()
         self.options_button = self._button(M.OPTIONS, self.open_options)
         options_bar.addWidget(self.options_button)
+        button_width = max(
+            self.output_button.sizeHint().width(), self.options_button.sizeHint().width()
+        )
+        self.output_button.setFixedWidth(button_width)
+        self.options_button.setFixedWidth(button_width)
         self.choices_summary = self._label(M.PREPARING)
         options_bar.addWidget(self.choices_summary, 1)
         layout.addLayout(options_bar)
@@ -379,6 +419,12 @@ class MainWindow(QMainWindow):
         self.prompt.textChanged.connect(self._rules)
         self.vad.toggled.connect(self._rules)
         self.theme_choice.currentIndexChanged.connect(self._theme_changed)
+        for first, second in zip(
+            (self.output_button, self.formats["txt"], self.formats["docx"], self.options_button),
+            (self.formats["txt"], self.formats["docx"], self.options_button, self.start_button),
+            strict=True,
+        ):
+            QWidget.setTabOrder(first, second)
 
     def _menus(self) -> None:
         file_menu = self.menuBar().addMenu(M.FILE_MENU)
@@ -469,6 +515,10 @@ class MainWindow(QMainWindow):
         self._startup_dialogs_active = True
         self._startup_dialogs_shown = True
         try:
+            if self.settings.get("managed_folder_notice", False):
+                self.settings["managed_folder_notice"] = False
+                self.show_error(text=M.MANAGED_FOLDER)
+                self._save_settings()
             # A saved folder is the welcome gate, including older settings files.
             # exec() keeps recovery behind welcome even with nested Qt events.
             if not self.output_dir:
@@ -524,7 +574,11 @@ class MainWindow(QMainWindow):
             if key in settings:
                 self._set_combo(combo, settings[key])
         if settings.get("output_dir"):
-            self.output_dir = Path(settings["output_dir"])
+            from dusty.work_area import managed_destination
+
+            output = Path(settings["output_dir"])
+            if not managed_destination(output, self.paths):
+                self.output_dir = output
         for key, box in (
             ("same_folder", self.same_folder),
             ("keep_structure", self.keep_structure),
@@ -816,6 +870,8 @@ class MainWindow(QMainWindow):
             hint = M.ADD_RECORDINGS_FIRST
         self.start_hint.setText(hint)
         self.start_hint.setVisible(bool(hint))
+        if self.settings.get("installer_test_failed"):
+            warning = M.INSTALLER_TEST_WARNING
         self.warning.setText(warning or M.EMPTY_CELL)
         self.warning.setVisible(bool(warning))
         self.choices_summary.setText(
@@ -825,12 +881,18 @@ class MainWindow(QMainWindow):
                 device=M.DEVICES["cpu" if cpu_only else "vulkan"],
             )
         )
-        self.output_label.setText(
-            M.SAME_FOLDER
+        output_text = (
+            M.SAVING_NEXT_TO
             if self.same_folder.isChecked()
-            else str(self.output_dir)
+            else M.SAVING_TO.format(path=str(self.output_dir))
             if self.output_dir
             else M.NO_OUTPUT
+        )
+        self.output_label.set_full_text(
+            output_text,
+            str(self.output_dir)
+            if self.output_dir and not self.same_folder.isChecked()
+            else output_text,
         )
         self.output_label.setObjectName(
             "warning" if not self.output_dir and not self.same_folder.isChecked() else ""
@@ -885,7 +947,7 @@ class MainWindow(QMainWindow):
         self.drop_area.setVisible(not has_jobs)
         self.table.setVisible(has_jobs)
         self.output_row.setVisible(True)
-        self.format_row.setVisible(has_jobs)
+        self.format_row.setVisible(True)
         editing = not self.running and not (self.scanner and self.scanner.isRunning())
         for button in self.edit_buttons + self.queue_buttons:
             button.setEnabled(editing)
@@ -927,11 +989,21 @@ class MainWindow(QMainWindow):
     def choose_output(self) -> None:
         folder = QFileDialog.getExistingDirectory(self, M.CHOOSE_FOLDER)
         if folder:
+            from dusty.work_area import managed_destination
+
+            if managed_destination(Path(folder), self.paths):
+                self.show_error(text=M.MANAGED_FOLDER)
+                return
             self.output_dir = Path(folder)
             self._rules()
 
     def add_paths(self, paths: list[Path], *, recursive: bool = False) -> None:
         if self.running or (self.scanner and self.scanner.isRunning()):
+            return
+        from dusty.work_area import managed_destination
+
+        if any(managed_destination(path, self.paths) for path in paths):
+            self.show_error(text=M.MANAGED_FOLDER)
             return
         self.status.setText(M.SCANNING)
         self.scanner = ScanWorker(paths, recursive, list(self.model.jobs), self.paths)
@@ -944,7 +1016,14 @@ class MainWindow(QMainWindow):
 
     @Slot(object)
     def _scanned(self, result: ScanResult) -> None:
+        from dusty.work_area import managed_destination
+
+        if any(managed_destination(job.source, self.paths) for job in result.jobs):
+            self.show_error(text=M.MANAGED_FOLDER)
+            return
         self.model.set_jobs(self.model.jobs + list(result.jobs))
+        if result.rejected:
+            self.show_error(text=M.MANAGED_FOLDER)
         name = result.duplicate_paths[0].name if len(result.duplicate_paths) == 1 else ""
         self.status.setText(
             M.scan_summary(len(result.jobs), result.unsupported, result.duplicates, name)
@@ -1050,6 +1129,16 @@ class MainWindow(QMainWindow):
         if not self.ready or self.running or not self.start_button.isEnabled():
             return
         options = self.batch_options()
+        from dusty.queue.outputs import output_targets
+        from dusty.work_area import managed_destination
+
+        if any(
+            managed_destination(path, self.paths)
+            for job in self.model.jobs
+            for path in (job.source, *output_targets(job, replace(options, collision="overwrite")))
+        ):
+            self.show_error(text=M.MANAGED_FOLDER)
+            return
         destinations = {
             job.source.parent if options.same_folder else options.output_dir
             for job in self.model.jobs
@@ -1225,6 +1314,10 @@ class MainWindow(QMainWindow):
 
     @Slot(bool)
     def _selftest_result(self, ok: bool) -> None:
+        if ok and self.settings.get("installer_test_failed"):
+            self.settings["installer_test_failed"] = False
+            self._save_settings()
+            self._refresh()
         text = M.SELF_TEST_OK if ok else M.SELF_TEST_ERROR
         if self.interactive:
             TextDialog(M.SELF_TEST, (text,), self).exec()

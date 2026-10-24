@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 from dusty.models import ModelCorrupt, ModelMissing, ModelRegistry
 from dusty.platform.win_process import run_job_process
 from dusty.runtime_paths import RuntimePaths, resolve_fetch_command
+from dusty.work_area import linked
 
 from . import messages as M
 from .dialogs import TextDialog
@@ -36,11 +37,7 @@ def model_name(model_id: str) -> str:
 
 def format_size(size_bytes: int) -> str:
     """Decimal download units; never wrap a number away from its unit."""
-    large = round(size_bytes / 1_000_000, 1) >= 1000
-    return M.MODEL_SIZE.format(
-        value=size_bytes / (1_000_000_000 if large else 1_000_000),
-        unit=M.GIGABYTES if large else M.MEGABYTES,
-    )
+    return M.format_size(size_bytes)
 
 
 def model_files(registry: ModelRegistry) -> dict[str, tuple[str, int]]:
@@ -95,6 +92,8 @@ class ModelWorker(QThread):
 
     def run(self) -> None:
         try:
+            if linked(self.paths.models_dir):
+                raise ValueError("Linked model folder")
             if self.action == "download":
                 for key in self.ids:
                     if self.cancelled.is_set():
@@ -169,7 +168,8 @@ class ModelWorker(QThread):
                         part = self.paths.models_dir / (
                             model_files(self.registry)[key][0] + ".part"
                         )
-                        part.unlink(missing_ok=True)
+                        if not linked(part):
+                            part.unlink(missing_ok=True)
                         self.failure = "CANCELLED"
                     elif process.exit_code or "complete" not in events:
                         self.failure = self.failure or "PROTOCOL"
@@ -181,7 +181,7 @@ class ModelWorker(QThread):
             elif self.action == "delete":
                 key = self.ids[0]
                 path = self.registry.directory / model_files(self.registry)[key][0]
-                if path.is_symlink():
+                if linked(path):
                     raise ValueError("Model symlink")
                 path.unlink(missing_ok=True)
                 self.registry._verified.pop(path, None)

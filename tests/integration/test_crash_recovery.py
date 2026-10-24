@@ -147,11 +147,15 @@ def test_parent_crash_kills_native_child_and_batch_resumes(tmp_path: Path) -> No
     assert [job.status for job in jobs] == [JobStatus.DONE, JobStatus.QUEUED]
     completed = jobs[0].outputs[0]
     before = (completed.read_bytes(), completed.stat().st_mtime_ns)
-    assert (paths.user_dir / "work" / str(jobs[1].id)).is_dir()
+    abandoned = list((paths.user_dir / "work").iterdir())
+    assert len(abandoned) == 1 and abandoned[0].name.startswith("job-")
+    assert (abandoned[0] / ".dusty-owned.json").is_file()
     cleanup_orphaned_work(paths.user_dir / "work")
     registry = ModelRegistry(load_manifest(paths.resources_dir / "models.json"), paths.models_dir)
     Coordinator(paths, registry).run_batch(jobs, options, vulkan_ok=False)
     assert all(job.status == JobStatus.DONE for job in jobs)
     assert (completed.read_bytes(), completed.stat().st_mtime_ns) == before
     assert all(output.is_file() for job in jobs for output in job.outputs)
-    assert list((paths.user_dir / "work").iterdir()) == []
+    # A killed native writer may leave a file not yet registered by its parent.
+    # Preserve that uncertain directory, while all new completed work is removed.
+    assert set((paths.user_dir / "work").iterdir()).issubset(set(abandoned))

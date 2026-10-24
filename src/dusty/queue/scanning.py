@@ -20,6 +20,7 @@ class ScanResult:
     unsupported: int
     duplicates: int
     duplicate_paths: tuple[Path, ...] = ()
+    rejected: int = 0
 
 
 def scan_inputs(

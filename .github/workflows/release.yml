@@ -1,0 +1,64 @@
+name: Draft M5 release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    outputs:
+      previous_tag: ${{ steps.version.outputs.previous_tag }}
+      previous_run_id: ${{ steps.version.outputs.previous_run_id }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Reject unapproved tags
+        id: version
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python tools/release_version.py $env:RELEASE_TAG
+          if ($LASTEXITCODE -ne 0) { throw 'Unapproved release tag' }
+          $number = [int]($env:RELEASE_TAG -replace '^v0.5.0-m5.', '')
+          $runs = gh run list --repo '${{ github.repository }}' --workflow release.yml --status success --limit 100 --json databaseId,headBranch | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot discover prior gated release workflows' }
+          $prior = @($runs | Where-Object { $_.headBranch -match '^v0\.5\.0-m5\.([1-9][0-9]*)$' } | ForEach-Object { @{number=[int]($_.headBranch -replace '^v0.5.0-m5.', '');tag=$_.headBranch;run=$_.databaseId} } | Where-Object { $_.number -lt $number } | Sort-Object -Property number -Descending)
+          if ($prior.Count) {
+            "previous_tag=$($prior[0].tag)" >> $env:GITHUB_OUTPUT
+            "previous_run_id=$($prior[0].run)" >> $env:GITHUB_OUTPUT
+          }
+          elseif ($number -gt 2) { throw 'Expected an earlier gated draft for the two-version upgrade test' }
+  gates:
+    needs: validate
+    uses: ./.github/workflows/ci.yml
+    with:
+      release_tag: ${{ github.ref_name }}
+      previous_tag: ${{ needs.validate.outputs.previous_tag }}
+      previous_run_id: ${{ needs.validate.outputs.previous_run_id }}
+  draft:
+    needs: [validate, gates]
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: m5-installer-draft-unsigned
+          path: build/release-input
+      - name: Stage approved assets and checksums
+        shell: pwsh
+        run: python -m tools.release_assets --source build/release-input --output build/release-assets --tag '${{ github.ref_name }}'
+      - name: Create draft only after every source and installed gate passes
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create '${{ github.ref_name }}' --verify-tag --draft --prerelease --title 'Dusty ${{ github.ref_name }} (unsigned M5 test)' --notes 'Unsigned test installer. Owner publication only. See SHA256SUMS.txt and THIRD_PARTY_NOTICES.md.' build/release-assets/*
+          if ($LASTEXITCODE -ne 0) { throw 'Draft release creation failed' }

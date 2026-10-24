@@ -42,7 +42,10 @@ MORE_FORMATS = "More formats"
 ADVANCED = "Advanced"
 OUTPUT = "Save transcripts to"
 CHOOSE_FOLDER = "Choose folder"
-NO_OUTPUT = "Not chosen yet"
+CHOOSE_OUTPUT_BUTTON = "Choose folder..."
+SAVING_TO = "Saving to {path}"
+NO_OUTPUT = "No folder chosen yet"
+SAVING_NEXT_TO = "Saving next to each recording. Change this in Options."
 CHOOSE_OUTPUT_FIRST = "Choose where to save transcripts first."
 CHOOSE_OUTPUT_MENU = "Choose where to save transcripts..."
 CLEAR_FINISHED = "Clear finished"
@@ -450,6 +453,16 @@ DOWNLOAD_PROGRESS = "{done} of {total}"
 DOWNLOADING_MODEL = "Downloading {name}"
 DOWNLOAD_TITLE = "Download transcription files?"
 DOWNLOAD_CONFIRM = "Download {names} from github.com ({size})?"
+
+
+def format_size(size_bytes: int) -> str:
+    large = round(size_bytes / 1_000_000, 1) >= 1000
+    return MODEL_SIZE.format(
+        value=size_bytes / (1_000_000_000 if large else 1_000_000),
+        unit=GIGABYTES if large else MEGABYTES,
+    )
+
+
 DELETE_TITLE = "Delete this downloaded model?"
 DELETE_CONFIRM = "Delete {name}? You can download it again later."
 DELETE_SELECTED = (
@@ -513,3 +526,130 @@ FETCH_ERRORS = {
     "PROTOCOL": "The downloader did not finish correctly. Try the download again.",
     "DELETE": "The downloaded model could not be deleted.",
 }
+
+# Inno Setup custom messages are generated from this same plain-language source.
+INSTALLER = {
+    "UninstallProtected": (
+        "Dusty could not confirm that its installation folder is safe to remove. "
+        "Uninstall has stopped to protect your files. Ask the person who installed "
+        "Dusty to review your saved transcript folders before trying again."
+    ),
+    "UpgradeFilesBlocked": (
+        "Some files from the earlier installation could not be updated. Close Dusty and "
+        "try again, or choose another installation folder. Your models and transcripts "
+        "have not been removed."
+    ),
+    "ChooseModels": "Choose transcription models",
+    "ChooseModelsHelp": "Choose at least one. Voice detection is included automatically.",
+    "ChooseModelsDetails": (
+        "Best quality suits a working graphics card. Balanced is good on any computer."
+    ),
+    "NeedModel": "Choose at least one transcription model.",
+    "DownloadPage": "Download and check transcription files",
+    "DownloadPageHelp": (
+        "Dusty will use its separate downloader, then test transcription on this computer."
+    ),
+    "DownloadConsent": (
+        "Dusty will connect to github.com to download %1 MB and will not send your recordings, "
+        "transcripts, or vocabulary hints."
+    ),
+    "DownloadWorking": "Downloading and checking transcription files...",
+    "DownloadFailed": (
+        "A download or verification failed (code %1). Check your connection and free disk space, "
+        "then retry. Installation is not ready yet."
+    ),
+    "SelfTestWorking": "Testing transcription on this computer...",
+    "SelfTestFailed": (
+        "The transcription test failed. Installation is not ready yet. Retry, or close Setup "
+        "and contact the person helping you install Dusty."
+    ),
+    "RemoveModels": "Also remove downloaded models",
+    "RemoveModelsHelp": (
+        "Recordings and folders with transcripts are kept. Uncheck this to keep downloaded "
+        "models for a future installation."
+    ),
+    "CleanupKept": (
+        "Some app data was kept because Dusty could not safely identify it. "
+        "Your recordings and transcripts were not removed."
+    ),
+    "DesktopShortcut": "Create a desktop shortcut",
+    "StopInstall": (
+        "Stop installation? Verified files are kept. Run Setup again to pick up the download."
+    ),
+}
+
+INSTALLER.update(
+    NeedsDownload="Needs download again",
+    LicenseDusty="Dusty's license",
+    LicenseNotices="Third-party notices",
+    LicenseMicrosoft="Microsoft runtime terms",
+    BestFor="Best for: %1",
+    CheckingGraphics=(
+        "Checking the graphics device... Small is the safe choice if this check cannot finish."
+    ),
+    LowMemory=(
+        "This computer has less memory than these models recommend. You can "
+        "still install Dusty, but transcription may be slow or may not finish."
+    ),
+    DownloadConsent="Download %1 from github.com (%2)?",
+    DownloadAction="Download",
+    DownloadPage="Download transcription models",
+    DownloadPageHelp="Dusty needs at least one model to transcribe.",
+    DownloadHeading="Downloading %1 (%2)",
+    DownloadAmount=DOWNLOAD_PROGRESS.format(done="%1", total="%2"),
+    SizeMegabytes=MODEL_SIZE.replace("{value:.1f}", "%1").replace("{unit}", MEGABYTES),
+    SizeGigabytes=MODEL_SIZE.replace("{value:.1f}", "%1").replace("{unit}", GIGABYTES),
+    VoiceIncluded="Voice detection (%1) is always included. It lets Dusty skip silent parts.",
+    WelcomeDescription="This will install Dusty on your computer.",
+    OpenDustyNow="Open Dusty now",
+    OpenFromStartMenu="Dusty is installed. Open it from the Start menu.",
+    UninstallTitle="Uninstall Dusty",
+    UninstallAction="Uninstall",
+    DownloadWorking="Downloading %1",
+    CheckingModel="Checking %1",
+    GpuSelfTestFailed=(
+        "The test on the graphics card did not pass. You can try again, "
+        "use the processor instead (slower), or finish without a model."
+    ),
+    InstallFiles="Installing Dusty",
+    InstallFilesHelp="Copying the application files to this computer.",
+    DownloadFailed=(
+        "The download or file check did not finish. Check your internet "
+        "connection and free space, then try again."
+    ),
+    SelfTestWorking="Testing %1 (%2 of %3)",
+    CpuTestWorking="Testing %1 on the processor (CPU fallback)",
+    SelfTestFailed=(
+        "The transcription test did not pass. Retry, or finish without choosing a model."
+    ),
+    Retry="Retry",
+    RetryCpu="Use the processor instead",
+    FinishWithout="Finish without a model",
+    FinishedWithout=(
+        "Dusty is installed, but no model is ready yet. "
+        "Dusty will show you what to do when you open it."
+    ),
+    SetupComplete=("Dusty is ready. Your model was downloaded and tested."),
+    SetupCompletePlural="Dusty is ready. Your models were downloaded and tested.",
+    CpuOutcome=(
+        "The test passed on the processor (CPU). Graphics acceleration was not used for this test."
+    ),
+    GpuOutcome="The test passed using Vulkan graphics acceleration.",
+    RemoveModels="Also remove downloaded models (%1)",
+    RemoveModelsHelp="Your recordings and transcripts are never removed.",
+    StopInstall=(
+        "Stop installation? The current partial download will be removed. Verified models are kept."
+    ),
+    ReviewOnly=(
+        "Installer page review only. Download amounts and progress states are "
+        "examples; no files are installed and no models are downloaded."
+    ),
+)
+INSTALLER_TEST_WARNING = (
+    "The installer transcription test did not pass. Choose a "
+    "transcription model in Options, or run the self-test again."
+)
+MANAGED_FOLDER = (
+    "Dusty uses this folder for its own files. Choose another folder for your recordings "
+    "and transcripts."
+)

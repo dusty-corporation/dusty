@@ -71,6 +71,27 @@ def test_docx_clears_author_metadata() -> None:
     assert any("Hello world." in paragraph.text for paragraph in document.paragraphs)
 
 
+def test_stdlib_docx_opens_with_escaped_unicode_and_no_timestamps() -> None:
+    transcript = Transcript(
+        (Segment(0, 0, 2, '<tag> & "سلام" 😀\x01'),), "fa", "transcribe", "tiny", "cpu", 2
+    )
+    payload = render_docx(transcript, Path("A & B.wav"), timestamps=False)
+    document = Document(io.BytesIO(payload))
+    assert document.paragraphs[0].text == "A & B"
+    assert document.paragraphs[-1].text == '<tag> & "سلام" 😀'
+    for name in (
+        "author",
+        "last_modified_by",
+        "comments",
+        "title",
+        "subject",
+        "keywords",
+        "category",
+        "identifier",
+    ):
+        assert getattr(document.core_properties, name) == ""
+
+
 def golden_transcript() -> Transcript:
     return Transcript(
         (Segment(0, 0, 1, "  Hello  world. "), Segment(1, 3, 4, "سلام دنیا")),
@@ -95,7 +116,11 @@ def test_json_and_docx_semantic_goldens() -> None:
     created = datetime(2026, 10, 22, tzinfo=UTC)
     transcript = golden_transcript()
     payload = render_json(transcript, Path("sample.wav"), created_utc=created)
-    assert json.loads(payload) == json.loads((root / "sample.json").read_text(encoding="utf-8"))
+    from dusty import __version__
+
+    expected_json = json.loads((root / "sample.json").read_text(encoding="utf-8"))
+    expected_json["app_version"] = __version__
+    assert json.loads(payload) == expected_json
     expected = json.loads((root / "sample-docx.json").read_text(encoding="utf-8"))
     document = Document(
         io.BytesIO(render_docx(transcript, Path("sample.wav"), created_utc=created))
