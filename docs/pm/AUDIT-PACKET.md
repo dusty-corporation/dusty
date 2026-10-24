@@ -145,7 +145,7 @@ All source unit network tests use the local TLS server, not a public model host.
 - 0021: only exact python312.dll/Qt6Core.dll hashes and exact WS2_32 function sets; no broad Winsock allowlist.
 - 0022: Setup uses separate dusty-fetch, no Inno network downloader.
 - 0023: installer-only Inno/Pascal Script/LZMA/JEDI/Delphi exceptions, retained notices/source and revenue-triggered Owner license requirement.
-- 0024: proposed UTF-8 native process manifest; successful candidate build is not approval/publication or activated production pins.
+- 0024: approved UTF-8 native process manifest; successful candidate build is not approval/publication or activated production pins.
 
 ## Known gaps for the auditor
 
@@ -185,3 +185,21 @@ EXCEPTION_CONTINUE_SEARCH always; faulthandler unchanged. Separate append-only
 Real RaiseException tests prove original OSError dispatch and no canary data.
 Packaged CI labels its injected event ci-fixture; this is not a Qt reproduction.
 ISSUE-027 remains open S2 per PM. No network or new dependency.
+
+## ISSUE-029 trust-anchor boundary
+
+Only dusty_fetch/tls.py creates the augmented TLS context. Exact four PEM/DER
+hashes are code pins; system roots are retained and no root retrieval occurs.
+resources/tls/sources.json gives honest CA provenance and data notices. Hostname,
+TLS minimum, allowlist, redirect and model-hash checks remain. CI-only
+dusty_fetch/tls_canary.py connects to both approved hosts with ONLY bundled roots
+and records full chain fingerprints. Unknown root/chain fails. Narrow
+check_licenses.check_trust_data permits only the four pinned public certificate
+files, never arbitrary code or a broad software-license exception. No TLS module
+is imported by dusty. Review fresh-store unit tests and the final canary receipt.
+
+PM approved no M5 backport/distribution: M5 after VM pass, then immediate M6,
+first real-use build M7 from main after M6. .13/.14 notes now state test-only.
+ADR 0024 is accepted; engine-v3 stays DRAFT, pins isolated on 299fea3. The official
+uninstall route is Settings > Apps; both registered command variants and all
+created shortcuts are audited. No bare internal-uninstaller entry is supported.

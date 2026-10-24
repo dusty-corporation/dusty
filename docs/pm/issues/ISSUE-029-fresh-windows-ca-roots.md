@@ -33,3 +33,19 @@ hash checks unchanged. Add isolated TLS positive/negative/integrity cases and a
 CI-only live bundled-root canary. Also show the complete model list immediately
 while the existing bounded hardware check runs; Checking this computer... and
 Next disabled until completion, then apply the recommendation.
+
+## Repair checkpoint
+
+6346a49 adds the pinned four-root system-plus-bundle context used by the same
+Setup/Model Manager fetch executable. USERTrust ECC/RSA and ISRG X1/X2 cover
+observed default/ECC/RSA chains. Provenance includes exact acquisition: existing
+trusted Windows USERTrust DER copies, official CA reference URLs, and ISRG HTTPS
+downloads. Rejected HTTP/crt.sh retrievals did not run; no unverified TLS used.
+No Microsoft retrieval, changed host policy, dependency or model-hash bypass.
+
+Local absent-root success, untrusted-root rejection, tampered/missing bundle and
+exact data-attribution tests pass; combined original downloader/new TLS tests
+31 pass, 36.94 s after fixture registration correction b47e351. Installer page
+fully initializes catalog before deferred probe extraction, displays Checking
+this computer..., blocks Next until bounded completion/fallback, then selects
+recommended/default Small. Full candidate 40130798813 and fresh-VM recheck pending.

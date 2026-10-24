@@ -1381,3 +1381,13 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - M6-checklist now has pinned script/audio download commands and hashes, installed
   Turbo Vulkan/Small CPU measurement, actual backend/time/RTF/sample peaks/work
   cleanup protocol. Surface M7. No laptop result invented.
+
+### M6 certificate full-suite fixture correction
+
+- 40130050201: 410 passed, 2 skips, 2 fixture errors; strict packages 96.0%,
+  privacy 97.2%. No assertion failure or weakened gate. Isolated TLS file had
+  passed, but pytest plugin registration did not expose the existing tls fixture
+  after the full suite had already collected its defining test module.
+- Register the shared fixture explicitly on the test module, matching normal
+  fixture reuse rather than plugin loading. Both absent-root assertions remain.
+  Full candidate rerun required; no certificate/installer success claimed yet.

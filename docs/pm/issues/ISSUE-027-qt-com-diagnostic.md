@@ -35,3 +35,17 @@ Keep open, S2. Add automatic passive recurrence capture of the producing module
 and native call context, with no user data and no exception suppression. A
 synthetic capture test proves the observer, never the actual diagnostic cause.
 Include its startup, storage and privacy boundaries in AUDIT-PACKET.md.
+
+## Implemented passive capture
+
+5bb2af7 adds privacy/native_diagnostics.py and installs it before real Qt imports
+on GUI/processing startup. Fixed-schema module basenames/offsets, instruction
+address attribution, 32 native frames, numeric thread and enumerated phase only.
+128 KiB, best effort; protected/linked/unfamiliar/unwritable paths preserved.
+Cleanup helpers do not open it. Every callback returns continue-search; no
+faulthandler setting changes. Eleven focused tests pass, including synthetic
+RaiseException normal OSError propagation, canary exception parameters excluded,
+bounds and startup order. Packaged WFP fixture labelled ci-fixture is included.
+
+This verifies the observer, not the historical Qt cause. Status stays open S2
+by PM decision. Native gate results are recorded in M6-report.md when complete.

@@ -38,3 +38,12 @@ d0abc304942255a1d30d741fff0ca98c2c1cdf45, already gated by app run 40125892713.
 Keep engine-v2 unchanged. Owner publishes engine-v3 as a prerelease, not latest.
 Prepare the pin switch only on m6-engine-v3-pins based on m6-hardening; do not
 merge it before the PM confirms publication.
+
+## Prepared draft and pin branch
+
+Engine-v3 draft has 12 independently downloaded/checksummed assets, including
+both exact gated packages, unchanged FFmpeg, licenses, patch, manifest, caches
+and BUILD-PROVENANCE.json. Native source/run remains d0abc30 / 40110881732.
+m6-engine-v3-pins 299fea3 changes only production engine pins; no merge before
+PM confirms publication. Active m6-hardening pins remain engine-v2. The exact
+Owner prerelease publication command is in docs/dev/engine-v3.md and M6-report.md.

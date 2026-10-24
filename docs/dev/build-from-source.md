@@ -27,7 +27,7 @@ Asset fetching is an explicit developer network action. It verifies the pinned
 engine archives, model manifest and model bytes before use. For walkthrough
 models, tools/fetch_dev_binaries.py --help describes the optional model set.
 Never commit those assets. ISSUE-026 tracks native Unicode-profile compatibility;
-the regression stays enabled while the proposed new engine awaits activation.
+the regression stays enabled while the approved new engine awaits activation.
 
 Run the GUI with a disposable profile inside the repo. Restore the process
 environment afterwards; this does not change Windows known folders:
