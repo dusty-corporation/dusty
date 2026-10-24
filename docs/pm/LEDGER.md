@@ -1033,3 +1033,15 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 | M6-04 | M6 | Automated hardening, packaged canary and CI | todo | Preserve existing gates and add adverse-path acceptance | - |
 | M6-05 | M6 | Manual offline checklist and independent audit packet | todo | Desktop and ThinkPad; Surface deferred to M7 by PM | Owner hardware |
 | M6-06 | M6 | Final report and acceptance | todo | No PR/publication; Owner results will remain explicit gaps | Owner sign-off |
+
+### M6 registry audit checkpoint
+
+- Replaced Model Manager private cache mutation with public ModelRegistry.invalidate;
+  verification/invalidation serialize across workers. Same-size/same-mtime tamper
+  tests prove explicit Verify all rehashes. 43 model/manager tests pass, 40.82 s;
+  lint and mypy pass. No new dependency or network behavior.
+- Qt diagnostic investigation: native, offscreen and sandbox isolated event-loop
+  checks all pass without 0x8001010d (3.94/2.16/2.11 s). Microsoft documents that
+  HRESULT as input-synchronous COM reentrancy; the historical producer remains
+  unproven. No suppression or false root-cause claim. Continue independent M6
+  work and capture native evidence if the diagnostic recurs in full-suite checks.

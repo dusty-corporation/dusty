@@ -88,3 +88,30 @@ def test_registry_verifies_small_local_fixture(tmp_path: Path) -> None:
     (tmp_path / item["file_name"]).write_bytes(b"changed")
     with pytest.raises(ModelCorrupt):
         registry.model_path("tiny")
+
+
+@pytest.mark.parametrize("all_files", [False, True])
+def test_explicit_registry_invalidation_rehashes_even_unchanged_metadata(tmp_path, all_files):
+    import os
+
+    data = json.loads(CATALOG.read_text(encoding="utf-8"))
+    item = next(entry for entry in data["models"] if entry["id"] == "tiny")
+    content = b"known model bytes"
+    item.update(size_bytes=len(content), sha256=hashlib.sha256(content).hexdigest())
+    manifest = tmp_path / "catalog.json"
+    manifest.write_text(json.dumps(data), encoding="utf-8")
+    target = tmp_path / item["file_name"]
+    target.write_bytes(content)
+    registry = ModelRegistry(load_manifest(manifest), tmp_path)
+    registry.model_path("tiny")
+    original = target.stat()
+    target.write_bytes(b"x" * len(content))
+    os.utime(target, ns=(original.st_atime_ns, original.st_mtime_ns))
+    if all_files:
+        registry.invalidate()
+    else:
+        registry.invalidate(file_name=item["file_name"])
+    with pytest.raises(ModelCorrupt):
+        registry.model_path("tiny")
+    with pytest.raises(ValueError, match="Unknown catalog file"):
+        registry.invalidate(file_name="not-a-model")
