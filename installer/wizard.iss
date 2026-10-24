@@ -569,7 +569,7 @@ begin
 #endif
   if Exec(ExpandConstant('{app}\dusty\dusty.exe'), '--model-size --out ' +
     Quoted(ExpandConstant('{tmp}\model-size.txt')), '', SW_HIDE, ewWaitUntilTerminated, Code) then
-    if (Code = 0) and LoadStringFromFile(ExpandConstant('{tmp}\model-size.txt'), S) then Result := String(S);
+    if (Code = 0) and LoadStringFromFile(ExpandConstant('{tmp}\model-size.txt'), S) then Result := UTF8Decode(S);
 end;
 
 #ifdef ReviewOnly

@@ -95,6 +95,8 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     assert "runasoriginaluser" in text and "skipifsilent" in text
     assert "(CurPageID = wpFinished) and not Busy" in text
     assert "Cancel.Default := True" in text
+    size_reader = text.split("function UninstallModelSize", 1)[1].split("procedure ReviewTick", 1)[0]
+    assert "Result := UTF8Decode(S)" in size_reader  # Keep the shared nonbreaking unit space.
     assert "Flags: unchecked" not in text.split("[Tasks]", 1)[1].split("[Messages]", 1)[0]
     assert "close all other applications" not in text
     for key in (
