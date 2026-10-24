@@ -984,3 +984,14 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   with a complete assertion of the PM-required VAD sentence and catalog size;
   every transcription row remains covered. No test is skipped or disabled.
 - Generator/source tests and native CI compilation/acceptance pending.
+
+### M5 native preview consistency
+
+- Local full source/coverage for the page checkpoint: 295 passed/1 expected skip
+  in 206.75 s, 94.2% required-package coverage. Native CI remains pending.
+- Preview byte totals now come from the selected catalog models plus voice
+  detection, matching its heading and bar; no mixed example totals. Preview
+  Retry/processor/Finish-without buttons render enabled but have explicit no-op
+  handlers, so review binaries can never start downloads or change selection.
+- Actual source download progress reads the current manifest partial/file size
+  with pinned Inno FileSize64; no downloader/network logic was added to Setup.

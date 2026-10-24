@@ -287,6 +287,9 @@ end;
 procedure DownloadClick(Sender: TObject);
 var I, Count: Integer;
 begin
+#ifdef ReviewOnly
+  Exit; { Native preview controls must never start a real transfer. }
+#endif
   SetArrayLength(Selected, 0); Smallest := -1;
   for I := 0 to GetArrayLength(ModelIds) - 1 do if ModelsPage.Values[I] then begin
     Count := GetArrayLength(Selected); SetArrayLength(Selected, Count + 1); Selected[Count] := I;
@@ -313,6 +316,9 @@ end;
 
 procedure RetryClick(Sender: TObject);
 begin
+#ifdef ReviewOnly
+  Exit;
+#endif
   RetryButton.Visible := False; CpuButton.Visible := False; WithoutButton.Visible := False;
   Busy := True;
   if Stage = 5 then begin
@@ -325,6 +331,9 @@ end;
 
 procedure CpuClick(Sender: TObject);
 begin
+#ifdef ReviewOnly
+  Exit;
+#endif
   RetryButton.Visible := False; CpuButton.Visible := False; WithoutButton.Visible := False;
   Busy := True; CpuRetry := True; BeginTest;
 end;
@@ -341,6 +350,9 @@ end;
 
 procedure WithoutClick(Sender: TObject);
 begin
+#ifdef ReviewOnly
+  Exit;
+#endif
   ReleaseChild;
   CleanupActivePartial;
   Stage := 5;
@@ -424,7 +436,7 @@ begin
 end;
 
 procedure CurPageChanged(Page: Integer);
-var Code: Integer; I: Integer; Mode: String;
+var Code: Integer; I, Count: Integer; Mode: String;
 begin
   if Page = ReturnModelsPage.ID then begin
     ModelsPage.CheckListBox.Parent := ReturnModelsPage.Surface;
@@ -463,13 +475,22 @@ begin
     if Mode <> 'consent' then begin
       DownloadStarted := True; Consent.Caption := DownloadText;
       Meter.Visible := True; Amount.Visible := True;
-      TotalModelBytes := 488500000; CompletedModelBytes := 291400000; Stage := 3;
+      TotalModelBytes := @@VAD_BYTES@@;
+      SetArrayLength(Selected, 0);
+      for I := 0 to GetArrayLength(ModelIds) - 1 do
+        if ModelsPage.Values[I] then begin
+          TotalModelBytes := TotalModelBytes + ModelBytes[I];
+          Count := GetArrayLength(Selected); SetArrayLength(Selected, Count + 1); Selected[Count] := I;
+        end;
+      CompletedModelBytes := TotalModelBytes * 32 div 100; Stage := 3;
+      if (Mode = 'test') or (Mode = 'test-failure') or (Mode = 'complete') then
+        CompletedModelBytes := TotalModelBytes;
       ShowAmount;
       WizardForm.NextButton.Caption := SetupMessage(msgButtonNext);
       WizardForm.BackButton.Enabled := False;
     end;
-    if Mode = 'download' then begin Phase.Caption := FmtMessage(CustomMessage('DownloadWorking'), [ModelNames[1]]); Meter.Position := 32; end;
-    if Mode = 'test' then begin Phase.Caption := FmtMessage(CustomMessage('SelfTestWorking'), [ModelNames[1], '2', '3']); Meter.Position := 70; end;
+    if Mode = 'download' then begin Phase.Caption := FmtMessage(CustomMessage('DownloadWorking'), [ModelNames[Selected[0]]]); Meter.Position := 32; end;
+    if Mode = 'test' then begin Phase.Caption := FmtMessage(CustomMessage('SelfTestWorking'), [ModelNames[Selected[0]], '1', IntToStr(GetArrayLength(Selected))]); Meter.Position := 70; end;
     if Mode = 'failure' then Failure(False);
     if Mode = 'test-failure' then begin
       Failure(True); Phase.Caption := CustomMessage('GpuSelfTestFailed'); CpuButton.Visible := True;
@@ -480,7 +501,6 @@ begin
       Consent.Caption := CustomMessage('RemoveModelsHelp');
       Phase.Caption := FmtMessage(CustomMessage('RemoveModels'), ['@@REVIEW_MODELS_SIZE@@']);
     end;
-    RetryButton.Enabled := False; CpuButton.Enabled := False; WithoutButton.Enabled := False;
 #endif
   end;
   if Page = wpFinished then begin
