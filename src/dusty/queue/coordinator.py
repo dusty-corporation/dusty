@@ -286,11 +286,11 @@ class Coordinator:
         except OutputExistsError:
             job.failure = FailureCode.OUTPUT_EXISTS_SKIPPED
             job.status = JobStatus.SKIPPED
-        except DecoderError:
+        except DecoderError as exc:
             if cancel and cancel.is_set():
                 job.status = JobStatus.CANCELLED
             else:
-                job.failure = FailureCode.DECODE_ERROR
+                job.failure = FailureCode.DISK_FULL if exc.disk_full else FailureCode.DECODE_ERROR
         except EngineError as exc:
             job.failure = FailureCode.GPU_ERROR if exc.gpu_error else FailureCode.ENGINE_ERROR
             if exc.cancelled:

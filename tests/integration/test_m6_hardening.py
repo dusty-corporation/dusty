@@ -63,7 +63,7 @@ def test_unicode_profile_models_and_synced_documents_output(qtbot, tmp_path, mon
     assert not list((paths.user_dir / "work").iterdir())
 
 
-@pytest.mark.parametrize("stage", ["preflight", "decode", "export"])
+@pytest.mark.parametrize("stage", ["preflight", "decode", "native-decode", "export"])
 def test_disk_exhaustion_fails_plainly_and_removes_partial_outputs(tmp_path, monkeypatch, stage):
     import dusty.engine
     import dusty.queue.outputs as outputs
@@ -78,10 +78,12 @@ def test_disk_exhaustion_fails_plainly_and_removes_partial_outputs(tmp_path, mon
         monkeypatch.setattr(
             "dusty.queue.coordinator.shutil.disk_usage", lambda _: SimpleNamespace(free=0)
         )
-    elif stage == "decode":
+    elif stage in {"decode", "native-decode"}:
 
         def full_decode(executable, source, target, **kwargs):
             target.write_bytes(b"synthetic incomplete PCM")
+            if stage == "native-decode":
+                raise dusty.engine.DecoderError("Synthetic decoder disk full", disk_full=True)
             raise OSError(errno.ENOSPC, "Synthetic exhausted disk")
 
         monkeypatch.setattr(dusty.engine, "transcode_audio", full_decode)
