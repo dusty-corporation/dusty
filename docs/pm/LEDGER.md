@@ -908,3 +908,12 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Rollback checks the content hash of newly published transcripts before removal.
   Downloader and Model Manager reject reparse ancestors; installer normal-cancel
   partial cleanup uses the guarded app helper instead of direct Pascal deletion.
+
+### ISSUE-020 development boundary correction
+
+- Offline source CI 40059180686 failed exit_code=1 (no connection violation): the
+  first boundary implementation treated all of development build/ as an install
+  folder, rejecting the audit's build/offline-*/outputs destination. RuntimePaths
+  now carries the actual frozen install root explicitly. Development protects
+  its binary/resource/model folders without rejecting sibling test outputs.
+  The installed app still protects the complete install folder.
