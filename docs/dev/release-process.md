@@ -78,8 +78,8 @@ M5 .13/.14 remain frozen pending Owner VM results. M6 work happens on
 m6-hardening and is not permission to push a new test tag or publish a release.
 Branch CI can produce gated unsigned review artifacts without a release.
 ISSUE-026 / proposed ADR 0024 needs a newly verified UTF-8 native build and
-Owner activation; until then public engine-v2 fails its enabled Unicode-profile
-regression. Do not call a native-only candidate an app release or green full CI.
+Owner activation. Production pins now select published engine-v3; the enabled
+Unicode-profile regression is part of every normal run. Do not call a native-only candidate an app release or green full CI.
 
 ## SmartScreen test downloads and internet zone
 
@@ -119,15 +119,15 @@ Apps. No runtime binary patch or compiler change is used. CI drives the register
 entry, changes its actual checkbox, confirms once and rejects any generic dialog.
 
 
-## Exact M6 candidate validation (not activation)
+## Historical M6 candidate validation (not the production route)
 
 Run `gh workflow run ci.yml --ref m6-hardening -f m6_engine_candidate=true`.
 The workflow checks native run 40110881732's success/source SHA, every member
 hash and deterministic archive hash in native/m6-engine-candidate.json. It stages
 both packages only after both validate and modifies native/versions.toml only
 inside that disposable checkout. It does not change committed production pins,
-models-v1, engine-v2 or any release. Ordinary push CI still tests engine-v2 and
-exposes ISSUE-026. Candidate green evidence must always name this explicit mode;
+models-v1, engine-v2 or any release. Ordinary push/PR CI now fetches published engine-v3. Historical engine-v2
+runs exposed ISSUE-026. Candidate green evidence must always name this explicit mode;
 it is not proof that a published app has switched engines. Never bypass gates
 or silently swap binaries to hide the production activation gap.
 
@@ -138,3 +138,9 @@ and [SendMessageTimeoutW](https://learn.microsoft.com/en-us/windows/win32/api/wi
 (checked 2026-10-24). It ignores hidden staging windows and waits for initialized
 visible controls within the original deadline. Missing controls or a generic
 confirmation still fail; these checks do not bypass the actual checkbox action.
+
+
+M5 PR #6 is merged and engine-v3 is Owner-published as a prerelease. The M6
+handoff uses normal CI on m6-hardening-main, never the validation-only override.
+All remaining manual checks, exact selected PR artifact/hash and hardware run
+commands are consolidated in docs/pm/M6-checklist.md. No M5-only distribution.

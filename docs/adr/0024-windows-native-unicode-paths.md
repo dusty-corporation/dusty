@@ -1,6 +1,6 @@
 # 0024 - Windows native Unicode paths
 
-- Status: Accepted by PM; production activation waits for publication confirmation
+- Status: Accepted by PM; Owner publication confirmed, production pins activated
 - Date: 2026-10-24
 
 ## Context
@@ -39,11 +39,11 @@ Keep engine-v2 unchanged. Owner publishes engine-v3 as a prerelease, not latest.
 Prepare the pin switch only on m6-engine-v3-pins based on m6-hardening; do not
 merge it before the PM confirms publication.
 
-## Prepared draft and pin branch
+## Publication and production activation
 
-Engine-v3 draft has 12 independently downloaded/checksummed assets, including
-both exact gated packages, unchanged FFmpeg, licenses, patch, manifest, caches
-and BUILD-PROVENANCE.json. Native source/run remains d0abc30 / 40110881732.
-m6-engine-v3-pins 299fea3 changes only production engine pins; no merge before
-PM confirms publication. Active m6-hardening pins remain engine-v2. The exact
-Owner prerelease publication command is in docs/dev/engine-v3.md and M6-report.md.
+Owner published engine-v3 as a prerelease on 2026-10-24. Its 12 assets retain
+the approved hashes and native source/run d0abc30 / 40110881732. engine-v2 and
+frozen M5 assets are unchanged. The isolated 299fea3 production-pin switch was
+integrated as f427da5 on m6-hardening-main after M5 PR #6 merged into main.
+Normal production/PR gate evidence is recorded in M6-report.md; candidate mode
+is no longer needed for acceptance. No engineer publication was performed.
