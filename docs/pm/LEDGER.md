@@ -1158,3 +1158,23 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   Windows Settings > Apps is the supported user route. No native runtime patch.
 - Internet-zone instructions added to release docs and to M5 docs-only d4ee428;
   seven checklist PowerShell blocks parse. Frozen M5 code and .13/.14 unchanged.
+
+### M6 full-source trace and audit disposition checkpoint
+
+- Full local source with exact candidate binaries and passive exception observer:
+  1 failed, 388 passed, 1 expected skip, 211.16 s. Only failure was an ASCII-default
+  test reader for the now-Unicode installer script; it now explicitly reads UTF-8
+  and retains ordering checks against the actual interactive uninstall boundary.
+  All 10 release tests pass (1.59 s). No HRESULT observed; native event file empty.
+  ISSUE-027 stays unresolved, not suppressed or closed on this evidence.
+- Added native decoder no-space derivation without retaining raw stderr; maps to
+  DISK_FULL rather than damaged recording advice. Six focused decoder/pipeline
+  tests pass, 3.74 s; enabled known Unicode production case was not part of that
+  focused command and remains in full candidate/default CI.
+- Every original audit note has a disposition with evidence and V1 risk rationale.
+  Unknown file/temp retention and deliberate same-account mutation remain bounded
+  by SPEC 9.1/NN-7; no new policy exception. Actual Qt producer remains open.
+- Restored historical desktop >=2h benchmark summary from the untouched reference
+  branch, with original hashes/limits. This is not fresh M6/laptop evidence.
+- Release docs include executable internet-zone commands and explicit candidate
+  validation provenance. No new image sources or screenshots were generated.

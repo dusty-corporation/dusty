@@ -67,3 +67,36 @@ promote an item to an issue if it affects correctness, privacy or licensing.
   beside the destination, while the original stays intact. Do not sweep output
   folders or guess ownership from that suffix; review explicit recovery ownership
   in M6. Ordinary failed writes remove only their own exclusive temporary file.
+
+## M6 engineering dispositions, 2026-10-24
+
+The entries above are retained as the original review questions. This table
+records each outcome. "Acceptable for V1" describes an engineering assessment
+within SPEC 9.1, not a new NN exception or a substitute for PM acceptance.
+
+| Item | Disposition and reason | Evidence / remaining limit |
+|---|---|---|
+| 1. Registry private cache | Fixed: public invalidate serializes with hash verification. | 989a5b6; same-size/same-mtime tamper and forced-rehash tests; manager no longer touches _verified. |
+| 2. Worker/view separation | Acceptable for V1: process/protocol state stays in the worker, widgets receive only validated progress/results. A larger controller refactor adds risk without changing the boundary. | Local TLS success/cancel/resume/hash/protocol tests, forced GUI-death and packaged WFP checks. Cancel during local hash cannot publish an unverified final. |
+| 3. Prepared VAD default | Fixed: omitted state is false; real preparer computes it explicitly. | 2f12720; positive fixtures now declare VAD; missing-flag regression and 67 GUI/manager tests. |
+| 4. Completed QThreads | Acceptable for V1 with a known retention cost: wrappers are retained through the window lifetime to avoid destroying a running thread. One BatchWorker serves a whole run, not every recording. Models/audio are in native children and not stored in these wrappers. | Real cancel/close/forced-death/resume and 200 ms event-loop tests; repeated-action memory is not claimed bounded. Independent audit should inspect very long interactive sessions. |
+| 5. Cleanup ownership/leftovers | Fixed boundaries plus conservative V1 behavior: unknown/changed/linked/protected content stays. Guessing ownership would violate NN-7. | All original ISSUE-020/023/025 regressions and 49 OS adversarial cases retained; native installed preflight/receipts. |
+| 6. PE32 installer ABI | Acceptable pinned ABI, not a guess: compiler/architecture gate plus sized Job records, suspended assignment and cancellation tests. | M5 source/build verification; actual ThinkPad .14 no-UAC, graphics/CPU self-tests and uninstall pass. Fresh standard-user VM still pending. |
+| 7. Installer attribution | Acceptable under PM-approved ADR 0023: exact runtime hashes, reviewed upstream build selection and notices/source retention. It is not a recovered linker-map claim. | Unchanged installer-wide allowlist and license gate; new compiler/hash/unit selection requires PM review. |
+| Standalone/production probe drift | Same verified physical-device rules and ABI; standalone is diagnostics only, never bundled or called by app. | Existing classification fixtures and real ThinkPad model-free PASS; a change must update both. Source parity remains an independent-audit check. |
+| Review-only navigation | Acceptable separate evidence tool: compile-time ReviewOnly disables installation and uses synthetic states. | Generator tests and archive PNG/README gate; accepted M5 images are not failure-injection acceptance. |
+| Wizard integer stages | Acceptable for V1 with gated transitions: result handling occurs only after the active process handle signals. Retry/cancel close/join the previous child before proceeding. | Real-prefix cancel/retry, failure, CPU fallback, selected-model tests and registered uninstall UI test; no synthetic image counted as execution evidence. |
+| Probe extraction timing | Driver timeout is bounded; complete disk extraction time is not inferred from it. | Owner ThinkPad successfully reached pre-selected Turbo; no precise total latency was supplied. Owner records unexpectedly slow clean-machine behavior; no fabricated timing. |
+| License-view links | Acceptable explicit user action in Setup: bundled full texts are readable locally; clicking an upstream link may open the user's browser. This is not a background processing connection. | Pinned RichEditViewer source reviewed. WFP attribution does not claim to include the external browser. About's new repository address is selectable plain text, not an active link. |
+| Ignored partial-removal failure | Fixed: boolean/nonzero helper result, checked Inno outcome and specific Model Manager retained-prefix reason. | Actual exclusive Windows handle test, post-release deletion and generator test. A normally closed app cannot promise OS-denied deletion succeeded; documented retained public prefix. |
+| Handle-relative mutation races | Static reparse checks remain; same-account malicious replacement between checks is outside SPEC 9.1. No claim of resistance to that attacker. | Junction/symlink, locks, read-only files and abrupt-exit matrix. New OS lease prevents ordinary concurrent startup cleanup from removing a live instance's work. |
+| Concurrent instances | Work cleanup is protected by an OS-held lease, released on crash. Shared settings/queue remain a single-profile workflow; two windows are not a concurrent queue editor. | Real second-process preservation, actual interpreter kill and orphan recovery test. Do not imply independent shared-profile queues are supported. |
+| Restored relative_dir | Fixed: reject parent traversal, rooted and drive-relative paths in load and output planning. | Quarantine/no-output tests; Windows root-without-drive covered explicitly. One early test attempted outside-root mkdir; sandbox denied it and no file was created; corrected regression uses pure planning. |
+| Qt 0x8001010d | Unresolved, ISSUE-027 S2. Three isolated M6 runs did not reproduce it. HRESULT name is not its native producer or a root cause. | Passive native module/offset observer leaves dispatch/faulthandler unchanged. Report actual captures/results; no suppression, invented cause or false closure. |
+| Older uninstall after interrupted upgrade | Acceptable conservative V1 residue: public license/ownership recovery metadata can remain if the user uninstalls the old version instead of resuming the interrupted upgrade. Removing uncertain contents is worse than retaining them. | Actual os._exit between unlinks and safe retry tests; normal completed upgrade/uninstall still require clean owned inventory. Document retention rather than sweeping directories. |
+| Crash .dusty-tmp | Acceptable V1 safety tradeoff: a crash before atomic replace can leave an exclusive temporary beside a destination; final file stays old-complete or new-complete. No suffix-based deletion in transcript folders. | Before/after replace crash tests and locked/read-only original preservation; privacy guide documents local retention and no secure erasure. |
+
+No decision here permits new dependencies, broad network/PE/license exceptions,
+source-recording deletion or automatic output-folder sweeps. The unresolved
+native engine activation (ISSUE-026) and Qt producer (ISSUE-027), plus Owner
+hardware/VM sign-off, remain explicit report gaps.

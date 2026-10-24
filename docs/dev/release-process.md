@@ -90,12 +90,14 @@ After copying the exact installer into the guest's local NTFS Downloads folder,
 verify its SHA-256 and add the internet zone before starting it:
 
 ```powershell
-Set-Content -LiteralPath <installer> -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3"
+$installer = (Read-Host 'Paste the full local installer path').Trim('"')
+Set-Content -LiteralPath $installer -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3"
+Get-Content -LiteralPath $installer -Stream Zone.Identifier
+Get-FileHash -LiteralPath $installer -Algorithm SHA256
 ```
 
-Replace <installer> with the quoted exact local path (or a PowerShell variable
-holding it). Verify with Get-Content -LiteralPath <installer> -Stream
-Zone.Identifier, and recheck the unchanged installer SHA-256. The alternate
+Paste the exact local path when prompted. Compare the complete SHA-256 with
+the trusted checksum before tagging, then recheck the unchanged hash afterwards. The alternate
 stream does not change the executable bytes. ZoneId=3 makes it eligible for
 internet-download checks; policy and reputation still affect the actual prompt.
 Record what happens instead of claiming that absence of a warning is a pass.
@@ -115,3 +117,16 @@ Directly running Inno's internal unins*.exe without the registered arguments can
 still show its generic question. The supported user route is Windows Settings >
 Apps. No runtime binary patch or compiler change is used. CI drives the registered
 entry, changes its actual checkbox, confirms once and rejects any generic dialog.
+
+
+## Exact M6 candidate validation (not activation)
+
+Run `gh workflow run ci.yml --ref m6-hardening -f m6_engine_candidate=true`.
+The workflow checks native run 40110881732's success/source SHA, every member
+hash and deterministic archive hash in native/m6-engine-candidate.json. It stages
+both packages only after both validate and modifies native/versions.toml only
+inside that disposable checkout. It does not change committed production pins,
+models-v1, engine-v2 or any release. Ordinary push CI still tests engine-v2 and
+exposes ISSUE-026. Candidate green evidence must always name this explicit mode;
+it is not proof that a published app has switched engines. Never bypass gates
+or silently swap binaries to hide the production activation gap.
