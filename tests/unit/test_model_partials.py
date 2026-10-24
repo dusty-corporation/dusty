@@ -61,3 +61,46 @@ def test_unknown_or_modified_stale_prefix_is_preserved(tmp_path):
     assert cleanup_stale_partials(tmp_path) == 0
     assert unknown.read_bytes() == b"user data"
     assert changed.read_bytes() == b"user replacement"
+
+
+def test_stale_partial_in_saved_output_folder_is_not_deleted(tmp_path):
+    from dusty.queue.storage import save_settings
+
+    directory = tmp_path / "user/models"
+    directory.mkdir(parents=True)
+    part = directory / "clip.part"
+    part.write_bytes(b"user transcript")
+    record_partial(part)
+    os.utime(part, (0, 0))
+    save_settings(
+        directory.parent / "settings.json", {"schema_version": 1, "output_dir": str(directory)}
+    )
+    assert cleanup_stale_partials(directory) == 0
+    assert part.read_bytes() == b"user transcript"
+    (directory.parent / "settings.json").write_text("{broken")
+    assert cleanup_stale_partials(directory) == 0
+    assert part.exists()
+
+
+def test_invalid_partial_receipt_is_preserved(tmp_path):
+    part = tmp_path / "old.part"
+    part.write_bytes(b"prefix")
+    receipt = tmp_path / "old.lock"
+    receipt.write_bytes(b"0{broken")
+    os.utime(part, (0, 0))
+    assert cleanup_stale_partials(tmp_path) == 0
+    assert part.read_bytes() == b"prefix"
+
+
+def test_linked_partial_receipt_never_deletes_the_prefix(tmp_path):
+    part = tmp_path / "old.part"
+    part.write_bytes(b"prefix")
+    record_partial(part)
+    receipt = tmp_path / "old.lock"
+    outside = tmp_path / "outside"
+    receipt.rename(outside)
+    receipt.symlink_to(outside)
+    os.utime(part, (0, 0))
+    assert cleanup_stale_partials(tmp_path) == 0
+    assert part.exists() and outside.exists()
+    receipt.unlink()
