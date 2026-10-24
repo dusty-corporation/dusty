@@ -62,3 +62,8 @@ promote an item to an issue if it affects correctness, privacy or licensing.
   installer successfully resumes cleanup. Review uninstalling an older version
   instead of resuming that interrupted transition; conservative recovery metadata
   may remain. Normal completed upgrade/uninstall gates require no such leftovers.
+
+- M5 atomic writes: abrupt exit before replace can leave a unique .dusty-tmp
+  beside the destination, while the original stays intact. Do not sweep output
+  folders or guess ownership from that suffix; review explicit recovery ownership
+  in M6. Ordinary failed writes remove only their own exclusive temporary file.

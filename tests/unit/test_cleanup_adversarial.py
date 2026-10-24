@@ -239,3 +239,107 @@ def test_stale_partial_cleanup_respects_active_downloader_lock(tmp_path):
         assert cleanup_stale_partials(models) == 0
         assert part.read_bytes() == b"old resumable bytes"
     assert cleanup_stale_partials(models) == 1
+
+
+def atomic_writer(folder, kind):
+    from dusty.core import BatchOptions, Job, Segment, Transcript
+    from dusty.queue.outputs import write_outputs
+    from dusty.queue.storage import atomic_json
+
+    folder.mkdir(parents=True, exist_ok=True)
+    if kind == "state":
+        target = folder / "settings.json"
+        return target, lambda: atomic_json(target, {"schema_version": 1, "theme": "dark"})
+    target = folder / "clip.txt"
+    options = BatchOptions("tiny", folder, formats=("txt",), collision="overwrite")
+    text = Transcript((Segment(0, 0, 1, "Hello"),), "en", "transcribe", "tiny", "cpu", 1)
+    return target, lambda: write_outputs(Job(folder.parent / "clip.wav"), options, text)
+
+
+@pytest.mark.parametrize("kind", ["state", "export"])
+@pytest.mark.parametrize("obstacle", ["read-only", "other-process-lock"])
+def test_atomic_overwrite_retains_inaccessible_original(tmp_path, kind, obstacle):
+    target, write = atomic_writer(tmp_path / "OneDrive/Transcripts", kind)
+    target.write_bytes(b'{"original":"keep"}')
+    if obstacle == "read-only":
+        target.chmod(stat.S_IREAD)
+        try:
+            with pytest.raises(OSError):
+                write()
+        finally:
+            target.chmod(stat.S_IWRITE | stat.S_IREAD)
+    else:
+        with exclusive_file(target), pytest.raises(OSError):
+            write()
+    assert target.read_bytes() == b'{"original":"keep"}'
+    assert not list(target.parent.glob("*.dusty-tmp"))
+
+
+@pytest.mark.parametrize("kind", ["state", "export"])
+@pytest.mark.parametrize("alias", ["junction", "symlink"])
+def test_atomic_write_refuses_linked_output_parent(tmp_path, kind, alias):
+    outside = tmp_path / "outside"
+    target, _ = atomic_writer(outside, kind)
+    target.write_bytes(b"private synthetic sentinel")
+    link = tmp_path / "linked-output"
+    if alias == "junction":
+        subprocess.run(
+            ["cmd", "/c", "mklink", "/J", str(link), str(outside)], check=True, capture_output=True
+        )
+    else:
+        link.symlink_to(outside, target_is_directory=True)
+    _, write = atomic_writer(link, kind)
+    with pytest.raises(OSError):
+        write()
+    assert target.read_bytes() == b"private synthetic sentinel"
+
+
+@pytest.mark.parametrize("kind", ["state", "export"])
+@pytest.mark.parametrize("long", [False, True])
+def test_atomic_write_handles_unicode_and_extended_long_path(tmp_path, kind, long):
+    folder = tmp_path / "گفتگو_日本語"
+    if long:
+        folder = Path("\\\\?\\" + str(folder.joinpath(*(["length-1234567890"] * 16)).resolve()))
+        assert len(str(folder)) > 300
+    target, write = atomic_writer(folder, kind)
+    write()
+    assert target.read_bytes() in (b"Hello\r\n", b'{\n  "schema_version": 1,\n  "theme": "dark"\n}')
+
+
+@pytest.mark.parametrize("kind", ["state", "export"])
+@pytest.mark.parametrize("point", ["before", "after"])
+def test_crash_at_atomic_replace_keeps_complete_original_or_result(tmp_path, kind, point):
+    import json
+
+    target, _ = atomic_writer(tmp_path / "destination", kind)
+    original = b'{"original":"keep"}'
+    target.write_bytes(original)
+    code = """
+import os,sys
+from pathlib import Path
+from dusty.queue.storage import atomic_json
+from dusty.queue.outputs import write_outputs
+from dusty.core import BatchOptions,Job,Segment,Transcript
+folder=Path(sys.argv[1]); kind=sys.argv[2]; point=sys.argv[3]
+replace=os.replace
+def die(*a,**kw):
+    if point=='after': replace(*a,**kw)
+    os._exit(91)
+os.replace=die
+if kind=='state': atomic_json(folder/'settings.json',{'schema_version':1,'theme':'dark'})
+else:
+    text=Transcript((Segment(0,0,1,'Hello'),),'en','transcribe','tiny','cpu',1)
+    write_outputs(Job(folder.parent/'clip.wav'),BatchOptions('tiny',folder,formats=('txt',),collision='overwrite'),text)
+"""
+    run = subprocess.run(
+        [sys.executable, "-c", code, str(target.parent), kind, point],
+        capture_output=True,
+        timeout=20,
+    )
+    assert run.returncode == 91, run.stderr.decode(errors="replace")
+    if point == "before":
+        assert target.read_bytes() == original
+    elif kind == "state":
+        assert json.loads(target.read_bytes()) == {"schema_version": 1, "theme": "dark"}
+    else:
+        assert target.read_bytes() == b"Hello\r\n"

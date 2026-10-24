@@ -5,6 +5,10 @@ Owner runs this on a disposable VM, not on the host installation. Allow about
 number, installer versions, guest Windows build and screenshots of failures.
 Do not send recordings, transcript contents, settings or raw Security logs.
 
+Second-review notice: .9/.10 below are the historical test pair, superseded by
+ISSUE-023's preservation repair. Use only public/synthetic files in the disposable
+VM. The final .11/.12 pair and exact hashes will replace these entries after gates.
+
 ## Owner actions before testing
 
 1. Owner confirmed AMD SVM enabled on 2026-10-23. Check it remains enabled.
@@ -152,6 +156,25 @@ repeat the hash listing: every owner-keep.txt must remain unchanged. These unkno
 sentinels intentionally prevent complete app-data removal. Revert snapshot clean
 before the clean-uninstall checks; do not mistake deliberate preservation for a
 failure or manually remove unknown files as part of Dusty behavior.
+
+To test the repaired legacy-setting path, close Dusty first in the disposable
+VM and run the following as DustyTester. This intentionally creates an old-style
+setting only in the test account; do not use this on the host:
+
+```powershell
+if ($env:USERNAME -ne 'DustyTester') { throw 'Run only inside the test VM' }
+$settingsFile = Join-Path $env:LOCALAPPDATA 'Dusty\settings.json'
+$settings = Get-Content -LiteralPath $settingsFile -Raw | ConvertFrom-Json
+$settings | Add-Member -NotePropertyName output_dir -NotePropertyValue (Join-Path $env:LOCALAPPDATA 'Dusty\models') -Force
+$settings | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $settingsFile -Encoding utf8
+```
+
+Launch Dusty. Expected: a one-time choose-another-folder message; the folder
+setting is cleared, all old contents stay. Close Dusty and inspect settings.json:
+preserved_paths contains the models folder. Uninstall with model removal checked.
+Expected: the protected folder, sentinels, verified models and protection metadata
+remain, with the retained-data notice. This deliberate legacy protection is not
+a normal clean-uninstall result. Revert clean before baseline uninstall tests.
 
 For the tamper test, use a guest PowerShell window with Dusty closed:
 

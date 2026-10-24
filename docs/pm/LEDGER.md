@@ -1150,3 +1150,16 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   release staging; a failed preservation receipt rejects the release.
 - A repaired .11/.12 pair replaces .9/.10 as final VM candidates after all gates.
   .9/.10's prior successful evidence remains historical, not the final acceptance.
+
+### M5 second review atomic writes
+
+- Full source at f9b39f9: 339 passed/1 expected skip, 213.48 s; required package
+  coverage 94.2%. No diagnostic suppression or gate changes.
+- Added atomic settings/export coverage: readonly/other-process exclusive locks
+  preserve originals and remove own temporaries; junction/symlink parent targets
+  survive; Unicode/extended paths work; os._exit(91) before/after replace leaves
+  old or new complete files. All 49 adversarial matrix cases pass, 4.30 s.
+- Crash-before-replace may preserve a random .dusty-tmp; noted for M6 ownership
+  recovery, not automatically deleted from transcript folders.
+- VM checklist now has exact legacy-setting commands and expected preserved_paths
+  retention, separate from normal clean-uninstall checks and reset to clean.
