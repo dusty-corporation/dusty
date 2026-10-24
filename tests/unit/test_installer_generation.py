@@ -63,6 +63,7 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     assert "CurStep = ssPostInstall" in text
     code = text.split("[Code]", 1)[1]
     assert not re.search(r"(?m)^\s*\[", code), "Inno parses leading arrays as sections"
+    assert not re.search(r"(?m)^\s*#\d", code), "Inno parses leading character codes as directives"
     for key in ("MODEL_BEST_FOR", "MODEL_NOTE"):
         from dusty.app import messages as M
 
