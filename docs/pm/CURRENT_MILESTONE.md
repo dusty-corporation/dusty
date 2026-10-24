@@ -19,3 +19,27 @@ Setup: create branch m6-hardening from m6-docs-v2 (which has M5 parity plus the 
 6. Audit packet docs/pm/AUDIT-PACKET.md for the final independent audit: architecture map, threat model, every safety-critical code path with file and function names (network, process isolation, file deletion/move/overwrite, licensing gates, installer/uninstaller), how to run every gate locally, accepted risks and ADR exceptions, and known gaps.
 
 When done, write docs/pm/reports/M6-report.md (acceptance table against SPEC M6, what changed, test and CI results, Owner actions, Questions for the PM) and stop.
+
+## PM supplement, 2026-10-24
+
+Owner real-hardware ThinkPad test (Iris Xe, 150%, draft v0.5.0-m5.14) passed no
+UAC, recommended Turbo pre-selection, Vulkan and CPU fallback self-tests, Finish
+launch, TXT/DOCX, OneDrive Documents warning, 150% layout and full model-removal
+uninstall with transcripts untouched. SmartScreen did not appear because gh did
+not add Mark of the Web. This is not fresh-VM or offline reboot acceptance.
+
+Fix on M6, with tests:
+1. After successful Setup, keep a valid verified existing model choice. If the
+   choice is absent, empty or stale, use the tested default: recommended selected
+   model, otherwise first selected. Cover fresh, empty, stale and valid profiles.
+2. Keep Privacy and accuracy unchanged. About Dusty shows name/version, one-line
+   description, Apache-2.0, selectable repository address and a button opening
+   the bundled local third-party notices. All wording stays in messages.py.
+3. Remove Inno's redundant generic confirmation after Dusty's own uninstall
+   confirmation. Keep the protected-installation stop.
+4. Document Zone.Identifier/ZoneId=3 tagging before installer testing, including
+   the exact Set-Content command, on m5-installer (docs only) and in release docs.
+
+Continue all remaining M6 work autonomously. Record Owner actions and PM
+questions instead of waiting. Do not alter frozen .13/.14 drafts. No PR,
+publishing or deletion of branches/tags/releases/runs. Stop with M6-report.md.

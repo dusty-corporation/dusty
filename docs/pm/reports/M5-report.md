@@ -243,3 +243,19 @@ Ownership repair, native post-copy cancellation and real two-version upgrade
 inventory required more work than screenshots. The second review added real OS
 failure tests and installed-state coverage, finding three defects before handoff.
 Engineer work is complete; stop here pending Owner VM results and PM acceptance.
+
+## Owner ThinkPad installer evidence, 2026-10-24
+
+Owner tested frozen v0.5.0-m5.14 on the real ThinkPad (Iris Xe), at 150% scale.
+PASS: no UAC; Large v3 Turbo pre-selected as recommended; Vulkan self-test and
+CPU fallback test; Finish opened Dusty; correct TXT/DOCX transcription; OneDrive
+warning for Documents; 150% layout; model-removal uninstall left no app folder,
+app data or models, while transcripts stayed unchanged. This is real-hardware
+evidence, not the pending fresh-VM checklist or M6 airplane-mode/reboot test.
+
+SmartScreen did not appear because gh did not add Mark of the Web. The checklist
+now adds Zone.Identifier with ZoneId=3 after guest-local copy/hash verification.
+No SmartScreen PASS is claimed. Owner also found stale/empty model handoff,
+overlapping About/privacy text and redundant uninstall confirmation. The PM
+assigned their code fixes to m6-hardening; this frozen branch has docs changes
+only. Both .13/.14 drafts and their binaries/hashes remain untouched.

@@ -80,3 +80,38 @@ Branch CI can produce gated unsigned review artifacts without a release.
 ISSUE-026 / proposed ADR 0024 needs a newly verified UTF-8 native build and
 Owner activation; until then public engine-v2 fails its enabled Unicode-profile
 regression. Do not call a native-only candidate an app release or green full CI.
+
+## SmartScreen test downloads and internet zone
+
+GitHub CLI downloads and read-only VirtualBox shares may not preserve Mark of
+the Web. The Owner's ThinkPad .14 test on 2026-10-24 therefore did not exercise
+SmartScreen, although installation/transcription/uninstall and 150% layout passed.
+After copying the exact installer into the guest's local NTFS Downloads folder,
+verify its SHA-256 and add the internet zone before starting it:
+
+```powershell
+Set-Content -LiteralPath <installer> -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3"
+```
+
+Replace <installer> with the quoted exact local path (or a PowerShell variable
+holding it). Verify with Get-Content -LiteralPath <installer> -Stream
+Zone.Identifier, and recheck the unchanged installer SHA-256. The alternate
+stream does not change the executable bytes. ZoneId=3 makes it eligible for
+internet-download checks; policy and reputation still affect the actual prompt.
+Record what happens instead of claiming that absence of a warning is a pass.
+
+## M6 registered uninstall entry
+
+Pinned Inno 6.7.3 Setup.Uninstall.pas:696 checks its native Silent/VerySilent
+flags before the unconditional generic confirmation, after InitializeUninstall.
+There is no script setting to suppress only that question. The public Windows
+Apps uninstall registration therefore uses /SILENT /DUSTYCONFIRM=yes. The explicit
+Dusty flag still opens our own confirmation; /SILENT suppresses Inno's second
+question. Unattended /REMOVEMODELS=yes|no remains an explicit separate route.
+The protected-installation preflight runs before both. Registration is written
+at ssDone and validated by CI; failure is reported rather than ignored.
+
+Directly running Inno's internal unins*.exe without the registered arguments can
+still show its generic question. The supported user route is Windows Settings >
+Apps. No runtime binary patch or compiler change is used. CI drives the registered
+entry, changes its actual checkbox, confirms once and rejects any generic dialog.

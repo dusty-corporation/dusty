@@ -1130,3 +1130,31 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - New PM findings queued: successful-install default selection, distinct About
   with local notices, one registered uninstall confirmation, and internet-zone
   tagging instructions. ThinkPad .14 evidence recorded with the M5 docs update.
+
+### Owner real ThinkPad .14 evidence and PM supplement
+
+- Recorded all reported ThinkPad PASS items in M5 report/checklist and M5 ledger;
+  m5-installer d4ee428 is docs-only. .13/.14 tags/assets and M5 code unchanged.
+- SmartScreen remains untested: gh download had no Mark of the Web. Checklist
+  adds exact Zone.Identifier ZoneId=3 after guest-local copy/hash check; all seven
+  PowerShell blocks parse. Copied only report/checklist evidence onto M6.
+- M6 brief supplemented with current PM findings. Implementing tested-default
+  handoff, separate About/local notices and one registered uninstall confirmation.
+
+### M6 PM findings implementation checkpoint
+
+- Handoff now verifies the existing choice, keeps it only if installed/hash-valid,
+  otherwise uses the installer-tested default. Wizard chooses the recommended
+  selected model or first selected. Fresh/empty/stale/valid/damaged profiles tested.
+- About now contains name/version/description/Apache-2.0 and a selectable plain
+  repository address. Local notices open read-only inside Dusty, with no external
+  browser/network action. Privacy and accuracy text is unchanged. 62 focused
+  handoff/generator/GUI tests pass, 14.61 s; generator follow-up 3 pass, 0.80 s.
+- Registered uninstall uses native /SILENT plus DUSTYCONFIRM=yes to show our
+  confirmation once. Protected preflight remains first; explicit unattended
+  REMOVEMODELS path stays separate. Added native CI UI driver for that route,
+  keep-model checkbox and absence of a generic message box. Native gates pending.
+- Documented pinned Inno behavior and internal bare-uninstaller limitation;
+  Windows Settings > Apps is the supported user route. No native runtime patch.
+- Internet-zone instructions added to release docs and to M5 docs-only d4ee428;
+  seven checklist PowerShell blocks parse. Frozen M5 code and .13/.14 unchanged.
