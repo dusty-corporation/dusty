@@ -10,47 +10,38 @@ after M6. No M5 code backport is planned.
 
 ## Summary
 
-M5 engineering work is complete on m5-installer; fresh standard-user VM
-acceptance is still pending. Final repaired drafts are **v0.5.0-m5.13** and
-**v0.5.0-m5.14**, with every release job green and a real .13 to .14 upgrade.
-The second review found and fixed ISSUE-023 (legacy destination protection),
-ISSUE-024 (interrupted license cleanup) and ISSUE-025 (native uninstall boundary).
-All original regressions remain enabled. No Owner data was accessed, and no
-PR, merge or publication was made.
+M5 engineering and reported standard-user VM cases now have evidence, including
+SmartScreen, offline reboot and a true .13 to .14 upgrade. Download on a cold
+Windows root store needed the ISSUE-029 workaround; its M6-only fix is pending.
+Manual keep-models uninstall was not exercised because the Owner left the remove
+checkbox checked. No M5-only build may be distributed. PM authorized a draft PR;
+no merge or publication is performed by the engineer.
 
 ## Owner actions
 
-1. Use only the final .13/.14 pair below. .1 through .12 are historical,
-   superseded drafts. Keep every test release draft.
-2. Follow [M5-checklist.md](../M5-checklist.md), about 90 minutes after setup and
-   downloads. Dusty-M5: Windows 11 Home, 8 GB, 4 CPUs, 80 GB, VBoxSVGA,
-   Guest Additions, standard DustyTester, snapshot clean. AMD SVM is enabled.
-3. Use the checklist's exact host commands for the read-only auto-mounted
-   C:/Users/kdash/bench/m5-vm share. Copy into guest Downloads before running;
-   verify the full installer hashes below. No GitHub credentials go to the guest.
-4. Return numbered PASS/FAIL results, Windows build, SmartScreen/UAC outcome,
-   model hashes/write times across upgrade, and both uninstall results. Test
-   the explicit legacy-setting/sentinel and protected-installation commands
-   separately, then revert clean.
-5. Confirm native 100%/150% layout, Cancel/X/Escape and checked Open Dusty now
-   surviving Setup exit. Use public fixtures only. VirtualBox is CPU acceptance;
-   real-device GPU tests and the pre-M7 Surface Vulkan smoke remain hardware checks.
-6. PM acceptance and any future PR/publication remain separate Owner decisions.
+1. PM/Owner reviews the draft M5 PR and follows the approved M5-then-M6 merge plan.
+   Do not distribute any M5-only state or publish .13/.14.
+2. Use the clean snapshot for the final M6 recheck: no-root-warmup download,
+   keep-models checkbox actually unchecked, folder preservation through the
+   reported sequence, incremental model counts and the complete probing list.
+   The exact list and final gated build belong in M6-report.md.
+3. Existing frozen artifact hashes, VM settings and transfer instructions remain
+   in M5-checklist.md. No frozen installer was altered by these doc updates.
 
 ## Final gap table / acceptance criteria
 
 | SPEC M5 item | Status | Evidence / remaining work |
 |---|---|---|
 | 1. PyInstaller split payload, bin/resources | Done | Separate app/fetch onedir; engine-v2, minimal FFmpeg, resources, no bundled models. Exact PE pins, license/notices/SBOM and GUI gates pass. |
-| 2. Generated installer, choices, downloads, self-tests | Implementation done; VM partial | Shared catalog/wording, bounded real-GPU/RAM probe, Auto per selected model plus smallest CPU test, VAD verification, retry/processor/Finish without. PM pages accepted; fresh VM pending. |
-| 3. Upgrade | CI done; VM partial | Real .13 to .14; verified models reused with fetch blocked, hashes/write times preserved. Damaged files show Needs download again. Exact installed inventory passes. |
-| 4. Uninstall | CI done; VM partial | Both choices, output sentinel, persisted legacy protection and conservative owned cleanup pass. Actual standard-user VM controls remain manual. |
+| 2. Generated installer, choices, downloads, self-tests | VM reported pass with ISSUE-029 workaround | Shared catalog/wording, bounded real-GPU/RAM probe, Auto per selected model plus smallest CPU test, VAD verification, retry/processor/Finish without. PM pages accepted; Owner VM results below; cold-store repair belongs to M6. |
+| 3. Upgrade | CI and Owner VM pass | Real .13 to .14; verified models reused with fetch blocked, hashes/write times preserved. Damaged files show Needs download again. Exact installed inventory passes. |
+| 4. Uninstall | CI both choices; manual keep pending | Both choices, output sentinel, persisted legacy protection and conservative owned cleanup pass. Owner full-removal passes; keep-models not manually exercised, not a defect. |
 | 5. Gated tagged draft release | Done | Runs 40104236818 and 40105275700; every job green, five assets each, hashes verified. No portable asset. |
 | 6. SmartScreen README | Done | Unsigned explanation, More info/Run anyway, Get-FileHash and full checksum comparison. |
 | Acceptance: tagged draft with artifacts | Met | Final .13/.14 drafts; release assets listed below. |
-| Acceptance: fresh Windows 11 VM, SPEC 11.6 | Not met yet, Owner | Exact 90-minute checklist, shared-folder transfer, standard user, interruption/tamper/upgrade/both uninstalls and expected results. |
+| Acceptance: fresh Windows 11 VM, SPEC 11.6 | Partial, Owner evidence received | Reported VM cases pass after root warmup; manual keep-models and M6 fixes need clean-snapshot recheck. |
 | Acceptance: installer size | Met | Exact sizes below, about 34.7 MB compressed, no model weights. |
-| Brief: page review and scaling | PM review accepted; VM scaling partial | 21 native light PNGs plus README, explicit scale limitation. Output row has 16 Qt light/dark 100%/150% captures. Genuine native monitor-scale checks remain Owner evidence. |
+| Brief: page review and scaling | PM accepted; ThinkPad 150% pass | 21 native light PNGs plus README, explicit scale limitation. Output row has 16 Qt light/dark 100%/150% captures. Owner ThinkPad 150% layout pass; VM evidence below. |
 | Brief: source/packaged/installed WFP | Met in CI | All privacy gates green, calibrated counts below. |
 
 ## What was built
@@ -242,15 +233,14 @@ m5-installer holds implementation and this handoff. m6-docs-v2 c58fcf6 carries
 all second-review code/tests with verified parity and matching privacy/install
 guides; final evidence/checklist are mirrored on that branch. No M6 acceptance is claimed.
 Reference m5-packaging-spike (95dd90b) and m6-docs (c855b52) remain unchanged.
-Manual VM/SmartScreen/scaling and physical GPU outcomes are explicit gaps, not
-assumed passes. Unknown/changed content is intentionally preserved with a notice.
+Owner VM/ThinkPad outcomes are recorded below; manual keep-models and M6 rechecks remain explicit gaps. Unknown/changed content is intentionally preserved with a notice.
 
 ## Time and effort notes
 
 Ownership repair, native post-copy cancellation and real two-version upgrade
 inventory required more work than screenshots. The second review added real OS
 failure tests and installed-state coverage, finding three defects before handoff.
-Engineer work is complete; stop here pending Owner VM results and PM acceptance.
+M5 code stays frozen; PM review/Owner merge and M6 follow-up are separate.
 
 ## Owner ThinkPad installer evidence, 2026-10-24
 
@@ -263,7 +253,38 @@ evidence, not the pending fresh-VM checklist or M6 airplane-mode/reboot test.
 
 SmartScreen did not appear because gh did not add Mark of the Web. The checklist
 now adds Zone.Identifier with ZoneId=3 after guest-local copy/hash verification.
-No SmartScreen PASS is claimed. Owner also found stale/empty model handoff,
+ThinkPad did not exercise SmartScreen; the later VM did pass it with Mark of the Web. Owner also found stale/empty model handoff,
 overlapping About/privacy text and redundant uninstall confirmation. The PM
 assigned their code fixes to m6-hardening; this frozen branch has docs changes
 only. Both .13/.14 drafts and their binaries/hashes remain untouched.
+
+## Owner VM evidence, 2026-10-24
+
+Windows 11 Home 26H2, VirtualBox, standard DustyTester, frozen .13/.14.
+Owner-reported PASS:
+
+- Mark of the Web produced SmartScreen; More info/Run anyway, no UAC.
+- All three license views; Small suggested without GPU; Back before download.
+- Tiny download/test after the ISSUE-029 root-warmup workaround, Finish launch,
+  welcome and Tiny chosen on the fresh profile; Start Menu/Desktop shortcuts.
+- Offline reboot and Processor-only TXT/DOCX transcription.
+- True .13 to .14 upgrade: identical model hashes/write times, new About version,
+  chosen output folder preserved at that point.
+- Normal Cancel and normal close remove partials. Task Manager termination stops
+  dusty-fetch, keeps the partial, and the next attempt resumes.
+- Tampered Tiny appears Damaged at startup; Download again repairs it.
+- Offline Setup gives plain failure, Retry and Finish without a model, preserves
+  existing models; Retry succeeds after reconnect.
+
+Steps 13 to 15 are covered by step 6 and the ThinkPad .14 report, including full
+uninstall and 150% layout. In step 12 the Owner accidentally left Also remove
+downloaded models checked: **manual keep-models NOT TESTED**, not a defect.
+CI's actual keep_models_choice assertion stays mandatory and this goes on the
+final clean-snapshot recheck. No inferred PASS is substituted.
+
+VM findings assigned only to M6: ISSUE-029 cold TLS store (23 roots to 24 after
+Invoke-WebRequest, USERTrust ECC then present); ISSUE-031 later output-folder
+change after upgrade (exact intervening trigger not isolated); ISSUE-032 Setup
+names/counts already installed models and progress denominator is misleading;
+partial model-list paint during the graphics check. .13/.14 remain unchanged,
+not for distribution. The first real-use build is main after M6, in M7.

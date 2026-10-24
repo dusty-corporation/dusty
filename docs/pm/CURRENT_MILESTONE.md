@@ -61,3 +61,17 @@ publishing or deletion of branches/tags/releases/runs. Stop with M6-report.md.
 
 Record decisions in ledger/issues/ADRs. Never wait for Owner; commit and push
 checkpoints; no PR/publication/deletion. Update M6-report.md and stop.
+
+## Combined PM supplement, 2026-10-24
+
+The combined attachment is the current scope. Record the full Owner .13/.14
+standard-user VM results in M5 evidence; manual keep-models was not exercised.
+Fix only on M6: ISSUE-029 missing Windows roots via pinned system-plus-bundled
+CA roots and live-chain canary; ISSUE-031 explicit-only output-folder mutation
+through the model/cancel/crash/resume/tamper/Setup sequence; ISSUE-032 consent
+names/bytes for needed downloads only, A, B and C grammar, already-downloaded
+Check and test state; complete model list before bounded deferred graphics check.
+No new dependencies, weakened TLS/host/hash checks or automatic root retrieval.
+PM specifically authorizes one DRAFT M5_installer_and_release_pipeline PR from
+m5-installer; never ready/merge it. Keep frozen code/assets unchanged. Prepare
+M6 for main after M5, include clean-snapshot rechecks, update M6-report and stop.

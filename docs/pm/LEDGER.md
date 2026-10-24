@@ -1444,3 +1444,13 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   from that UI deferral (standalone production probe remains audited separately).
   Add CI-only Inno logs to diagnose any remaining native failure. No gate waived.
 - Full candidate rerun pending after ISSUE-031/032 and unattended-page correction.
+
+### Combined evidence and final recheck preparation
+
+- Mirror the accepted M5 branch report (dcf7f98) onto M6: full Owner VM passes,
+  cold-store workaround disclosed, keep-models manual NOT tested, frozen M5-only
+  Not for distribution. M5-checklist already matches both branches byte-for-byte.
+- M6 checklist adds a clean-snapshot cold-store/no-warmup download, full probing
+  list, incremental/all-installed counts, explicit folder lifecycle, model
+  handoff and the actually-unchecked keep-models confirmation test.
+- Candidate CI 40132812499 at 019a16f is running; final gates not yet claimed.

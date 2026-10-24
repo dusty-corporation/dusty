@@ -160,8 +160,8 @@ never sweep user folders to improve a clean-uninstall result.
 
 ISSUE-028 records a normal/extended Windows namespace comparison bypass, found
 with predicates only. M6 canonicalizes protection comparisons without shortening
-actual long-path I/O. The frozen M5 code does not have that repair; PM must decide
-any backport separately. See M6-report.md for the final native gate result.
+actual long-path I/O. The frozen M5 code does not have that repair; PM approved no backport and
+no M5-only distribution. See M6-report.md for the final native gate result.
 
 ## Final M6 candidate evidence
 
@@ -169,7 +169,8 @@ CI 40125892713 at fc2c6e5 passed all source, packaged and installed gates;
 M6-report.md records counts, exact installer hash and native candidate provenance.
 Registered uninstall receipt: one custom confirmation, zero generic, actual
 keep-model checkbox action passed. ISSUE-028 normal/extended protection cases
-both passed with synthetic bytes/metadata intact. Later commits are docs only.
+both passed with synthetic bytes/metadata intact. This is historical baseline evidence; newer M6 runtime and installer changes
+require the final run recorded in M6-report.md.
 This is explicit candidate mode, not production activation: ISSUE-026 remains
 S1 and normal engine-v2 CI still fails. No M5 code or frozen draft was changed.
 
@@ -209,3 +210,35 @@ valid_capture checks the bounded fixed event schema. installer_cleanup includes
 only that recognized file in removal; unknown/protected/linked content remains.
 Tests explicitly cover all three cases. Cleanup entry never holds a capture
 handle open; real installed uninstall remains a mandatory native gate.
+
+
+## Combined PM follow-up review paths
+
+ISSUE-031: app/window.py choose_output is the only ordinary writer of a new
+output_dir. _save_settings excludes cached folder snapshots; _apply_settings
+restores only at initial preparation and never over an explicit selection.
+restore_batch keeps the visible current choice for unfinished jobs. Safety
+sanitization may clear an unsafe legacy destination, preserving protection.
+The integrated Owner-sequence regression includes real TLS, forced GUI death,
+child Job Object termination, partial resume, tamper repair and Setup helpers.
+Exact Owner trigger was not observed; stale restore and startup races are
+separately demonstrated code paths.
+
+ISSUE-032: wizard QueryDownloadPlan runs installed offline --installer-status,
+including VAD hash verification. ApplyDownloadPlan tracks needed files separately
+from selected/self-tested files. Generated consent covers every needed subset;
+only missing/damaged bytes contribute to transfer totals, while every selected
+model and VAD still verify. A verified file changed after consent fails safely
+rather than silently expanding network consent. Native lifecycle must reuse all
+installed files with fetch blocked. Recheck mixed installed/missing wording on
+the clean VM; generated-string tests alone are not a visual review.
+
+Main handoff: m6-docs-v2 47594ecd has byte-identical code/config/native/resources
+with frozen m5-installer dcf7f98; histories are parallel copies with merge-base
+20cce6b. M6 additionally contains the docs prework, then commits from 5aae540.
+Do not blindly drop those prework docs in an onto rebase. After the Owner merges
+M5, preserve the pushed M6 snapshot and compare the complete content before/after
+any rebase, especially guides, privacy, CONTRIBUTING, ledger and reports. Resolve
+milestone/report conflicts to the latest M6 brief and mirrored M5 VM evidence;
+retain unrelated main changes. Re-run all gates on the actual rebased head.
+No history rewrite, M5 merge or M6 PR was performed during preparation.

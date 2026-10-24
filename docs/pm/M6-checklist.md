@@ -128,3 +128,46 @@ Vulkan success. Preserve evidence; do not delete uncertain work manually. If you
 must abort, terminate the public-test Dusty process in Task Manager; its native
 children must die. Do not reuse result folders or report an interrupted run as
 complete. No ThinkPad endurance result is claimed until the Owner sends it.
+
+## Final clean-snapshot VM recheck after M6 fixes
+
+Use Dusty-M5's clean snapshot and the final gated M6 candidate identified in
+M6-report.md, not frozen .13/.14. This is a test-only candidate until engine-v3
+publication/pin activation and normal CI pass. Copy the artifact from the
+read-only host share into guest Downloads, verify its reported SHA-256, and add
+Mark of the Web as in M5-checklist.md. Do not warm the trust store by running
+Invoke-WebRequest or another Windows-native request to GitHub first.
+
+1. Fresh standard-user Setup: all five transcription choices appear immediately;
+   Checking this computer... is visible, Next disabled until the bounded check
+   ends. No real VM GPU means Small recommendation. Check three license views,
+   no UAC, then Tiny plus automatic Voice detection. Download succeeds from the
+   cold store, tests pass, Finish launches with Tiny selected. Report the root
+   count before/after if convenient; do not install roots by hand.
+2. Choose Documents/Transcripts explicitly. Re-run Setup with Tiny, Small and
+   Small English selected after pre-installing Tiny and Small. Only Small English
+   is named/counts as a download if Voice detection is already verified. The
+   bytes and bar reach the same total. All selected models are still tested.
+   Repeat with everything installed: names are already downloaded, Check and
+   test, no misleading download amount. No network access is needed for checks.
+3. Keep the chosen folder through Model Manager download/cancel/normal close,
+   Task Manager forced death and resumed partial, tampered Tiny detection and
+   Download again, offline Setup Finish without a model, then online Setup retry.
+   Reopen after each phase; folder stays Documents/Transcripts. Only explicitly
+   choosing a new folder changes it. Use public recordings and fresh outputs.
+4. Check empty/stale model selection after successful Setup becomes its tested
+   default, while a valid previously chosen installed model stays selected.
+   Verify About has separate privacy content, selectable repository and working
+   local Third-party notices, without opening a network link automatically.
+5. Uninstall through Windows Settings > Apps. This time actually UNCHECK Also
+   remove downloaded models. Exactly one Dusty confirmation, no generic second
+   confirmation. Models remain byte-identical; app/settings/state/logs/work are
+   removed; public outputs/sentinels remain. Reinstall uses those models, then
+   repeat with removal checked and verify owned models/data/app are gone while
+   recordings and outputs remain. Manual keep-models was not tested in M5.
+
+Return numbered PASS/FAIL, candidate run/hash, Windows version and any plain
+error text. Do not send private filenames, paths, recordings or settings.
+The desktop/ThinkPad offline and endurance protocols remain separate below/above;
+this VM recheck does not substitute for real-device Vulkan or actual account
+path tests. The real Surface smoke remains M7.
