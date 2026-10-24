@@ -1109,3 +1109,14 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   of the installer against the Owner's profile. Asset hashes in M5-report.md.
 - Authorized v0.5.0-m5.10 pushed at 5a88b49; run 40068461160 uses the now-gated
   .9 artifact for the safe .9 to .10 pair. It remains pending before VM use.
+
+### PM accepted review and VM handoff correction (2026-10-24)
+
+- PM ACCEPTED installer pages 7b8d28b and output row a75f1cf. Empty failure
+  progress bar versus full byte text parked in BACKLOG.md as requested.
+- .9 to .10 run 40068461160 all jobs GREEN; both releases confirmed draft.
+  Exact .9/.10 installer hashes and named safe pair added to the checklist.
+- Owner building Dusty-M5, Home, 8 GB/4 CPU/80 GB/VBoxSVGA, DustyTester, clean
+  snapshot. Checklist now 90 minutes, Guest Additions/admin reboot, read-only
+  auto-mounted host bench share, local guest copies, exact hashes and sentinels.
+- Host commands are instructions only; agent did not write outside the repo.

@@ -41,3 +41,5 @@ Record optional improvements, optimizations, and work outside V1 here instead of
 
 - Refresh pinned GitHub Actions for Node 24 after review; current pinned actions pass but CI warns that Node 20 actions are forced onto Node 24.
 - M5: replace Inno's default wizard images with Dusty artwork before public release.
+
+- Installer graphics-test failure preview: make the empty progress bar consistent with the full byte amount shown underneath (PM accepted page round; future polish).

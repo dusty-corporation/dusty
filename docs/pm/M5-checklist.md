@@ -1,7 +1,7 @@
 # M5 fresh Windows 11 acceptance checklist
 
 Owner runs this on a disposable VM, not on the host installation. Allow about
-45 minutes of testing after Windows and model downloads. Record PASS/FAIL per
+90 minutes of testing after Windows and model downloads. Record PASS/FAIL per
 number, installer versions, guest Windows build and screenshots of failures.
 Do not send recordings, transcript contents, settings or raw Security logs.
 
@@ -23,13 +23,17 @@ Do not send recordings, transcript contents, settings or raw Security logs.
    Complete supported Windows setup/account requirements. Do not bypass TPM,
    Secure Boot, account or other Windows setup requirements. If installation
    demands a license or unsupported bypass, stop VM setup and tell the Owner.
-5. From the guest administrator account: Settings > Accounts > Other users >
+5. After Windows setup, as the guest administrator: VirtualBox Devices > Insert
+   Guest Additions CD image. Open the guest CD and run VBoxWindowsAdditions.exe
+   as administrator. Complete the signed driver installation and reboot the guest.
+   This is required for 1920 x 1080 and the shared folder below. No Extension Pack.
+6. From the guest administrator account: Settings > Accounts > Other users >
    Add account > I don't have this person's sign-in information > Add a user
    without a Microsoft account. Create DustyTester; its Account type must be
    Standard User. Sign out, then sign in as DustyTester. Keep the administrator
    account separate. Dusty must never request its credentials.
-6. Take a clean VM snapshot before installing Dusty. Shared clipboard, drag/drop
-   and host shared folders can remain off. The VM normally exposes no physical
+7. Take the snapshot named clean before installing Dusty. Shared clipboard and
+   drag/drop can remain off; enable only the read-only shared folder below. The VM normally exposes no physical
    Vulkan GPU, so Small pre-selection is expected; it cannot prove Iris Xe use.
    Set the guest display to 1920 x 1080 and 100% before baseline tests, then
    use 150% for the scale checks. Do not change the host display. If the guest
@@ -43,32 +47,52 @@ retrieved 2026-10-23. Microsoft specifies 4 GB RAM/64 GB storage minimum;
 this test assigns 8 GB/80 GB. The ISO version is Owner-supplied, not independently
 identified by Dusty. Do not download an unofficial Windows image.
 
-## Get the two draft installers into the guest
+## Transfer the exact repaired builds using one read-only share
 
-Draft releases require the Owner's authenticated GitHub access. On the host,
-use only the two repaired, successful drafts identified in M5-report.md.
-Do not use historical .1 through .7 builds: they predate the ISSUE-020 repair.
-Do not publish either. Download all five assets for each version into separate
-host folders. The final report identifies the exact safe tag numbers:
+The Owner is creating Dusty-M5: Windows 11 Home, 8 GB, 4 CPUs, 80 GB VDI,
+VBoxSVGA, standard user DustyTester, snapshot clean. Keep that configuration.
+Earlier: **v0.5.0-m5.9**, CI 40067407725. Later: **v0.5.0-m5.10**, CI 40068461160.
+Both are successful DRAFT releases. The latter tested the real .9 to .10 upgrade.
+Do not use .1 through .8. Do not publish any release.
 
-```powershell
-gh release download <earlier-safe-tag-from-report> --repo dusty-corporation/dusty --dir .\m5-test-1
-gh release download <later-safe-tag-from-report> --repo dusty-corporation/dusty --dir .\m5-test-2
-```
-
-Replace the angle-bracket placeholders with the report's successful tags.
-In the guest browser, sign in to GitHub yourself, open the draft release and
-save the installer and SHA256SUMS.txt in Downloads. Alternatively make a read-only
-ISO containing the host download folders, mount it in VirtualBox's optical drive,
-and copy to guest Downloads. Never copy your gh authentication file into the VM.
-Check the entire installer SHA against its exact SHA256SUMS entry:
+Run on the HOST in PowerShell, using the Owner's authenticated gh:
 
 ```powershell
-Get-FileHash .\Dusty-*-draft-unsigned.exe -Algorithm SHA256
+$vmShare = 'C:\Users\kdash\bench\m5-vm'
+New-Item -ItemType Directory -Force -Path $vmShare, "$vmShare\m5.9", "$vmShare\m5.10" | Out-Null
+gh release download v0.5.0-m5.9 --repo dusty-corporation/dusty --dir "$vmShare\m5.9"
+if ($LASTEXITCODE -ne 0) { throw 'Earlier draft download failed' }
+gh release download v0.5.0-m5.10 --repo dusty-corporation/dusty --dir "$vmShare\m5.10"
+if ($LASTEXITCODE -ne 0) { throw 'Later draft download failed' }
+Copy-Item -LiteralPath 'C:\Users\kdash\whisper_app\tests\fixtures\audio\formats\jfk.wav' -Destination "$vmShare\jfk.wav"
 ```
 
-Expected: exact match. Do not run a mismatching file. The other assets are
-THIRD_PARTY_NOTICES.md, the versioned CycloneDX SBOM and installer-jedi-source.zip.
+The downloads refuse to overwrite existing assets; if they already exist, keep
+and verify them instead of adding --clobber. No gh credentials go into the guest.
+In VirtualBox, Dusty-M5 > Settings > Shared Folders > add a Machine Folder:
+Folder Path `C:\Users\kdash\bench\m5-vm`, Folder Name `m5-vm`, Read-only ON,
+Auto-mount ON, permanent machine folder. Guest Additions must already be installed.
+The guest UNC path is `\\VBOXSVR\m5-vm`; an assigned drive letter may vary.
+
+In the GUEST, signed in as DustyTester, copy locally before running anything:
+
+```powershell
+if ($env:USERNAME -ne 'DustyTester') { throw 'Run this inside the VM as DustyTester' }
+$vmDownloads = Join-Path $env:USERPROFILE 'Downloads\M5-check'
+New-Item -ItemType Directory -Force -Path $vmDownloads | Out-Null
+Copy-Item -LiteralPath '\\VBOXSVR\m5-vm\m5.9' -Destination $vmDownloads -Recurse
+Copy-Item -LiteralPath '\\VBOXSVR\m5-vm\m5.10' -Destination $vmDownloads -Recurse
+Copy-Item -LiteralPath '\\VBOXSVR\m5-vm\jfk.wav' -Destination $vmDownloads
+$earlier = Join-Path $vmDownloads 'm5.9\Dusty-0.5.0-m5.9-draft-unsigned.exe'
+$later = Join-Path $vmDownloads 'm5.10\Dusty-0.5.0-m5.10-draft-unsigned.exe'
+if ((Get-FileHash -LiteralPath $earlier -Algorithm SHA256).Hash -ne '9605ab888149228322c9f02c6d0101ddcb6e51cbb769a72f7128fee4936f5997') { throw 'Earlier installer hash mismatch' }
+if ((Get-FileHash -LiteralPath $later -Algorithm SHA256).Hash -ne '5c5d1972bbc2d71636546bdd805f1baf19792b50ba832410bd575b9e6c4cf337') { throw 'Later installer hash mismatch' }
+Get-FileHash -LiteralPath $earlier,$later -Algorithm SHA256
+```
+
+Expected: both full hashes match, including the corresponding SHA256SUMS.txt
+entries. Stop on mismatch. Run only the local Downloads copies. Keep the host
+share read-only. The other assets are notices, CycloneDX SBOM and JEDI source.
 
 ## SPEC 11.6 checks (standard user)
 
@@ -77,7 +101,7 @@ THIRD_PARTY_NOTICES.md, the versioned CycloneDX SBOM and installer-jedi-source.z
 | 1 | Run the earlier installer. If SmartScreen appears, after the hash check select More info, Run anyway. | Unsigned warning explained; no UAC/admin prompt. If policy prevents running it, record that rather than disable security. |
 | 2 | Open each of the three license views. Read the catalog; choose Tiny for a fast test, leave Voice detection included. | Apache/NOTICE, third-party notices and Microsoft runtime EULA reachable; agreement required. Physical GPU probe bounded, no model opened. VM defaults Small; changing to Tiny remains respected. |
 | 3 | Install to the default folder. On the model-download page, use Back to change Tiny to Small and back; then press Download. | Consent names and size change with the selection. Back is available before download and disabled during it. Consent becomes Downloading; byte totals appear below the bar. Each selected model is tested on Auto, smallest once on CPU, Voice detection verifies. Success uses the actual singular/plural result. |
-| 4 | Leave Open Dusty now checked and press Finish. Close and reopen from Start Menu; test the default-checked Desktop shortcut too. | Dusty survives Setup exit and runs as DustyTester, no admin prompt. Welcome only while output folder unset. Choose a guest-local output folder and add the public JFK fixture from the repository's tests/fixtures/audio/formats/jfk.wav. |
+| 4 | Leave Open Dusty now checked and press Finish. Close and reopen from Start Menu; test the default-checked Desktop shortcut too. | Dusty survives Setup exit and runs as DustyTester, no admin prompt. Welcome only while output folder unset. Choose a guest-local output folder and add Downloads\M5-check\jfk.wav. |
 | 5 | Disconnect the VM network adapter, close Dusty and reboot guest. Open Dusty and transcribe JFK to Text and Word. | Offline startup/transcription/export work, intelligible expected speech; output saved only in chosen folder, models unchanged. VM CPU fallback works. Reconnect adapter afterwards. |
 | 6 | Install the later test version over the earlier one. Before/after record model hashes and LastWriteTime with Get-FileHash/Get-Item. | Version changes; verified model bytes and modification times unchanged, no model redownload. Output folder and user settings preserved. |
 | 7 | In Model Manager start an extra download. Cancel normally; repeat and close normally. | Active .part disappears immediately, no corrupt final model. Next attempt starts fresh. |
@@ -92,6 +116,42 @@ THIRD_PARTY_NOTICES.md, the versioned CycloneDX SBOM and installer-jedi-source.z
 | 16 | From a disposable snapshot, begin Setup's model download three times; stop via Cancel, window X, then Escape. Retry afterwards. | Confirmation while active; child stops, active partial disappears, verified/pre-existing models survive. Setup closes normally without launching Dusty. Retry succeeds. Repeat when idle on the post-copy model page. |
 | 17 | In the test profile only, put a sentinel under an old unmarked work folder, and choose an app-managed work/models folder as output or add a recording from it. | Unknown sentinel survives startup/self-test/uninstall. Managed source/output is refused with one plain choose-another-folder message. Existing legacy output settings are cleared with a notice, while their folder contents stay untouched. |
 | 18 | If a real GPU self-test failure is reproducible, try Retry, Use the processor instead, and Finish without a model. Also select multiple models once. | GPU failure is stated plainly, CPU retry outcome is truthful, all selected models tested and one smallest CPU fallback test counted. Without preserves verified/pre-existing files and clears a failed default. Do not fabricate a failure; report unavailable hardware coverage. |
+
+## Step 17 exact guest commands and managed paths
+
+Use a disposable snapshot. Close Dusty first. Run only in the GUEST as DustyTester:
+
+```powershell
+if ($env:USERNAME -ne 'DustyTester') { throw 'Run only inside the test VM' }
+$dustyData = Join-Path $env:LOCALAPPDATA 'Dusty'
+$testFolders = @('work\probe', 'work\selftest', 'work\owner-sentinel', 'models', 'state', 'logs')
+foreach ($relative in $testFolders) {
+    $testFolder = Join-Path $dustyData $relative
+    New-Item -ItemType Directory -Force -Path $testFolder | Out-Null
+    $sentinel = Join-Path $testFolder 'owner-keep.txt'
+    if (Test-Path -LiteralPath $sentinel) { throw 'Sentinel already exists; do not overwrite it' }
+    'Owner VM sentinel: preserve this file' | Set-Content -LiteralPath $sentinel -Encoding utf8
+}
+Copy-Item -LiteralPath "$env:USERPROFILE\Downloads\M5-check\jfk.wav" -Destination (Join-Path $dustyData 'work\owner-sentinel\jfk.wav')
+Get-ChildItem -LiteralPath $dustyData -Filter 'owner-keep.txt' -Recurse | Get-FileHash
+```
+
+Test these exact destinations with Choose folder (all must be refused):
+
+- `C:\Users\DustyTester\AppData\Local\Dusty\work\owner-sentinel`
+- `C:\Users\DustyTester\AppData\Local\Dusty\models`
+- `C:\Users\DustyTester\AppData\Local\Dusty\state`
+- `C:\Users\DustyTester\AppData\Local\Dusty\logs`
+- `C:\Users\DustyTester\AppData\Local\Programs\Dusty`
+
+Add the managed-source test recording
+`C:\Users\DustyTester\AppData\Local\Dusty\work\owner-sentinel\jfk.wav`:
+it must be refused. Repeat with Save next to each recording enabled. Do not
+put private recordings in these folders. After startup, self-test and uninstall,
+repeat the hash listing: every owner-keep.txt must remain unchanged. These unknown
+sentinels intentionally prevent complete app-data removal. Revert snapshot clean
+before the clean-uninstall checks; do not mistake deliberate preservation for a
+failure or manually remove unknown files as part of Dusty behavior.
 
 For the tamper test, use a guest PowerShell window with Dusty closed:
 
