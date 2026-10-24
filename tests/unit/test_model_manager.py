@@ -208,7 +208,12 @@ def test_main_prompts_live_update_and_preserves_explicit_choice(models, qtbot, m
     qtbot.addWidget(view)
     view.show()
     view.apply_prepared(
-        Prepared((), False, {"output_dir": str(models.paths.user_dir)}, vad_installed=False)
+        Prepared(
+            (),
+            False,
+            {"output_dir": str(models.paths.user_dir.parent / "outputs")},
+            vad_installed=False,
+        )
     )
     assert view.start_hint.text() == M.NO_MODELS
     assert view.download_recommended_button.isVisible() and not view.start_button.isEnabled()
