@@ -4,8 +4,8 @@
 
 The PM approved the repair on 2026-10-23. The implementation preserves legacy
 transcript destinations and replaces name-based recursive work cleanup with
-unique owned folders and exact content inventories. ISSUE-020 remains open until
-final source, packaged, installed WFP and uninstall gates pass. Installer page
+unique owned folders and exact content inventories. ISSUE-020 is resolved: final CI 40061186069 on 1b62946 passed all
+source, packaged, installed WFP and uninstall gates. Installer page
 polish has not started. No real Owner app-data files were inspected or changed.
 
 ## Root cause and repair
@@ -89,3 +89,19 @@ AMD SVM is now enabled, as reported by the Owner. Keep historical M5 drafts
 unpublished. Use the final repaired build identified in M5-report.md for VM testing
 once its gates pass; do not use an older affected draft for ordinary transcription.
 No PM decision is pending for the approved repair. Final evidence follows here.
+
+## Final repair acceptance (2026-10-24)
+
+CI https://github.com/dusty-corporation/dusty/actions/runs/40061186069 is green
+on 1b62946. Source: 293 passed, 2 expected skips, 286.55 s; separate CI-only
+network test: 1 passed. Required coverage 94.2% (all packages above 85%).
+Packaged layout/PE/license/GUI/WFP, installer-wide license, installed payload/PE/
+WFP, model-preserving same-version upgrade, both uninstall choices and output
+sentinel preservation passed. Calibrated Setup 0, GUI/probe 0, native 0, fetch
+allowed 4, blocked 0. two_distinct_versions=false is honestly retained; Part 3
+must establish the separate true-upgrade requirement.
+
+Final marker continuity checks prevent bookkeeping from recreating lost markers
+or adopting changes to previously recorded files. The full repair is on
+m6-docs-v2 8c199b0, with implementation parity checked and updated user/privacy
+guides. Part 2 may now proceed. Previous pending-status notes above are historical.

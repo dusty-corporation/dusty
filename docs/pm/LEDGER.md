@@ -953,3 +953,15 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   bytes before every inventory update and permanently preserves that invocation
   after any mismatch/read/write error. Two enabled regressions cover marker
   removal and mutation before bookkeeping. No Owner data was touched.
+
+### ISSUE-020 resolved, Part 1 complete (2026-10-24)
+
+- Final repair 1b62946: CI 40061186069 all four jobs green. Source 293 passed,
+  2 expected skips plus real-network 1 passed; required coverage 94.2%.
+- Packaged PE/license/GUI/WFP, installed payload/PE/WFP and both uninstall choices
+  pass. Calibrated Setup 0, GUI/probe 0, native 0, fetch allowed 4, blocked 0.
+  Models and output sentinel preserved. two_distinct_versions=false is not
+  claimed as true-upgrade acceptance; Part 3 will provide two gated tag builds.
+- ISSUE-020 closed with PM decision, root cause, retained original regressions,
+  marker continuity/link tests and the deletion sweep in M5-interim-9.md.
+- m6-docs-v2 8c199b0 implementation parity verified. Part 2 page work now starts.
