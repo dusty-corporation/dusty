@@ -1404,3 +1404,28 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Packaged fixture skips the ownership header when parsing event records and
   still requires module/context capture with no canary contents. Full final
   candidate validation rerun required after this app-code correction.
+
+### Combined PM instructions / M5 draft PR
+
+- Read combined attachment; A is already implemented/in validation, not duplicated.
+  Owner full VM evidence committed docs-only on m5-installer dcf7f98. Draft PR #6
+  M5_installer_and_release_pipeline opened and attached, draft/unmerged; report,
+  WFP and .13/.14 links plus Not for distribution; fixes follow in M6.
+- ISSUE-031 S2: demonstrated stale recovered batch output_dir overwrites global
+  folder and later settings saves persist it; asynchronous startup can also race
+  a user choice. Exact Owner trigger not claimed. Repair makes Choose folder
+  the only new-folder writer and preserves current choice during recovery/events.
+- ISSUE-032 S2 filed: selected models incorrectly used as download set/denominator.
+  Required-download planning and already-downloaded Check and test state next.
+- Keep-models manual not tested due checked checkbox, not a defect; retain actual
+  CI assertion and final clean-snapshot recheck. M5 code/assets remain frozen.
+
+### ISSUE-031 regression checkpoint
+
+- Combined real TLS/model/GUI sequence plus GUI suite: 33 pass, 21.12 s. The new
+  regression chooses Documents/Transcripts, applies stale startup/recovery
+  Downloads/M5-check, downloads, cancels/closes, uses the actual TerminateProcess/
+  Job Object crash-and-resume helper, tampers/repairs Tiny, clears failed Setup
+  selection and accepts successful tests. Disk and visible folder stay chosen;
+  final explicit Choose folder changes both. Existing forced-kill test name and
+  child-death/no-further-bytes assertions remain. No guessed exact Owner trigger.

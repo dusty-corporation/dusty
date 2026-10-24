@@ -767,6 +767,10 @@ def test_gui_startup_removes_stale_partial_and_keeps_recent_prefix(models, qtbot
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows TerminateProcess and Job Objects")
 def test_forced_gui_death_kills_fetch_job_and_recent_partial_resumes(models, qtbot):
+    _force_gui_death_and_resume(models, qtbot)
+
+
+def _force_gui_death_and_resume(models, qtbot):
     import ctypes
     from ctypes import wintypes
 
@@ -854,6 +858,77 @@ def test_forced_gui_death_kills_fetch_job_and_recent_partial_resumes(models, qtb
     wait_done(dialog, qtbot)
     assert models.tls.requests == [None, f"bytes={offset}-"]
     assert models.file.read_bytes() == DATA and not part.exists()
+    return view
+
+
+def test_output_folder_survives_owner_model_recovery_and_setup_sequence(models, qtbot, monkeypatch):
+    from PySide6.QtWidgets import QFileDialog
+
+    from dusty.core import BatchOptions, Job, JobStatus
+    from dusty.installer_support import accept_tests, clear_failed_selection
+    from dusty.queue.storage import load_settings
+
+    chosen = models.paths.user_dir.parent / "Documents/Transcripts"
+    old = models.paths.user_dir.parent / "Downloads/M5-check"
+    settings_file = models.paths.user_dir / "settings.json"
+    view = MainWindow(models.paths, interactive=False)
+    qtbot.addWidget(view)
+    view.apply_prepared(Prepared((), False, {}, vad_installed=False))
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a: str(chosen))
+    view.choose_output()
+
+    def unchanged(window):
+        assert window.output_dir == chosen
+        assert load_settings(settings_file)["output_dir"] == str(chosen)
+
+    # An in-flight pre-upgrade/startup snapshot cannot undo a new explicit choice.
+    view.apply_prepared(Prepared((), False, {"output_dir": str(old)}, vad_installed=False))
+    unchanged(view)
+    dialog = models.create(registry=view.registry)
+    dialog.models_changed.connect(view._models_changed)
+    dialog.download()
+    wait_done(dialog, qtbot)
+    unchanged(view)
+    models.tls.mode = "slow"
+    dialog.table.selectRow(dialog.ids.index("small"))
+    dialog.download()
+    partial = models.paths.models_dir / (
+        models.registry.manifest.models["small"].file_name + ".part"
+    )
+    qtbot.waitUntil(lambda: partial.exists() and partial.stat().st_size > 0, timeout=10000)
+    dialog.cancel()
+    wait_done(dialog, qtbot)
+    dialog.close()
+    unchanged(view)
+
+    # Same actual TerminateProcess/Job Object helper as the standalone regression.
+    models.file.unlink()
+    models.tls.requests.clear()
+    restarted = _force_gui_death_and_resume(models, qtbot)
+    unchanged(restarted)
+    restarted.restore_batch(
+        BatchOptions("tiny", old), [Job(Path("public.wav"), status=JobStatus.FAILED)]
+    )
+    assert restarted._save_settings()
+    unchanged(restarted)
+
+    models.file.write_bytes(b"tampered public model fixture")
+    repair = models.create(registry=restarted.registry)
+    repair.models_changed.connect(restarted._models_changed)
+    assert repair.statuses["tiny"] == "damaged"
+    repair.download()
+    wait_done(repair, qtbot)
+    unchanged(restarted)
+    clear_failed_selection(models.paths)  # Offline Setup / Finish without a model.
+    unchanged(restarted)
+    accept_tests(models.paths, "tiny")  # Successful online retry, no folder assignment.
+    unchanged(restarted)
+    assert restarted._save_settings()  # Stale cached settings cannot replace disk choice.
+    unchanged(restarted)
+    final_choice = chosen.parent / "Explicit new choice"
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a: str(final_choice))
+    restarted.choose_output()
+    assert load_settings(settings_file)["output_dir"] == str(final_choice)
 
 
 def test_failed_installer_test_keeps_models_and_shows_empty_options_choice(models, qtbot):

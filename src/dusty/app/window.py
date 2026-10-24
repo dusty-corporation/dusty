@@ -505,7 +505,7 @@ class MainWindow(QMainWindow):
             )
         )
         self._set_combo(self.model_choice, self.settings.get("model_id", default))
-        self._apply_settings(self.settings)
+        self._apply_settings(self.settings, restore_output=True)
         self.overall.setRange(0, 1000)
         self.status.setText(M.READY)
         self._refresh()
@@ -564,7 +564,7 @@ class MainWindow(QMainWindow):
         if index >= 0 or combo is self.model_choice and value is None:
             combo.setCurrentIndex(index)
 
-    def _apply_settings(self, settings: dict) -> None:
+    def _apply_settings(self, settings: dict, *, restore_output: bool = False) -> None:
         self._applying = True
         for key, combo in (
             ("model_id", self.model_choice),
@@ -576,7 +576,7 @@ class MainWindow(QMainWindow):
         ):
             if key in settings:
                 self._set_combo(combo, settings[key])
-        if settings.get("output_dir"):
+        if restore_output and self.output_dir is None and settings.get("output_dir"):
             from dusty.work_area import managed_destination
 
             output = Path(settings["output_dir"])
@@ -608,7 +608,9 @@ class MainWindow(QMainWindow):
 
         try:
             settings = load_settings(self.paths.user_dir / "settings.json")
-            settings.update(self.settings)
+            # Folder choice has a single writer: choose_output. Neither a stale
+            # recovery snapshot nor model/installer notifications may replace it.
+            settings.update({k: v for k, v in self.settings.items() if k != "output_dir"})
             settings.update(
                 {
                     "schema_version": 1,
@@ -633,8 +635,6 @@ class MainWindow(QMainWindow):
                     "geometry": bytes(self.saveGeometry().toBase64().data()).decode("ascii"),
                 }
             )
-            if self.output_dir:
-                settings["output_dir"] = str(self.output_dir)
             save_settings(self.paths.user_dir / "settings.json", settings)
             self.settings = settings
             return True
@@ -997,6 +997,17 @@ class MainWindow(QMainWindow):
             if managed_destination(Path(folder), self.paths):
                 self.show_error(text=M.MANAGED_FOLDER)
                 return
+            from dusty.queue.storage import load_settings
+
+            try:
+                file = self.paths.user_dir / "settings.json"
+                settings = load_settings(file)
+                settings["output_dir"] = folder
+                save_settings(file, settings)
+            except (OSError, ValueError):
+                self.show_error(text=M.SAVE_ERROR)
+                return
+            self.settings["output_dir"] = folder
             self.output_dir = Path(folder)
             self._rules()
 
