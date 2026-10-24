@@ -213,7 +213,7 @@ claimed as fresh Windows 11 Home standard-user or physical GPU evidence.
 
 m5-installer holds implementation and this handoff. m6-docs-v2 e6de0aa carries
 all second-review code/tests with verified parity and matching privacy/install
-guides; final evidence/checklist sync follows. No M6 acceptance is claimed.
+guides; final evidence/checklist are mirrored on that branch. No M6 acceptance is claimed.
 Reference m5-packaging-spike (95dd90b) and m6-docs (c855b52) remain unchanged.
 Manual VM/SmartScreen/scaling and physical GPU outcomes are explicit gaps, not
 assumed passes. Unknown/changed content is intentionally preserved with a notice.
