@@ -1133,3 +1133,20 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   final candidates. New gated pair follows the review; no publication/deletion.
 - Real active receipt-byte lock test already passes: Windows denies the receipt
   read while the downloader holds it; stale cleanup preserves the active prefix.
+
+### M5 second review matrix and interrupted migration repair
+
+- Matrix: work ownership, obsolete licenses, partial receipts and uninstall,
+  each tested with real junction/symlink targets, read-only attributes, another
+  process's exclusive file handle, non-ASCII/extended long paths, synthetic
+  OneDrive output and child os._exit(91) immediately after an actual unlink.
+- Initial matrix: 32 passed/1 failed. ISSUE-024 S1: interrupted obsolete-license
+  cleanup preserved data but could not retry. Added exclusive purpose/hash
+  receipt and safe resume; changed marker/file/unknown-entry regressions pass.
+- All focused preservation/upgrade/release tests: 85 passed; lint/format/mypy
+  pass. No test skip/waiver. Source inventory/PE/license gates unchanged.
+- Actual installed new app now must refuse uninstall-data for preserved_paths,
+  retain metadata and model hashes/times. New positive receipt required by
+  release staging; a failed preservation receipt rejects the release.
+- A repaired .11/.12 pair replaces .9/.10 as final VM candidates after all gates.
+  .9/.10's prior successful evidence remains historical, not the final acceptance.

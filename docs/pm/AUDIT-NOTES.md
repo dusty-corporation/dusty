@@ -58,3 +58,7 @@ promote an item to an issue if it affects correctness, privacy or licensing.
   faulthandler, while completing with exit 0. Full source: 302 passed/1 skip;
   targeted recheck: 1 passed. Review COM/window event interaction on this desktop
   in M6. No cause, product crash or test suppression is claimed.
+- M5 interrupted upgrade: the purpose/hash recovery receipt stays until a new
+  installer successfully resumes cleanup. Review uninstalling an older version
+  instead of resuming that interrupted transition; conservative recovery metadata
+  may remain. Normal completed upgrade/uninstall gates require no such leftovers.

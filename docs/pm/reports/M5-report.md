@@ -2,13 +2,20 @@
 
 ## Summary
 
+Second adversarial review reproduced ISSUE-023 (NN-7): sanitized legacy
+preserved_paths were omitted by uninstall's initial inspector. Only a synthetic
+fixture was affected. The approved ownership fix is implemented and tested;
+.9/.10 are superseded final candidates. New .11/.12 gates follow. ISSUE-024
+interrupted-license recovery is also fixed. No Owner data was accessed.
+
+
 Implementation is on `m5-installer`. ISSUE-020 is resolved with green ownership,
 packaged, installed WFP and uninstall evidence. The PM page round and Owner's
 output-row change are implemented. The first repaired tagged upgrade passed; the .9 to .10 pair is running;
 M5 acceptance remains pending the Owner's fresh standard-user VM results.
 No PR, merge or published release has been created.
 
-## Owner actions for the morning
+## Owner actions
 
 1. Use only the repaired draft builds identified in the final release table below.
    Do not use historical .1 through .7 builds for acceptance.
@@ -201,3 +208,28 @@ No M6 acceptance, PR, publication, merge or repository setting change is claimed
 Ownership repair and verifying Inno's post-copy navigation/cancellation required
 more work than page rendering. Safe previews, real lifecycle tests and VM
 acceptance are kept separate. Final tagged evidence remains in progress.
+
+## Second self-review
+
+Scope: M5 deletion/move/overwrite paths only. Work markers, obsolete own-license
+migration, stale/normal partial cleanup and uninstall were tested using real
+Windows junctions/symlinks, read-only files, another process holding an exclusive
+handle, Unicode paths, paths over 300 characters using the Windows extended
+prefix, and synthetic OneDrive output sentinels. No actual synced folder or
+Owner data was used. App/network/GUI capture was not involved in this matrix.
+
+A child actually called os._exit(91) immediately after the first unlink for each
+cleanup type. Work cleanup retained its incomplete inventory conservatively;
+partial cleanup and uninstall preserved unrelated output. Upgrade retry exposed
+ISSUE-024 and now uses a purpose/directory/hash receipt, rejecting changed/unknown
+contents. Real OS-locked receipt cleanup already preserved the active prefix.
+
+ISSUE-023 failed before repair and passes after preserving preserved_paths
+before all uninstall deletion. The installed lifecycle now exercises that exact
+state through the new packaged exe, and release staging rejects a false/missing
+preservation receipt. Focused matrix and existing safety/release tests: 85 pass.
+Full source and new paired native release gates pending. Original regressions
+remain enabled; no inventory/license/network exception or skipped test added.
+
+Non-urgent handle-relative traversal and older-version uninstall after an
+interrupted migration remain audit notes. No fresh Windows VM result is claimed.
