@@ -1248,3 +1248,14 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - No new screenshot/image source; accepted review images remain historical links.
   Current native-driver validation is 40125892713, code fc2c6e5; earlier visibility
   driver validation 40125713083 remains separate evidence.
+
+### M6 final-code source validation
+
+- 40125892713 (fc2c6e5) checks/offline/upload-regression passed. Full source:
+  392 passed, 2 expected skips in 286.62 s; real-network opt-in 1 passed in 1.67 s.
+  Coverage: core 93.7%, export 98.6%, models 97.4%, queue 94.7%, privacy 96.6%;
+  total 1046/1092 = 95.8%. Ruff, format 152 files, mypy 82 sources and all policies
+  pass. Installed native acceptance is still running.
+- Added a separate fresh-standard-account path protocol after frozen M5 testing,
+  without confusing synthetic Unicode paths with an actual Windows profile.
+  M6 offline reboot checks remain about 20 minutes per machine and pending.

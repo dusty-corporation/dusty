@@ -25,3 +25,28 @@ The automated forced-kill/Job Object, canary and calibrated WFP tests complement
 this checklist. The Owner need not change firewall or Security audit policy.
 Actual physical GPU failure/retry coverage must be named as available or not
 available; do not manufacture PASS for a failure screen that was not exercised.
+
+## Separate fresh-account path check
+
+This is additional VM evidence, not part of the 20-minute offline run. Finish
+the frozen M5 .13/.14 VM checklist first. Use a separate snapshot for M6 after
+the engine decision and gated build are approved.
+
+1. In the VM's administrator account, open Settings > Accounts > Other users.
+   Add a local account without a Microsoft account, with a name containing a
+   space and non-ASCII letters, for example Dusty Test گفتگو. Keep it a Standard
+   user. Sign in once to create its profile.
+2. Open PowerShell and inspect `$env:USERPROFILE`. Windows may normalize the
+   account name. Record whether the actual profile path has a space and non-ASCII
+   letters. Do not rename a profile folder or edit the registry to force it.
+3. From that standard account, install the approved M6 build, download/test a
+   model, and transcribe public JFK audio with a non-ASCII filename. Choose an
+   output folder with spaces and non-ASCII letters. Check TXT and DOCX.
+4. Reopen Dusty and check the selected model and folder persist. Uninstall through
+   Windows Settings > Apps, keeping a transcript-folder sentinel. Confirm the
+   chosen model-removal behavior and that recordings/transcripts/sentinel stay.
+
+Send numbered PASS/FAIL, build/hash and the two profile-character flags. Do not
+send the full profile path or private recordings. If Windows normalized away
+either character class, mark actual-profile coverage partial. Synthetic M6
+source/install-path tests do not replace this account-level evidence.
