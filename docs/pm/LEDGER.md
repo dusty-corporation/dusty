@@ -1297,3 +1297,14 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   audit queued, including Inno QuietUninstallString.
 - ThinkPad >=2h installed Turbo Vulkan/Small CPU protocol queued, same public
   source/hash as desktop; Surface endurance belongs to M7.
+
+### M6 exact engine-v3 asset preparation
+
+- Refactored candidate verification into a side-effect-free archive builder; all
+  five existing tamper/extra/non-CI guard tests pass (0.94 s), ruff/mypy pass.
+- CPU 13,225,699 B b47ec54d..., Vulkan 58,828,109 B 0e8f26c5... exactly match
+  the previously gated archives. Original native CMake caches confirm native OFF,
+  backend DL ON and all CPU variants ON. FFmpeg remains exact engine-v2 bytes.
+- Staged licenses, patch, manifest, cache/build configuration, per-member build
+  provenance and all-asset checksums in ignored build/engine-v3-draft. No new
+  native compilation or production-pin activation. Draft upload is next.

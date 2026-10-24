@@ -14,7 +14,8 @@ from tools.fetch_dev_binaries import extract_flat_zip
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def prepare(source: Path, root: Path = ROOT) -> None:
+def candidate_archives(source: Path, root: Path = ROOT) -> dict[str, bytes]:
+    """Verify both exact packages before returning any bytes or writing files."""
     spec = json.loads((root / "native/m6-engine-candidate.json").read_text(encoding="utf-8"))
     manifest = root / "native/windows-utf8.manifest"
     if hashlib.sha256(manifest.read_bytes()).hexdigest() != spec["manifest_sha256"]:
@@ -49,6 +50,12 @@ def prepare(source: Path, root: Path = ROOT) -> None:
         ):
             raise ValueError("Candidate archive changed")
         archives[backend] = data
+    return archives
+
+
+def prepare(source: Path, root: Path = ROOT) -> None:
+    spec = json.loads((root / "native/m6-engine-candidate.json").read_text(encoding="utf-8"))
+    archives = candidate_archives(source, root)
     # Validate every input before changing any disposable-checkout input.
     pins_path = root / "native/versions.toml"
     pins = pins_path.read_text(encoding="utf-8")
