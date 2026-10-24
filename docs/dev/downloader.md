@@ -143,6 +143,13 @@ CI-only acceptance entry, not a user-facing feature; ordinary use is rejected.
 
 ## Ownership of abandoned prefixes (ISSUE-020)
 
+M6 also checks normal-cancel removal failures. Installer cancel_partial returns
+a truthful boolean; its CLI exit is nonzero when deletion is refused, and the
+wizard checks it and reports retained public model data. Model Manager uses a
+distinct CANCEL_CLEANUP reason when unlink fails. It does not claim removal in
+that state. A real helper holds an exclusive Windows file handle to prove failure
+and later successful cleanup. No verified final model is removed by that check.
+
 Automatic age cleanup now also requires a matching SHA-256 receipt written by a
 transfer attempt into its existing .lock file. Unknown or changed old prefixes
 are preserved. A forced crash before the receipt is written may leave a prefix

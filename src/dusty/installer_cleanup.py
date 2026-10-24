@@ -6,7 +6,7 @@ from pathlib import Path
 
 from dusty.models import load_manifest
 from dusty.runtime_paths import RuntimePaths
-from dusty.work_area import cleanup_owned, linked, protected_paths
+from dusty.work_area import canonical, cleanup_owned, linked, protected_paths
 
 
 def uninstall_allowed(paths: RuntimePaths) -> bool:
@@ -17,7 +17,7 @@ def uninstall_allowed(paths: RuntimePaths) -> bool:
             return False
         if paths.install_dir is None:
             return True
-        install = paths.install_dir.resolve()
+        install = canonical(paths.install_dir)
         return not linked(paths.install_dir) and not any(
             p.is_relative_to(install) or install.is_relative_to(p) for p in protected
         )
@@ -45,7 +45,7 @@ def _cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
         elif key in {"output_dir", "outputs", "source", "preserved_paths"} and isinstance(
             value, str
         ):
-            protected.add(Path(value).resolve())
+            protected.add(canonical(Path(value)))
 
     try:
         # Reparse points anywhere in the owned subtree make cleanup uncertain.
@@ -57,13 +57,18 @@ def _cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
                 if not isinstance(data, dict) or data.get("schema_version") != 1:
                     return False
                 inspect(data)
-        owned_root = root.resolve()
+        owned_root = canonical(root)
         if any(p.is_relative_to(owned_root) or owned_root.is_relative_to(p) for p in protected):
             return False
         candidates = list(metadata)
         candidates += [
             p for p in (root / "logs").glob("*") if re.fullmatch(r"dusty\.log(?:\.[1-5])?", p.name)
         ]
+        from dusty.privacy.native_diagnostics import valid_capture
+
+        diagnostic = root / "logs/native-diagnostic.jsonl"
+        if not linked(diagnostic) and valid_capture(diagnostic):
+            candidates.append(diagnostic)
         ownership_protection = protected_paths(root)
         for directory in (root / "work").glob("*"):
             if directory.is_dir():
@@ -78,7 +83,7 @@ def _cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
             ]
         # Decide before deleting metadata: another attempt must retain protection.
         for path in candidates:
-            resolved = path.resolve()
+            resolved = canonical(path)
             if any(resolved == p or resolved.is_relative_to(p) for p in protected):
                 return False
         for path in candidates:
@@ -92,7 +97,7 @@ def _cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
             if path != root / "work" and path.is_relative_to(root / "work"):
                 # Even an empty unmarked work folder is not proven app-owned.
                 continue
-            resolved = path.resolve()
+            resolved = canonical(path)
             if any(
                 resolved == p or resolved.is_relative_to(p) or p.is_relative_to(resolved)
                 for p in protected

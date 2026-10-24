@@ -6,7 +6,7 @@ import stat
 import time
 from pathlib import Path
 
-from dusty.work_area import linked, protected_paths
+from dusty.work_area import canonical, linked, protected_paths
 
 PARTIAL_MAX_AGE_SEC = 7 * 24 * 60 * 60
 
@@ -25,7 +25,7 @@ def cleanup_stale_partials(directory: Path, *, now: float | None = None) -> int:
             linked(directory)
             or protected is None
             or any(
-                p.is_relative_to(directory.resolve()) or directory.resolve().is_relative_to(p)
+                p.is_relative_to(canonical(directory)) or canonical(directory).is_relative_to(p)
                 for p in protected
             )
         ):

@@ -1,5 +1,7 @@
 """Small reviewable dialogs with centralized text and safe default choices."""
 
+from collections.abc import Callable
+from pathlib import Path
 from typing import cast
 
 from PySide6.QtCore import Qt
@@ -8,6 +10,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
     QLabel,
+    QPlainTextEdit,
     QPushButton,
     QRadioButton,
     QScrollArea,
@@ -47,6 +50,43 @@ class TextDialog(QDialog):
         button.clicked.connect(callback)
         self.buttons.addWidget(button)
         return button
+
+
+class AboutDialog(TextDialog):
+    def __init__(self, version: str, notices: Callable[[], None], parent=None):
+        super().__init__(
+            M.ABOUT,
+            (
+                M.ABOUT_VERSION.format(version=version),
+                M.ABOUT_DESCRIPTION,
+                M.ABOUT_LICENSE,
+                M.REPOSITORY_ADDRESS,
+            ),
+            parent,
+        )
+        for label in self.findChildren(QLabel):
+            label.setTextInteractionFlags(
+                Qt.TextInteractionFlag.TextSelectableByMouse
+                | Qt.TextInteractionFlag.TextSelectableByKeyboard
+            )
+        self.notices_button = self.button(M.THIRD_PARTY_NOTICES, notices)
+        self.button(M.DISMISS, self.accept, default=True)
+
+
+class NoticesDialog(TextDialog):
+    def __init__(self, path: Path, parent=None):
+        super().__init__(M.THIRD_PARTY_NOTICES, (), parent)
+        self.resize(760, 600)
+        self.text = QPlainTextEdit()
+        self.text.setReadOnly(True)
+        self.text.setAccessibleName(M.THIRD_PARTY_NOTICES)
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            text = M.NOTICES_UNAVAILABLE
+        self.text.setPlainText(text)
+        self.body.insertWidget(0, self.text, 1)
+        self.button(M.DISMISS, self.accept, default=True)
 
 
 class WelcomeDialog(TextDialog):

@@ -113,6 +113,24 @@ def check(root: Path) -> list[str]:
     return findings
 
 
+def check_trust_data(bundle: Path, inventory: dict) -> bool:
+    """PM ISSUE-029: exact public certificate data only, never arbitrary code."""
+    from dusty_fetch.tls import ROOTS, bundled_pem
+
+    attributed = {
+        item["path"]
+        for item in inventory["files"]
+        if "public-ca-certificates" in item["components"]
+    }
+    if attributed != {"resources/tls/" + name for name in ROOTS}:
+        return False
+    try:
+        bundled_pem(bundle / "resources/tls")
+        return True
+    except (OSError, ValueError):
+        return False
+
+
 def check_bundle(bundle: Path, inventory_path: Path) -> list[str]:
     """Audit every collected file and embedded component; unknowns fail closed."""
     inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
@@ -146,6 +164,8 @@ def check_bundle(bundle: Path, inventory_path: Path) -> list[str]:
             approved = entry.get("linkage") == "executable"
         if key == "jfk-fixture" and expression == "LicenseRef-Public-Domain":
             approved = entry.get("kind") == "data"
+        if key == "public-ca-certificates" and expression == "LicenseRef-Public-CA-Certificate":
+            approved = entry.get("kind") == "data" and check_trust_data(bundle, inventory)
         if entry.get("linkage") == "static" and "LGPL" in expression:
             approved = False
         if not approved:

@@ -62,9 +62,79 @@ CURRENT-installer download/probe audit with zero Setup/GUI/native events. Missin
 or false receipts prevent draft creation. A normal-cancel receipt must also pass:
 the real downloader writes a partial, the shared Cancel/X routine stops it,
 the active partial is removed, retry succeeds and the output sentinel survives.
+The final M5 staging gate also requires both legacy app-data destination and
+protected registered-installation receipts. A native uninstaller must stop
+before deleting any protected installed payload or its protection metadata.
 The first successful build can have no
 prior upgrade input. Intermediate experiments are not two-version evidence.
 
 Each calibrated WFP phase uses a unique repository-local audit-policy CSV and
 restores its own snapshot. Reusing a file fails auditpol with 0x00000050; the
 expanded two-audit lifecycle is the regression for this correction.
+
+## M6 work and frozen M5 artifacts
+
+M5 .13/.14 remain frozen pending Owner VM results. M6 work happens on
+m6-hardening and is not permission to push a new test tag or publish a release.
+Branch CI can produce gated unsigned review artifacts without a release.
+ISSUE-026 / proposed ADR 0024 needs a newly verified UTF-8 native build and
+Owner activation; until then public engine-v2 fails its enabled Unicode-profile
+regression. Do not call a native-only candidate an app release or green full CI.
+
+## SmartScreen test downloads and internet zone
+
+GitHub CLI downloads and read-only VirtualBox shares may not preserve Mark of
+the Web. The Owner's ThinkPad .14 test on 2026-10-24 therefore did not exercise
+SmartScreen, although installation/transcription/uninstall and 150% layout passed.
+After copying the exact installer into the guest's local NTFS Downloads folder,
+verify its SHA-256 and add the internet zone before starting it:
+
+```powershell
+$installer = (Read-Host 'Paste the full local installer path').Trim('"')
+Set-Content -LiteralPath $installer -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3"
+Get-Content -LiteralPath $installer -Stream Zone.Identifier
+Get-FileHash -LiteralPath $installer -Algorithm SHA256
+```
+
+Paste the exact local path when prompted. Compare the complete SHA-256 with
+the trusted checksum before tagging, then recheck the unchanged hash afterwards. The alternate
+stream does not change the executable bytes. ZoneId=3 makes it eligible for
+internet-download checks; policy and reputation still affect the actual prompt.
+Record what happens instead of claiming that absence of a warning is a pass.
+
+## M6 registered uninstall entry
+
+Pinned Inno 6.7.3 Setup.Uninstall.pas:696 checks its native Silent/VerySilent
+flags before the unconditional generic confirmation, after InitializeUninstall.
+There is no script setting to suppress only that question. The public Windows
+Apps uninstall registration therefore uses /SILENT /DUSTYCONFIRM=yes. The explicit
+Dusty flag still opens our own confirmation; /SILENT suppresses Inno's second
+question. Unattended /REMOVEMODELS=yes|no remains an explicit separate route.
+The protected-installation preflight runs before both. Registration is written
+at ssDone and validated by CI; failure is reported rather than ignored.
+
+Directly running Inno's internal unins*.exe without the registered arguments can
+still show its generic question. The supported user route is Windows Settings >
+Apps. No runtime binary patch or compiler change is used. CI drives the registered
+entry, changes its actual checkbox, confirms once and rejects any generic dialog.
+
+
+## Exact M6 candidate validation (not activation)
+
+Run `gh workflow run ci.yml --ref m6-hardening -f m6_engine_candidate=true`.
+The workflow checks native run 40110881732's success/source SHA, every member
+hash and deterministic archive hash in native/m6-engine-candidate.json. It stages
+both packages only after both validate and modifies native/versions.toml only
+inside that disposable checkout. It does not change committed production pins,
+models-v1, engine-v2 or any release. Ordinary push CI still tests engine-v2 and
+exposes ISSUE-026. Candidate green evidence must always name this explicit mode;
+it is not proof that a published app has switched engines. Never bypass gates
+or silently swap binaries to hide the production activation gap.
+
+The native confirmation driver reads cross-process control text with bounded
+WM_GETTEXT via SendMessageTimeoutW, as required by Microsoft
+[GetWindowTextW](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowtextw)
+and [SendMessageTimeoutW](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendmessagetimeoutw)
+(checked 2026-10-24). It ignores hidden staging windows and waits for initialized
+visible controls within the original deadline. Missing controls or a generic
+confirmation still fail; these checks do not bypass the actual checkbox action.

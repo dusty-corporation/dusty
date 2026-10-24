@@ -2,7 +2,10 @@
 
 Verified 2026-10-23 on the Owner desktop, using engine-v2, whisper.cpp v1.9.5
 commit d1be6fde11ac6e0407606b4e42fe72d34add8037 plus the pinned VAD patch.
-This is an investigation result, not an implemented installer feature.
+This records the historical Phase 1 investigation. M5 subsequently implemented
+the guarded probe in installer_support.probe and platform/vulkan_probe.py;
+M5-report.md contains its CI and Owner evidence. The proposed next steps below
+describe the state at the time of this investigation.
 
 ## CLI limitation
 

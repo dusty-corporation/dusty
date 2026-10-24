@@ -23,6 +23,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out")
     parser.add_argument("--installer-upgrade-root", help=argparse.SUPPRESS)
     parser.add_argument("--check-model-download", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--check-hardening", action="store_true", help=argparse.SUPPRESS)
     for flag in (
         "probe-vulkan",
         "probe-vulkan-child",
@@ -118,7 +119,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.installer_cancel_part:
             from dusty.installer_support import cancel_partial
 
-            cancel_partial(resolve_paths(), args.model)
+            return 0 if cancel_partial(resolve_paths(), args.model) else 1
         elif args.out:
             Path(args.out).write_text(model_size(resolve_paths()), encoding="utf-8")
         return 0
@@ -133,6 +134,20 @@ def main(argv: list[str] | None = None) -> int:
             else 1
         )
 
+    # Cleanup/probe helpers return above: they must not create or hold a new
+    # log during removal. Processing/GUI paths capture before any Qt imports.
+    from dusty.privacy.native_diagnostics import install_capture, set_context
+    from dusty.runtime_paths import resolve_paths
+
+    install_capture(resolve_paths().user_dir)
+
+    if args.check_hardening:
+        from pathlib import Path
+
+        from dusty.app.hardening_check import run
+
+        return run(Path(args.out)) if args.out else 2
+
     if args.check_model_download:
         from pathlib import Path
 
@@ -143,6 +158,7 @@ def main(argv: list[str] | None = None) -> int:
         return run_download_check(args.model, Path(args.out))
 
     if args.self_test or args.installer_test:
+        set_context("self-test")
         from dusty.privacy.logging import configure_logger
         from dusty.runtime_paths import resolve_paths
         from dusty.selftest import run_selftest
@@ -158,6 +174,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if code.startswith("OK") else 1
 
     if args.headless_batch:
+        set_context("batch")
         if not args.out:
             parser.error("--out is required with --headless-batch")
         from pathlib import Path
@@ -172,6 +189,7 @@ def main(argv: list[str] | None = None) -> int:
             formats=("txt",),
         )
 
+    set_context("qt-startup")
     from PySide6.QtCore import QTimer
     from PySide6.QtWidgets import QApplication
 
@@ -182,6 +200,7 @@ def main(argv: list[str] | None = None) -> int:
     window = create_window()
     window.show()
     QTimer.singleShot(0, window.initialize)
+    set_context("event-loop")
     return app.exec()
 
 

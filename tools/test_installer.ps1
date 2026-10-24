@@ -14,13 +14,13 @@ if ($twoVersions) {
 }
 $work = Join-Path $repo 'build/installer/acceptance'
 New-Item -ItemType Directory -Path $work -Force | Out-Null
-$install = Join-Path $work 'app'
+$install = Join-Path $work 'App install گفتگو 日本語'
 # Inno uses the Windows known folder, not the LOCALAPPDATA environment override.
 $local = [Environment]::GetFolderPath('LocalApplicationData')
 if ($env:LOCALAPPDATA -ne $local) { throw 'Inno and app user-data roots must match' }
 $data = Join-Path $local 'Dusty'
 if (Test-Path -LiteralPath $data) { throw 'Refusing to change pre-existing runner app data' }
-$outputs = Join-Path $work 'user-outputs'
+$outputs = Join-Path $work 'OneDrive/Documents/Transcript outputs گفتگو'
 New-Item -ItemType Directory -Path $outputs -Force | Out-Null
 $sentinel = Join-Path $outputs 'keep.txt'
 'public test output sentinel' | Set-Content -LiteralPath $sentinel -Encoding utf8NoBOM
@@ -40,7 +40,7 @@ function Invoke-Checked([string]$Executable, [string[]]$Arguments, [int]$Expecte
 }
 function Install-App {
     Write-Host 'acceptance: install or upgrade'
-    Invoke-Checked $Installer @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/CURRENTUSER','/ACCEPTTERMS=yes','/ALLOWDOWNLOAD=yes','/MODELS=tiny',('/DIR='+$install))
+    Invoke-Checked $Installer @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/CURRENTUSER','/ACCEPTTERMS=yes','/ALLOWDOWNLOAD=yes','/MODELS=tiny',('/DIR='+$install),('/LOG='+ (Join-Path $work ('install-' + [guid]::NewGuid().ToString('N') + '.log'))))
     if (-not (Test-Path -LiteralPath (Join-Path $install 'dusty/dusty.exe'))) { throw 'Installed app missing' }
     Invoke-Checked (Join-Path $install 'dusty-fetch/dusty-fetch.exe') @('verify','--id','tiny','--dest',(Join-Path $data 'models'),'--manifest',(Join-Path $install 'resources/models.json'))
 }
@@ -49,7 +49,7 @@ function Uninstall-App([string]$Remove, [int]$ExpectedExit = 0) {
     # than assuming the generated filename across upgrade/reinstall cycles.
     $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{7B3110E8-7983-41AC-A0ED-F6EB13DBB72A}_is1'
     $command = (Get-ItemProperty -LiteralPath $key).UninstallString
-    if ($command -notmatch '^"([^"]+)"$') { throw 'Unexpected registered uninstall command' }
+    if ($command -notmatch '^"([^"]+)" /SILENT /DUSTYCONFIRM=yes$') { throw 'Unexpected registered uninstall command' }
     $uninstaller = [IO.Path]::GetFullPath($Matches[1])
     if ([IO.Path]::GetDirectoryName($uninstaller) -ne $install -or -not (Test-Path -LiteralPath $uninstaller)) { throw 'Registered uninstaller is outside the test install or missing' }
     Write-Host ('acceptance: uninstall remove_models=' + $Remove + ' executable=' + [IO.Path]::GetFileName($uninstaller))
@@ -107,22 +107,27 @@ Save-UserState
 $installedManifest = Join-Path $install 'resources/models.json'
 $manifestBytes = [IO.File]::ReadAllBytes($installedManifest)
 $privateSentinel = '{"private":"synthetic protected transcript"}'
-@{schema_version=1;preserved_paths=@((Join-Path $install 'resources'))} | ConvertTo-Json |
-    Set-Content -LiteralPath (Join-Path $data 'settings.json') -Encoding utf8NoBOM
-[IO.File]::WriteAllText($installedManifest, $privateSentinel)
-Uninstall-App 'yes' 1
-if (-not (Test-Path -LiteralPath (Join-Path $install 'dusty/dusty.exe')) -or
-    -not (Test-Path -LiteralPath (Join-Path $data 'settings.json')) -or
-    [IO.File]::ReadAllText($installedManifest) -ne $privateSentinel) { throw 'Protected installed payload was removed or changed' }
+foreach ($protectedFolder in @((Join-Path $install 'resources'), ('\\?\' + (Join-Path $install 'resources')))) {
+    @{schema_version=1;preserved_paths=@($protectedFolder)} | ConvertTo-Json |
+        Set-Content -LiteralPath (Join-Path $data 'settings.json') -Encoding utf8NoBOM
+    [IO.File]::WriteAllText($installedManifest, $privateSentinel)
+    Uninstall-App 'yes' 1
+    if (-not (Test-Path -LiteralPath (Join-Path $install 'dusty/dusty.exe')) -or
+        -not (Test-Path -LiteralPath (Join-Path $data 'settings.json')) -or
+        [IO.File]::ReadAllText($installedManifest) -ne $privateSentinel) { throw 'Protected installed payload was removed or changed' }
+}
 [IO.File]::WriteAllBytes($installedManifest, $manifestBytes)
 Save-UserState
 & (Join-Path $repo '.venv/Scripts/python.exe') (Join-Path $PSScriptRoot 'check_installed_payload.py') $install --output (Join-Path $work 'installed-files.json')
 if ($LASTEXITCODE -ne 0) { throw 'Installed file inventory failed' }
+& (Join-Path $PSScriptRoot 'test_uninstall_entries.ps1') -InstallPath $install -Output (Join-Path $work 'uninstall-entries.json')
+if ($LASTEXITCODE -ne 0) { throw 'Installed shortcut and uninstall registration audit failed' }
 & (Join-Path $PSScriptRoot 'test_network_isolation.ps1') -Bundle $install -InstalledModels
 if ($LASTEXITCODE -ne 0) { throw 'Installed WFP self-test failed' }
 & (Join-Path $repo '.venv/Scripts/python.exe') (Join-Path $PSScriptRoot 'check_pe_imports.py') (Join-Path $install 'dusty') --native (Join-Path $install 'bin') --output (Join-Path $work 'installed-pe.json')
 if ($LASTEXITCODE -ne 0) { throw 'Installed PE import gate failed' }
-Uninstall-App 'no'
+& (Join-Path $PSScriptRoot 'test_uninstall_ui.ps1') -InstallPath $install -Output (Join-Path $work 'uninstall-ui.json')
+if ($LASTEXITCODE -ne 0) { throw 'Interactive uninstall confirmation test failed' }
 Assert-Output
 if (Test-Path -LiteralPath (Join-Path $install 'dusty/dusty.exe')) { throw 'Uninstall left app executable' }
 foreach ($model in $models) { if (-not (Test-Path -LiteralPath (Join-Path $data ('models/' + $model.name)))) { throw 'Keep-models uninstall removed a model' } }

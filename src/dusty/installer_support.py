@@ -6,7 +6,7 @@ from pathlib import Path
 
 from dusty.platform.win_process import run_job_process
 from dusty.runtime_paths import RuntimePaths
-from dusty.work_area import OwnedWork, linked, protected_paths
+from dusty.work_area import OwnedWork, canonical, linked, protected_paths
 
 
 def probe(paths: RuntimePaths, output: Path) -> bool:
@@ -43,12 +43,20 @@ def clear_failed_selection(paths: RuntimePaths) -> None:
 
 
 def accept_tests(paths: RuntimePaths, model_id: str) -> None:
+    from dusty.models import ModelCorrupt, ModelMissing, ModelRegistry, load_manifest
     from dusty.queue.storage import load_settings, save_settings
 
+    registry = ModelRegistry(load_manifest(paths.resources_dir / "models.json"), paths.models_dir)
+    registry.model_path(model_id)  # Never install an unverified default choice.
     file = paths.user_dir / "settings.json"
     settings = load_settings(file)
     settings["installer_test_failed"] = False
-    if not settings.get("model_id"):
+    try:
+        selected = settings.get("model_id")
+        if not isinstance(selected, str):
+            raise ModelMissing("No model selected")
+        registry.model_path(selected)
+    except (KeyError, ModelMissing, ModelCorrupt, OSError, ValueError, TypeError):
         settings["model_id"] = model_id
     save_settings(file, settings)
 
@@ -89,10 +97,17 @@ def model_status(paths: RuntimePaths) -> dict[str, str]:
             statuses[model_id] = "missing"
         except (ModelCorrupt, OSError, ValueError):
             statuses[model_id] = "damaged"
+    try:
+        registry.vad_path()
+        statuses["silero-vad"] = "installed"
+    except ModelMissing:
+        statuses["silero-vad"] = "missing"
+    except (ModelCorrupt, OSError, ValueError):
+        statuses["silero-vad"] = "damaged"
     return statuses
 
 
-def cancel_partial(paths: RuntimePaths, model_id: str) -> None:
+def cancel_partial(paths: RuntimePaths, model_id: str) -> bool:
     from dusty.models import load_manifest
 
     manifest = load_manifest(paths.resources_dir / "models.json")
@@ -105,8 +120,13 @@ def cancel_partial(paths: RuntimePaths, model_id: str) -> None:
         linked(part)
         or protected is None
         or any(
-            part.resolve().is_relative_to(p) or p.is_relative_to(part.resolve()) for p in protected
+            canonical(part).is_relative_to(p) or p.is_relative_to(canonical(part))
+            for p in protected
         )
     ):
-        return
-    part.unlink(missing_ok=True)
+        return False
+    try:
+        part.unlink(missing_ok=True)
+        return True
+    except OSError:
+        return False

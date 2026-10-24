@@ -55,6 +55,9 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     assert "DownloadTemporaryFile(" not in text
     assert "UninstallDelete" not in text  # No broad recursive deletion of user data.
     assert "--installer-test --backend " in text
+    assert "function TestedDefaultId: String;" in text
+    assert "ModelIds[Selected[I]] = RecommendedModel" in text
+    assert text.count("'--installer-pass --model ' + Quoted(TestedDefaultId)") == 2
     assert "Stage := 4" in text  # Smallest model's additional CPU-only check.
     assert "@@" not in text
     assert "{param:ACCEPTTERMS|}" in text
@@ -66,6 +69,18 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     uninstall = text.rsplit("function InitializeUninstall: Boolean;", 1)[1]
     assert uninstall.index("--installer-can-uninstall") < uninstall.index("if UninstallSilent")
     assert uninstall.index("--installer-can-uninstall") < uninstall.index("CreateCustomForm")
+    assert "if UninstallSilent and (ExpandConstant('{param:DUSTYCONFIRM|}') <> 'yes')" in uninstall
+    assert (
+        "'UninstallString', Quoted(ExpandConstant('{uninstallexe}')) + ' /SILENT /DUSTYCONFIRM=yes'"
+        in text
+    )
+    assert (
+        "'QuietUninstallString', Quoted(ExpandConstant('{uninstallexe}'))"
+        " + ' /SILENT /DUSTYCONFIRM=yes'" in text
+    )
+    icons = text.split("[Icons]", 1)[1].split("[CustomMessages]", 1)[0]
+    assert "unins" not in icons.lower()
+    assert icons.count('Filename: "{app}\\dusty\\dusty.exe"') == 2
     code = text.split("[Code]", 1)[1]
     assert not re.search(r"(?m)^\s*\[", code), "Inno parses leading arrays as sections"
     assert not re.search(r"(?m)^\s*#\d", code), "Inno parses leading character codes as directives"
@@ -85,8 +100,39 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     assert "Finish without a model" in text
     assert "GraphicsCandidate" not in text
     assert "--probe-vulkan --out" in text
+    initial = text.split("procedure InitializeWizard;", 1)[1].split("procedure CurPageChanged", 1)[
+        0
+    ]
+    assert initial.count("ModelsPage.Add(") == len(manifest_data["models"])
+    changed = text.split("procedure CurPageChanged", 1)[1].split("function NextButtonClick", 1)[0]
+    probe = changed.split("if (Page = ModelsPage.ID) and not ProbeStarted", 1)[1].split(
+        "if Page = DownloadPage.ID", 1
+    )[0]
+    assert "Stage := -4" in probe and "ExtractTemporaryFiles" not in probe
+    assert "and not WizardSilent then begin" in probe
+    assert "WizardForm.NextButton.Enabled := False" in probe
+    assert "ModelsPage.CheckListBox.Enabled := False" in probe
+    assert "Checking this computer..." in text
+    # Plan from verified files, not the selection: installed files are still
+    # checked/tested, but never count towards transfer bytes or consent names.
+    assert 'Pos(\'"silero-vad":"installed"\'' in text
+    assert "Pos('\"' + ModelIds[I] + '\":\"installed\"'" in text
+    credit = text.split("if CurrentDownloadWanted then begin", 1)[1].split(
+        "DownloadIndex := DownloadIndex + 1", 1
+    )[0]
+    assert "CompletedModelBytes" in credit
+    assert (
+        "(Stage >= 1) and (Stage <= 2) and CurrentDownloadWanted"
+        in text.split("procedure ShowAmount;", 1)[1]
+    )
+    assert "Check and test" in text
+    assert "if (Stage = -4) or (Stage = -1)" in text
     assert "--installer-cancel-part --model " in text
     assert "DeleteFile(ExpandConstant('{localappdata}" not in text
+    partial = text.split("procedure CleanupActivePartial", 1)[1].split("procedure WithoutClick", 1)[
+        0
+    ]
+    assert "(not Success) or (Code <> 0)" in partial and "PartialKept" in partial
     without = text.split("procedure WithoutClick", 1)[1].split("procedure ModelsClick", 1)[0]
     assert without.index("CleanupActivePartial;") < without.index("Stage := 5;")
     cancel = text.split("procedure CancelButtonClick", 1)[1].split("function GetCustom", 1)[0]
@@ -94,6 +140,7 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     failure = text.split("procedure Failure", 1)[1].split("function CurrentId", 1)[0]
     assert "RetryButton.Visible := True" in failure
     assert "WizardForm.NextButton.Enabled := False" in failure
+    assert "Meter.Position := CompletedModelBytes * 100 div TotalModelBytes" in failure
     assert "Action := NewButton" not in text
     assert "BackButtonClick" in text and "ReturnModelsRequested := Result" in text
     assert "if not ModelsTouched then ModelsPage.Values[I]" in text
@@ -135,3 +182,34 @@ def test_installer_rejects_tampered_catalog(tmp_path):
     (bundle / "resources/models.json").write_text(json.dumps(data))
     with pytest.raises(ValueError):
         generate(tmp_path / "generated", bundle)
+
+
+def test_download_consent_cases_only_name_and_count_the_needed_files(tmp_path):
+    from dusty.app import messages as M
+
+    bundle = tmp_path / "bundle"
+    (bundle / "resources").mkdir(parents=True)
+    shutil.copyfile(ROOT / "resources/models.json", bundle / "resources/models.json")
+    (bundle / "THIRD_PARTY_NOTICES.md").write_text("Audited app notices\n")
+    text = generate(tmp_path / "generated", bundle).read_text(encoding="utf-8")
+    data = json.loads((ROOT / "resources/models.json").read_text())
+    models = data["models"]
+    consent = text.split("function ConsentText: String;", 1)[1].split(
+        "function DownloadText: String;", 1
+    )[0]
+    # Every possible needed subset, including VAD alone and no VAD. Installed
+    # selected models cannot inflate any of these literal consent totals.
+    for mask in range(1, 1 << (len(models) + 1)):
+        entries = models + data["vad"]
+        chosen = [entry for i, entry in enumerate(entries) if mask & (1 << i)]
+        names = [
+            M.VOICE_MODEL if e["id"] == "silero-vad" else M.MODEL_TECHNICAL[e["id"]] for e in chosen
+        ]
+        expected = M.DOWNLOAD_CONFIRM.format(
+            names=M.join_names(names), size=M.format_size(sum(e["size_bytes"] for e in chosen))
+        )
+        assert f"{mask}: Result := '{expected.replace(chr(39), chr(39) * 2)}';" in consent
+    assert M.join_names(["A", "B", "C"]) == "A, B and C"
+    assert M.join_names(["A", "B"]) == "A and B"
+    assert "if NeededMask = 0 then begin Result := AlreadyText; Exit; end;" in consent
+    assert "are already downloaded. Dusty will check and test them." in text

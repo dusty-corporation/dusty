@@ -1,5 +1,6 @@
 """Real-device classification and bounded installer process contracts."""
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -12,6 +13,31 @@ from dusty import installer_support
 from dusty.platform.vulkan_probe import is_real_gpu
 from dusty.queue.storage import load_settings, save_settings
 from dusty.runtime_paths import resolve_paths
+
+
+@pytest.mark.parametrize("state", ["installed", "missing", "damaged"])
+def test_installer_status_hash_checks_voice_detection_too(tmp_path, state):
+    from dusty.runtime_paths import RuntimePaths
+
+    resources = tmp_path / "resources"
+    resources.mkdir()
+    models = tmp_path / "models"
+    models.mkdir()
+    catalog = json.loads(
+        (Path(__file__).resolve().parents[2] / "resources/models.json").read_text(encoding="utf-8")
+    )
+    voice = catalog["vad"][0]
+    content = b"verified voice fixture"
+    voice.update(size_bytes=len(content), sha256=hashlib.sha256(content).hexdigest())
+    if state != "missing":
+        (models / voice["file_name"]).write_bytes(
+            content if state == "installed" else b"x" * len(content)
+        )
+    (resources / "models.json").write_text(json.dumps(catalog), encoding="utf-8")
+    paths = RuntimePaths(tmp_path / "bin", models, resources, tmp_path / "user")
+    statuses = installer_support.model_status(paths)
+    assert statuses["silero-vad"] == state
+    assert all(statuses[key] == "missing" for key in statuses if key != "silero-vad")
 
 
 @pytest.mark.parametrize(
@@ -155,3 +181,45 @@ def test_uninstall_size_uses_shared_units_and_ignores_unknown_files(tmp_path):
         tmp_path / "user",
     )
     assert installer_support.model_size(paths) == M.format_size(1_000_000)
+
+
+@pytest.mark.parametrize("profile", ["fresh", "empty", "stale", "valid", "damaged"])
+def test_successful_install_keeps_only_a_verified_existing_selection(tmp_path, profile):
+    from dusty.runtime_paths import RuntimePaths
+
+    resources = tmp_path / "resources"
+    resources.mkdir()
+    models = tmp_path / "models"
+    models.mkdir()
+    catalog = json.loads(
+        (Path(__file__).resolve().parents[2] / "resources/models.json").read_text(encoding="utf-8")
+    )
+    for entry in catalog["models"]:
+        if entry["id"] in {"tiny", "small"}:
+            content = (entry["id"] + " verified fixture").encode()
+            entry.update(size_bytes=len(content), sha256=hashlib.sha256(content).hexdigest())
+            (models / entry["file_name"]).write_bytes(content)
+    (resources / "models.json").write_text(json.dumps(catalog), encoding="utf-8")
+    paths = RuntimePaths(tmp_path / "bin", models, resources, tmp_path / "user")
+    settings = paths.user_dir / "settings.json"
+    if profile != "fresh":
+        choice = None if profile == "empty" else "uninstalled" if profile == "stale" else "tiny"
+        save_settings(
+            settings,
+            {
+                "schema_version": 1,
+                "model_id": choice,
+                "prompt": "keep hints",
+                "installer_test_failed": True,
+            },
+        )
+    if profile == "damaged":
+        tiny = next(m for m in catalog["models"] if m["id"] == "tiny")
+        target = models / tiny["file_name"]
+        target.write_bytes(b"x" * tiny["size_bytes"])
+    installer_support.accept_tests(paths, "small")
+    result = load_settings(settings)
+    assert result["model_id"] == ("tiny" if profile == "valid" else "small")
+    assert result["installer_test_failed"] is False
+    if profile != "fresh":
+        assert result["prompt"] == "keep hints"

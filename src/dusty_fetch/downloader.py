@@ -18,6 +18,8 @@ from enum import IntEnum
 from pathlib import Path
 from typing import Any, cast
 
+from .tls import create_context
+
 HOSTS = frozenset({"github.com", "release-assets.githubusercontent.com"})
 CHUNK = 64 * 1024
 
@@ -196,7 +198,7 @@ class Downloader:
         self.opener = urllib.request.build_opener(
             urllib.request.ProxyHandler({}),
             CheckedRedirect(self.policy),
-            urllib.request.HTTPSHandler(context=context or ssl.create_default_context()),
+            urllib.request.HTTPSHandler(context=context or create_context()),
         )
 
     def verify(self, asset: Asset, destination: Path) -> None:

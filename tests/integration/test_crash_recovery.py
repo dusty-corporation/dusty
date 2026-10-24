@@ -41,6 +41,40 @@ def changed(job):
 Coordinator(paths, registry).run_batch(jobs, options, on_change=changed, vulkan_ok=False)
 """
 
+GUI_PARENT = """
+from dusty.privacy.network_guard import install_guard
+install_guard()
+import os, sys
+from pathlib import Path
+from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QApplication
+from dusty.app.window import MainWindow
+from dusty.app.workers import Prepared
+from dusty.core import Job, JobStatus
+from dusty.runtime_paths import RuntimePaths, resolve_paths
+root, temporary = map(Path, sys.argv[1:])
+(temporary/'parent-pid').write_text(str(os.getpid()),encoding='ascii')
+app=QApplication([])
+dev=resolve_paths(repo_root=root,frozen=False)
+paths=RuntimePaths(dev.bin_dir,dev.models_dir,dev.resources_dir,temporary/'user')
+window=MainWindow(paths,interactive=False)
+window.apply_prepared(Prepared(('tiny',),False,{'schema_version':1,
+    'model_id':'tiny','output_dir':str(temporary/'out'),
+    'backend':'cpu','threads':4,'vad':False},vad_installed=True))
+window.model.set_jobs([Job(root/'tests/fixtures/audio/formats/jfk.wav'),
+    Job(root/'tests/fixtures/audio/vad/mostly-silence-10min.m4a')])
+window._refresh()
+window.show()
+timer=QTimer()
+def poll():
+    if window.model.jobs[1].status==JobStatus.TRANSCRIBING:
+        (temporary/'ready').touch()
+    if window.batch and not window.running: app.quit()
+timer.timeout.connect(poll);timer.start(10)
+QTimer.singleShot(0,window.start_batch)
+app.exec()
+"""
+
 
 class ProcessEntry(ctypes.Structure):
     _fields_ = [
@@ -108,9 +142,10 @@ def _kill_worker(tmp_path: Path) -> None:
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows Job Objects")
-def test_parent_crash_kills_native_child_and_batch_resumes(tmp_path: Path) -> None:
+@pytest.mark.parametrize("gui", [False, True], ids=["coordinator", "real-gui"])
+def test_parent_crash_kills_native_child_and_batch_resumes(tmp_path, qtbot, monkeypatch, gui):
     parent = subprocess.Popen(
-        [sys.executable, "-c", PARENT, str(ROOT), str(tmp_path)],
+        [sys.executable, "-c", GUI_PARENT if gui else PARENT, str(ROOT), str(tmp_path)],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
@@ -151,8 +186,38 @@ def test_parent_crash_kills_native_child_and_batch_resumes(tmp_path: Path) -> No
     assert len(abandoned) == 1 and abandoned[0].name.startswith("job-")
     assert (abandoned[0] / ".dusty-owned.json").is_file()
     cleanup_orphaned_work(paths.user_dir / "work")
-    registry = ModelRegistry(load_manifest(paths.resources_dir / "models.json"), paths.models_dir)
-    Coordinator(paths, registry).run_batch(jobs, options, vulkan_ok=False)
+    if gui:
+        from PySide6.QtWidgets import QDialog
+
+        from dusty.app.dialogs import ResumeDialog
+        from dusty.app.window import MainWindow
+        from dusty.app.workers import Prepared
+
+        window = MainWindow(paths, interactive=False)
+        qtbot.addWidget(window)
+        prepared = Prepared(
+            ("tiny",),
+            False,
+            {"output_dir": str(options.output_dir)},
+            (options, jobs),
+            vad_installed=True,
+        )
+        window.apply_prepared(prepared)
+        prompts = []
+        monkeypatch.setattr(
+            ResumeDialog, "exec", lambda self: prompts.append(True) or QDialog.DialogCode.Accepted
+        )
+        window.show()
+        window._startup_dialogs(prepared)
+        qtbot.waitUntil(lambda: window.running, timeout=5000)
+        qtbot.waitUntil(lambda: not window.running, timeout=60000)
+        jobs = window.model.jobs
+        assert prompts == [True]
+    else:
+        registry = ModelRegistry(
+            load_manifest(paths.resources_dir / "models.json"), paths.models_dir
+        )
+        Coordinator(paths, registry).run_batch(jobs, options, vulkan_ok=False)
     assert all(job.status == JobStatus.DONE for job in jobs)
     assert (completed.read_bytes(), completed.stat().st_mtime_ns) == before
     assert all(output.is_file() for job in jobs for output in job.outputs)

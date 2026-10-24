@@ -12,6 +12,26 @@ from dusty.runtime_paths import RuntimePaths
 ROOT = Path(__file__).resolve().parents[2]
 
 
+@pytest.mark.parametrize("kind", ["owned", "unknown", "protected"])
+def test_uninstall_removes_only_owned_native_diagnostics(tmp_path, kind):
+    from dusty.privacy.native_diagnostics import HEADER
+    from dusty.queue.storage import save_settings
+
+    root = tmp_path / "user"
+    log = root / "logs/native-diagnostic.jsonl"
+    log.parent.mkdir(parents=True)
+    content = HEADER if kind != "unknown" else b"unfamiliar synthetic transcript"
+    log.write_bytes(content)
+    if kind == "protected":
+        save_settings(root / "settings.json", {"schema_version": 1, "preserved_paths": [str(log)]})
+    paths = RuntimePaths(tmp_path, root / "models", ROOT / "resources", root)
+    ok = cleanup(paths, remove_models=True)
+    if kind == "owned":
+        assert ok and not root.exists()
+    else:
+        assert not ok and log.read_bytes() == content
+
+
 def test_uninstall_retains_sanitized_legacy_destination(tmp_path):
     from dusty.queue.storage import save_settings
     from dusty.work_area import sanitize_output
@@ -101,6 +121,9 @@ def test_cleanup_removes_recognized_job_work_only(tmp_path):
     (work / "raw.json").write_text("temporary")
     owned.record("audio.wav", "raw.json")
     paths = RuntimePaths(tmp_path, root / "models", ROOT / "resources", root)
+    assert not cleanup(paths, remove_models=False)
+    assert (work / "audio.wav").read_bytes() == b"temporary"
+    del owned  # Owner has exited; only now is this orphaned work.
     assert cleanup(paths, remove_models=False)
     assert not root.exists()
 

@@ -6,6 +6,15 @@ All notable changes to Dusty will be documented here. This project follows Keep 
 
 ### Added
 
+- Pinned public TLS roots for fresh Windows downloads, with integrity checks and
+  a CI canary for both approved hosts; no automatic root retrieval.
+- Bounded passive native-diagnostic capture with redacted module/context data.
+
+- M6 user/privacy/developer guides, documentation consistency gate, manual
+  offline checklist and independent-audit packet with explicit evidence gaps.
+- Forced-GUI-death recovery, Unicode and long-path processing, disk-exhaustion
+  and packaged sensitive-log canary regressions.
+
 - Packaging spike with separate offline GUI and TLS downloader folders, actual
   file inventory, CycloneDX SBOM, runtime notices and calibrated packaged WFP CI.
 
@@ -27,6 +36,18 @@ All notable changes to Dusty will be documented here. This project follows Keep 
   screenshot matrix covering light/dark appearance at two display scales.
 
 ### Fixed
+
+- Explicit output-folder choices survive model events, crash recovery and Setup.
+- Setup names/counts only needed downloads, supports Check and test for installed
+  selections, and shows the full model list before the bounded graphics check.
+
+- Windows namespace aliases now share managed-folder protection comparisons;
+  active work leases prevent another instance's startup cleanup removing it.
+- Successful Setup preserves a valid model choice or selects its tested default;
+  About opens local notices, and the registered uninstall route confirms once.
+- Decoder disk-full classification and partial-removal failure reporting avoid
+  misleading damaged-recording or successful-cleanup messages.
+- Graphics-test failure progress reflects the completed download amount.
 
 - Standard-library DOCX export removes runtime lxml; exact platform PE pins,
   Owner-sourced Visual C++ runtime copies and license evidence gate the bundle.

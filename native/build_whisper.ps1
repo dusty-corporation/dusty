@@ -31,6 +31,7 @@ Write-Output "Applied native patch SHA-256=$patchHash"
 
 $buildPath = Join-Path $outputPath $Backend
 $args = @('-S', $sourcePath, '-B', $buildPath, '-A', 'x64',
+    ('-DCMAKE_EXE_LINKER_FLAGS=/MANIFEST:EMBED /MANIFESTINPUT:"' + (Join-Path $PSScriptRoot 'windows-utf8.manifest') + '"'),
     '-DCMAKE_POLICY_DEFAULT_CMP0091=NEW',
     '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded',
     '-DBUILD_SHARED_LIBS=ON',

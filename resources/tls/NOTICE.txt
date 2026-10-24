@@ -1,0 +1,7 @@
+Public CA trust-anchor certificate data, bundled by PM decision ISSUE-029.
+This is not third-party program code and is not represented as Dusty-owned
+Apache-2.0 material. CA subjects identify Sectigo/USERTrust and ISRG.
+Official CA reference URLs, SHA-256 DER fingerprints, PEM hashes and exact
+acquisition provenance are in sources.json. No private key is included.
+Sectigo references: https://www.sectigo.com/knowledge-base/detail/Sectigo-Root-Certificates
+ISRG references: https://letsencrypt.org/certificates/
