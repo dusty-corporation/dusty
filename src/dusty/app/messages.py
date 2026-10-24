@@ -4,6 +4,13 @@ from dataclasses import dataclass
 
 from dusty.core.types import FailureCode
 
+
+def join_names(names: list[str]) -> str:
+    if len(names) < 3:
+        return " and ".join(names)
+    return ", ".join(names[:-1]) + " and " + names[-1]
+
+
 APP_NAME = "Dusty"
 FILE_FILTER = (
     "Recordings (*.mp3 *.m4a *.aac *.wav *.flac *.ogg *.oga *.opus *.wma *.webm *.mp4 "
@@ -609,7 +616,7 @@ INSTALLER.update(
     ),
     DownloadConsent="Download %1 from github.com (%2)?",
     DownloadAction="Download",
-    DownloadPage="Download transcription models",
+    DownloadPage="Download or check transcription models",
     DownloadPageHelp="Dusty needs at least one model to transcribe.",
     DownloadHeading="Downloading %1 (%2)",
     DownloadAmount=DOWNLOAD_PROGRESS.format(done="%1", total="%2"),
@@ -623,6 +630,9 @@ INSTALLER.update(
     UninstallAction="Uninstall",
     DownloadWorking="Downloading %1",
     CheckingModel="Checking %1",
+    CheckingInstalled="Checking the downloaded models...",
+    CheckAndTest="Check and test",
+    AlreadyDownloaded="%1 are already downloaded. Dusty will check and test them.",
     GpuSelfTestFailed=(
         "The test on the graphics card did not pass. You can try again, "
         "use the processor instead (slower), or finish without a model."

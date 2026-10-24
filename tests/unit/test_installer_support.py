@@ -15,6 +15,31 @@ from dusty.queue.storage import load_settings, save_settings
 from dusty.runtime_paths import resolve_paths
 
 
+@pytest.mark.parametrize("state", ["installed", "missing", "damaged"])
+def test_installer_status_hash_checks_voice_detection_too(tmp_path, state):
+    from dusty.runtime_paths import RuntimePaths
+
+    resources = tmp_path / "resources"
+    resources.mkdir()
+    models = tmp_path / "models"
+    models.mkdir()
+    catalog = json.loads(
+        (Path(__file__).resolve().parents[2] / "resources/models.json").read_text(encoding="utf-8")
+    )
+    voice = catalog["vad"][0]
+    content = b"verified voice fixture"
+    voice.update(size_bytes=len(content), sha256=hashlib.sha256(content).hexdigest())
+    if state != "missing":
+        (models / voice["file_name"]).write_bytes(
+            content if state == "installed" else b"x" * len(content)
+        )
+    (resources / "models.json").write_text(json.dumps(catalog), encoding="utf-8")
+    paths = RuntimePaths(tmp_path / "bin", models, resources, tmp_path / "user")
+    statuses = installer_support.model_status(paths)
+    assert statuses["silero-vad"] == state
+    assert all(statuses[key] == "missing" for key in statuses if key != "silero-vad")
+
+
 @pytest.mark.parametrize(
     "kind,vendor,name,expected",
     [

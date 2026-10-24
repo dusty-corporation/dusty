@@ -97,6 +97,13 @@ def model_status(paths: RuntimePaths) -> dict[str, str]:
             statuses[model_id] = "missing"
         except (ModelCorrupt, OSError, ValueError):
             statuses[model_id] = "damaged"
+    try:
+        registry.vad_path()
+        statuses["silero-vad"] = "installed"
+    except ModelMissing:
+        statuses["silero-vad"] = "missing"
+    except (ModelCorrupt, OSError, ValueError):
+        statuses["silero-vad"] = "damaged"
     return statuses
 
 

@@ -140,6 +140,9 @@ var
   Selected, Downloads: array of Integer;
   DownloadIndex, TestIndex, Smallest, Stage: Integer;
   Busy, FinishedWithout, TestFailed, ModelsTouched, ProbeStarted: Boolean;
+  DownloadPlanReady, PlanStartRequested, MissingVoice: Boolean;
+  MissingModels: array of Boolean;
+  NeededMask: Integer;
   CpuRetry: Boolean;
   ProbeRoot: String;
   RecommendedModel: String;

@@ -2,6 +2,7 @@
 function InitializeUninstall: Boolean; forward;
 procedure FinishStopped; forward;
 procedure StopModelSetup(Confirm: Boolean); forward;
+procedure DownloadClick(Sender: TObject); forward;
 #ifdef ReviewOnly
 procedure ReviewTick; forward;
 #endif
@@ -25,7 +26,7 @@ begin
   Result.OnClick := Handler;
 end;
 
-function ConsentText: String;
+function AlreadyText: String;
 var I, Mask, Bit: Integer;
 begin
   Mask := 0; Bit := 1;
@@ -35,22 +36,33 @@ begin
   end;
   Result := '';
   case Mask of
+@@ALREADY_CASES@@
+  end;
+end;
+
+function ConsentText: String;
+begin
+  if NeededMask = 0 then begin Result := AlreadyText; Exit; end;
+  Result := '';
+  case NeededMask of
 @@CONSENT_CASES@@
   end;
 end;
 
 function DownloadText: String;
-var I, Mask, Bit: Integer;
 begin
-  Mask := 0; Bit := 1;
-  for I := 0 to GetArrayLength(ModelIds) - 1 do begin
-    if ModelsPage.Values[I] then Mask := Mask + Bit;
-    Bit := Bit * 2;
-  end;
+  if NeededMask = 0 then begin Result := AlreadyText; Exit; end;
   Result := '';
-  case Mask of
+  case NeededMask of
 @@DOWNLOAD_CASES@@
   end;
+end;
+
+function CurrentDownloadWanted: Boolean;
+begin
+  if DownloadIndex >= GetArrayLength(Downloads) then begin Result := False; Exit; end;
+  if Downloads[DownloadIndex] < 0 then Result := MissingVoice
+  else Result := MissingModels[Downloads[DownloadIndex]];
 end;
 
 function SizeText(Bytes: Int64): String;
@@ -85,7 +97,7 @@ procedure ShowAmount;
 var Bytes, Current: Int64; FileName: String;
 begin
   Current := 0;
-  if (Stage >= 0) and (Stage <= 2) and (DownloadIndex < GetArrayLength(Downloads)) then begin
+  if (Stage >= 0) and (Stage <= 2) and CurrentDownloadWanted then begin
     if Downloads[DownloadIndex] < 0 then FileName := '@@VAD_FILE@@'
     else FileName := ModelFiles[Downloads[DownloadIndex]];
     FileName := ExpandConstant('{localappdata}\Dusty\models\') + FileName;
@@ -224,6 +236,37 @@ begin
     Quoted(ExpandConstant('{tmp}\model-status.json'))) then Stage := 0;
 end;
 
+procedure QueryDownloadPlan(StartNow: Boolean);
+begin
+  PlanStartRequested := StartNow;
+  DownloadPlanReady := False; Busy := True; Stage := -5;
+  Consent.Caption := CustomMessage('CheckingInstalled');
+  Phase.Caption := ''; WizardForm.NextButton.Enabled := False;
+  if not StartChild(ExpandConstant('{app}\dusty\dusty.exe'), '--installer-status --out ' +
+    Quoted(ExpandConstant('{tmp}\download-plan.json'))) then Failure(False);
+end;
+
+procedure ApplyDownloadPlan(S: AnsiString);
+var I, Bit: Integer;
+begin
+  SetArrayLength(MissingModels, GetArrayLength(ModelIds));
+  NeededMask := 0; Bit := 1; TotalModelBytes := 0;
+  for I := 0 to GetArrayLength(ModelIds) - 1 do begin
+    MissingModels[I] := ModelsPage.Values[I] and (Pos('"' + ModelIds[I] + '":"installed"', String(S)) = 0);
+    if MissingModels[I] then begin
+      NeededMask := NeededMask + Bit;
+      TotalModelBytes := TotalModelBytes + ModelBytes[I];
+    end;
+    Bit := Bit * 2;
+  end;
+  MissingVoice := Pos('"silero-vad":"installed"', String(S)) = 0;
+  if MissingVoice then begin
+    NeededMask := NeededMask + @@VOICE_BIT@@;
+    TotalModelBytes := TotalModelBytes + @@VAD_BYTES@@;
+  end;
+  DownloadPlanReady := True;
+end;
+
 procedure PollChild(A, B, C, D: LongWord);
 var Code: LongWord; I: Integer; Memory: TMemoryStatus; S: AnsiString; Prefix, Expected: Int64; Part: String;
 begin
@@ -259,6 +302,16 @@ begin
   end;
   if (Child.Process = 0) or (WaitChild(Child.Process, 0) <> 0) then Exit;
   Code := 1; ChildExit(Child.Process, Code); ReleaseChild;
+  if Stage = -5 then begin
+    if (Code <> 0) or not LoadStringFromFile(ExpandConstant('{tmp}\download-plan.json'), S) then begin Failure(False); Exit; end;
+    ApplyDownloadPlan(S); Busy := False; Stage := 0;
+    Consent.Caption := ConsentText;
+    if NeededMask = 0 then WizardForm.NextButton.Caption := CustomMessage('CheckAndTest')
+    else WizardForm.NextButton.Caption := CustomMessage('DownloadAction');
+    WizardForm.NextButton.Enabled := True;
+    if PlanStartRequested then DownloadClick(nil);
+    Exit;
+  end;
   if Stage = -3 then begin
     if (Code = 0) and LoadStringFromFile(ExpandConstant('{tmp}\model-status.json'), S) then
       for I := 0 to GetArrayLength(ModelIds) - 1 do
@@ -303,11 +356,16 @@ begin
     Stage := 0; BeginFetch('verify'); Exit;
   end;
   if Stage <= 2 then begin
-    if (Stage = 0) and (Code <> 0) then begin Stage := 1; BeginFetch('download'); Exit; end;
+    if (Stage = 0) and (Code <> 0) then begin
+      if not CurrentDownloadWanted then begin Failure(False); Exit; end;
+      Stage := 1; BeginFetch('download'); Exit;
+    end;
     if Code <> 0 then begin Failure(False); Exit; end;
     if Stage = 1 then begin Stage := 2; BeginFetch('verify'); Exit; end;
-    if Downloads[DownloadIndex] < 0 then CompletedModelBytes := CompletedModelBytes + @@VAD_BYTES@@
-    else CompletedModelBytes := CompletedModelBytes + ModelBytes[Downloads[DownloadIndex]];
+    if CurrentDownloadWanted then begin
+      if Downloads[DownloadIndex] < 0 then CompletedModelBytes := CompletedModelBytes + @@VAD_BYTES@@
+      else CompletedModelBytes := CompletedModelBytes + ModelBytes[Downloads[DownloadIndex]];
+    end;
     DownloadIndex := DownloadIndex + 1;
     ShowAmount;
     if DownloadIndex < GetArrayLength(Downloads) then begin Stage := 0; BeginFetch('verify'); end
@@ -339,6 +397,7 @@ begin
 #ifdef ReviewOnly
   Exit; { Native preview controls must never start a real transfer. }
 #endif
+  if not DownloadPlanReady then begin QueryDownloadPlan(True); Exit; end;
   SetArrayLength(Selected, 0); Smallest := -1;
   for I := 0 to GetArrayLength(ModelIds) - 1 do if ModelsPage.Values[I] then begin
     Count := GetArrayLength(Selected); SetArrayLength(Selected, Count + 1); Selected[Count] := I;
@@ -349,11 +408,9 @@ begin
   SetArrayLength(Downloads, GetArrayLength(Selected) + 1);
   for I := 0 to GetArrayLength(Selected) - 1 do Downloads[I] := Selected[I];
   Downloads[GetArrayLength(Selected)] := -1;
-  TotalModelBytes := @@VAD_BYTES@@; CompletedModelBytes := 0;
-  for I := 0 to GetArrayLength(Selected) - 1 do
-    TotalModelBytes := TotalModelBytes + ModelBytes[Selected[I]];
+  CompletedModelBytes := 0;
   DownloadStarted := True; Consent.Caption := DownloadText;
-  Meter.Visible := True; Amount.Visible := True;
+  Meter.Visible := TotalModelBytes > 0; Amount.Visible := TotalModelBytes > 0;
   WizardForm.BackButton.Enabled := False;
   Busy := True; DownloadIndex := 0; Stage := -2;
   Meter.Position := 0; Outcome.Caption := '';
@@ -369,6 +426,7 @@ begin
   Exit;
 #endif
   RetryButton.Visible := False; CpuButton.Visible := False; WithoutButton.Visible := False;
+  if Stage = -5 then begin QueryDownloadPlan(PlanStartRequested); Exit; end;
   Busy := True;
   if Stage = 5 then begin
     if not StartChild(ExpandConstant('{app}\dusty\dusty.exe'), '--installer-clear') then Failure(True);
@@ -476,7 +534,7 @@ end;
 
 procedure ModelsClick(Sender: TObject);
 begin
-  ModelsTouched := True;
+  ModelsTouched := True; DownloadPlanReady := False;
   ShowMemoryWarning;
 end;
 
@@ -555,7 +613,7 @@ begin
     AccuracyNotice.Parent := ReturnModelsPage.Surface;
     MemoryNotice.Parent := ReturnModelsPage.Surface;
   end;
-  if (Page = ModelsPage.ID) and not ProbeStarted then begin
+  if (Page = ModelsPage.ID) and not ProbeStarted and not WizardSilent then begin
     ProbeStarted := True;
 #ifndef ReviewOnly
     MemoryNotice.Caption := CustomMessage('CheckingGraphics');
@@ -577,10 +635,12 @@ begin
       Consent.Caption := DownloadText;
       WizardForm.NextButton.Caption := SetupMessage(msgButtonNext);
     end else begin
-      Consent.Caption := ConsentText;
-      WizardForm.NextButton.Caption := CustomMessage('DownloadAction');
+      Consent.Caption := CustomMessage('CheckingInstalled');
+#ifndef ReviewOnly
+      QueryDownloadPlan(False);
+#endif
     end;
-    Meter.Visible := DownloadStarted; Amount.Visible := DownloadStarted;
+    Meter.Visible := DownloadStarted and (TotalModelBytes > 0); Amount.Visible := Meter.Visible;
 #ifdef ReviewOnly
     Mode := ExpandConstant('{param:REVIEWSTATE|consent}');
     Phase.Caption := CustomMessage('ReviewOnly');

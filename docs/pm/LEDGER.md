@@ -1429,3 +1429,18 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   selection and accepts successful tests. Disk and visible folder stay chosen;
   final explicit Choose folder changes both. Existing forced-kill test name and
   child-death/no-further-bytes assertions remain. No guessed exact Owner trigger.
+
+### ISSUE-032 download plan checkpoint
+
+- Setup now hashes existing transcription and voice-detection files before
+  consent. Needed-file masks determine names and byte totals independently of
+  selected models; all selected files still verify and self-test. All-installed
+  selection says already downloaded and Check and test, with no transfer bar.
+- 34 installer generator/support tests pass (2.52 s), including all 63 needed
+  subsets, three-name grammar, missing/corrupt/verified VAD. Ruff and mypy pass.
+- 40131277479: source/offline and packaged PE/license/GUI/WFP gates pass;
+  silent install exits 1 before useful acceptance evidence. Deferred visible-page
+  probe could block unattended page navigation; exclude the invisible wizard
+  from that UI deferral (standalone production probe remains audited separately).
+  Add CI-only Inno logs to diagnose any remaining native failure. No gate waived.
+- Full candidate rerun pending after ISSUE-031/032 and unattended-page correction.

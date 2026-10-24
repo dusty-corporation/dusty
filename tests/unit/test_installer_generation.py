@@ -109,9 +109,20 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
         "if Page = DownloadPage.ID", 1
     )[0]
     assert "Stage := -4" in probe and "ExtractTemporaryFiles" not in probe
+    assert "and not WizardSilent then begin" in probe
     assert "WizardForm.NextButton.Enabled := False" in probe
     assert "ModelsPage.CheckListBox.Enabled := False" in probe
     assert "Checking this computer..." in text
+    # Plan from verified files, not the selection: installed files are still
+    # checked/tested, but never count towards transfer bytes or consent names.
+    assert 'Pos(\'"silero-vad":"installed"\'' in text
+    assert "Pos('\"' + ModelIds[I] + '\":\"installed\"'" in text
+    credit = text.split("if CurrentDownloadWanted then begin", 1)[1].split(
+        "DownloadIndex := DownloadIndex + 1", 1
+    )[0]
+    assert "CompletedModelBytes" in credit
+    assert "CurrentDownloadWanted then begin" in text.split("procedure ShowAmount;", 1)[1]
+    assert "Check and test" in text
     assert "if (Stage = -4) or (Stage = -1)" in text
     assert "--installer-cancel-part --model " in text
     assert "DeleteFile(ExpandConstant('{localappdata}" not in text
@@ -168,3 +179,34 @@ def test_installer_rejects_tampered_catalog(tmp_path):
     (bundle / "resources/models.json").write_text(json.dumps(data))
     with pytest.raises(ValueError):
         generate(tmp_path / "generated", bundle)
+
+
+def test_download_consent_cases_only_name_and_count_the_needed_files(tmp_path):
+    from dusty.app import messages as M
+
+    bundle = tmp_path / "bundle"
+    (bundle / "resources").mkdir(parents=True)
+    shutil.copyfile(ROOT / "resources/models.json", bundle / "resources/models.json")
+    (bundle / "THIRD_PARTY_NOTICES.md").write_text("Audited app notices\n")
+    text = generate(tmp_path / "generated", bundle).read_text(encoding="utf-8")
+    data = json.loads((ROOT / "resources/models.json").read_text())
+    models = data["models"]
+    consent = text.split("function ConsentText: String;", 1)[1].split(
+        "function DownloadText: String;", 1
+    )[0]
+    # Every possible needed subset, including VAD alone and no VAD. Installed
+    # selected models cannot inflate any of these literal consent totals.
+    for mask in range(1, 1 << (len(models) + 1)):
+        entries = models + data["vad"]
+        chosen = [entry for i, entry in enumerate(entries) if mask & (1 << i)]
+        names = [
+            M.VOICE_MODEL if e["id"] == "silero-vad" else M.MODEL_TECHNICAL[e["id"]] for e in chosen
+        ]
+        expected = M.DOWNLOAD_CONFIRM.format(
+            names=M.join_names(names), size=M.format_size(sum(e["size_bytes"] for e in chosen))
+        )
+        assert f"{mask}: Result := '{expected.replace(chr(39), chr(39) * 2)}';" in consent
+    assert M.join_names(["A", "B", "C"]) == "A, B and C"
+    assert M.join_names(["A", "B"]) == "A and B"
+    assert "if NeededMask = 0 then begin Result := AlreadyText; Exit; end;" in consent
+    assert "are already downloaded. Dusty will check and test them." in text

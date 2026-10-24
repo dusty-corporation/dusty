@@ -40,7 +40,7 @@ function Invoke-Checked([string]$Executable, [string[]]$Arguments, [int]$Expecte
 }
 function Install-App {
     Write-Host 'acceptance: install or upgrade'
-    Invoke-Checked $Installer @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/CURRENTUSER','/ACCEPTTERMS=yes','/ALLOWDOWNLOAD=yes','/MODELS=tiny',('/DIR='+$install))
+    Invoke-Checked $Installer @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/CURRENTUSER','/ACCEPTTERMS=yes','/ALLOWDOWNLOAD=yes','/MODELS=tiny',('/DIR='+$install),('/LOG='+ (Join-Path $work ('install-' + [guid]::NewGuid().ToString('N') + '.log'))))
     if (-not (Test-Path -LiteralPath (Join-Path $install 'dusty/dusty.exe'))) { throw 'Installed app missing' }
     Invoke-Checked (Join-Path $install 'dusty-fetch/dusty-fetch.exe') @('verify','--id','tiny','--dest',(Join-Path $data 'models'),'--manifest',(Join-Path $install 'resources/models.json'))
 }

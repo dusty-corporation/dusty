@@ -331,6 +331,7 @@ jobs:
             build/installer/sbom.cdx.json
             build/installer/THIRD_PARTY_NOTICES.md
             build/installer/acceptance/*.json
+            build/installer/acceptance/*.log
             build/installer/runtime-inputs.json
           if-no-files-found: warn
       - name: Preserve gated installer page review only
