@@ -1224,3 +1224,13 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   waits within the original deadline for exactly one checkbox and confirmation;
   checked-default, actual checkbox toggle, generic-dialog rejection and complete
   uninstall assertions remain. Rerun required; no UI success claimed yet.
+
+### M6 path-boundary issue resolution
+
+- ISSUE-028 resolved for M6 at 8818032: candidate 40124502580 source suite and
+  actual normal/extended installed-protection refusals passed, preserving all
+  synthetic bytes and metadata. Installed inventory (221 files), installed WFP
+  with canary and PE (64 checked) also passed before the separate UI-driver
+  failure. Overall run remains failed; 40125713083 is the full rerun.
+- No M5 backport or production activation is implied. M5 docs-only d4ee428 and
+  frozen tags are unchanged. PM must authorize any M5 code change separately.

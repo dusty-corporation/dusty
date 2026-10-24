@@ -22,3 +22,11 @@ the Owner. No new correctness/privacy policy is being invented: this enforces
 the existing ISSUE-025 protection for all spellings. Unrelated work was paused
 until source protection tests passed; only verified M6 candidate gates may
 produce review artifacts. Final report will retain the finding and native result.
+
+## Native protection result
+
+ISSUE-028 is resolved on M6 at 8818032. Candidate 40124502580 passed both
+actual protected-uninstaller refusals with sentinel/application/metadata intact,
+then installed inventory, WFP/canary and PE gates. Its later UI discovery failure
+means overall installer acceptance failed; replacement 40125713083 is pending.
+No M5 code or frozen draft was changed. Final M6 report separates those results.
