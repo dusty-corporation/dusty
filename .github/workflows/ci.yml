@@ -208,7 +208,7 @@ jobs:
             build/bin
             build/models
           key: ${{ runner.os }}-m2-assets-${{ hashFiles('native/versions.toml') }}
-      - name: Fetch pinned engine-v2 inputs
+      - name: Fetch pinned production engine inputs
         run: uv run python tools/fetch_dev_binaries.py
       - name: Stage exact M6 candidate for validation only
         if: inputs.m6_engine_candidate

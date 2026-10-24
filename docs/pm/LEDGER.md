@@ -1562,3 +1562,16 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   Sectigo terms; ISRG CP/CPS v6.2 section 1.1. Verified HTTPS, not acquisition
   replacement, no Windows-store change or new shipped host. tls-roots.md records
   exact hashes, comparison date and official primary-source links.
+
+### Production Unicode regression and Owner-session preparation
+
+- Named test_unicode_profile_models_and_synced_documents_output passes directly
+  with published engine-v3 production pins: 1 pass, 2.17 s. All local static,
+  formatting/type/docs/policy checks pass; helper matrix 9 pass, 2.19 s.
+- Normal production CI 40140878487 source and offline jobs pass; packaging still
+  running. Historical Fetch pinned engine-v2 inputs label corrected to production
+  engine inputs; fetch implementation/policies unchanged.
+- Consolidated Owner session draft covers all A-E requests, actual account creation
+  INSIDE VM only, unattended downloads/endurance, same pinned installer everywhere,
+  exact public input/script hashes and read-only VM share transfer. Final PR run
+  and installer hash will be bound after its normal gates pass.
