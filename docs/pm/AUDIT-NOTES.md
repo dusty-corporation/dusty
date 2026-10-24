@@ -47,3 +47,10 @@ promote an item to an issue if it affects correctness, privacy or licensing.
 - M5: Inno partial cleanup ignores DeleteFile's failure return. Normal cancellation
   is covered, but a future audit should inject a locked/permission-denied partial
   and verify that any preserved file is explained without promising removal.
+
+## M5 follow-up audit notes
+
+- Work ownership currently uses preflight reparse/inventory checks, not OS handle-relative
+  traversal. Review concurrent path replacement and two simultaneous Dusty instances in M6.
+- Queue relative_dir is persisted input. Audit containment of restored relative paths under
+  the explicitly chosen output folder, including manually edited queue metadata.

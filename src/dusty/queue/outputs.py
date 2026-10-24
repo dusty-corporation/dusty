@@ -1,5 +1,6 @@
 """Plan collision-safe names and atomically publish rendered outputs."""
 
+import hashlib
 import os
 import tempfile
 from pathlib import Path
@@ -47,6 +48,7 @@ def write_outputs(job: Job, options: BatchOptions, transcript: Transcript) -> li
     """Render formats then publish each complete file without silent replacement."""
     targets = output_targets(job, options)
     published: list[Path] = []
+    identities: dict[Path, str] = {}
     try:
         for fmt, target in zip(options.formats, targets, strict=True):
             if linked(target.parent):
@@ -74,11 +76,18 @@ def write_outputs(job: Job, options: BatchOptions, transcript: Transcript) -> li
                         os.link(temporary, target)
                         temporary.unlink()
                 published.append(target)
+                identities[target] = hashlib.sha256(content).hexdigest()
             finally:
                 temporary.unlink(missing_ok=True)
         return published
     except BaseException:
         if options.collision != "overwrite":
             for target in published:
-                target.unlink(missing_ok=True)
+                if not linked(target) and target.is_file():
+                    with target.open("rb") as stream:
+                        unchanged = (
+                            hashlib.file_digest(stream, "sha256").hexdigest() == identities[target]
+                        )
+                    if unchanged:
+                        target.unlink(missing_ok=True)
         raise

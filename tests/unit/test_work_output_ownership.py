@@ -177,3 +177,17 @@ def test_downloader_refuses_linked_destination_before_any_transfer(tmp_path, kin
     assert caught.value.code == Exit.IO
     assert sentinel.read_bytes() == b"not disposable"
     link.rmdir() if kind == "junction" else link.unlink()
+
+
+def test_legacy_logs_output_folder_is_untouched_even_by_logging(tmp_path):
+    from dusty.privacy.logging import configure_logger
+
+    root = tmp_path / "user"
+    logs = root / "logs"
+    logs.mkdir(parents=True)
+    sentinel = logs / "dusty.log"
+    sentinel.write_text("user transcript")
+    save_settings(root / "settings.json", {"schema_version": 1, "output_dir": str(logs)})
+    before = {p.name: p.read_bytes() for p in logs.iterdir()}
+    configure_logger(root).info("status=done")
+    assert {p.name: p.read_bytes() for p in logs.iterdir()} == before

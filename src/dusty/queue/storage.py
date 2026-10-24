@@ -129,6 +129,10 @@ def load_batch(path: Path) -> tuple[BatchOptions, list[Job]] | None:
 
 
 def clear_history(path: Path) -> None:
+    from dusty.work_area import linked
+
+    if linked(path):
+        return
     path.unlink(missing_ok=True)
 
 

@@ -901,3 +901,14 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   repeated local bundle builds refuse existing destinations instead of rmtree.
 - Old name-only cleanup test fixtures now create explicit owned inventories;
   crash recovery expects uncertain killed-writer output to survive, per PM rule.
+
+### ISSUE-020 source verification checkpoint
+
+- Full isolated source suite: 282 passed, 1 expected skip in 168.39 s. Additional
+  no-reparse/cancel/log-folder tests were added afterward; final-head CI remains
+  authoritative and pending. Focused latest safety tests: 33 passed.
+- Logging initialization now preserves a legacy transcript folder under logs;
+  the enum-only skip diagnostic is admitted by the existing privacy filter.
+- Rollback checks the content hash of newly published transcripts before removal.
+  Downloader and Model Manager reject reparse ancestors; installer normal-cancel
+  partial cleanup uses the guarded app helper instead of direct Pascal deletion.

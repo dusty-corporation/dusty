@@ -53,16 +53,32 @@ class RedactionFilter(logging.Filter):
 
 def configure_logger(user_dir: Path) -> logging.Logger:
     """Install one bounded, filtered file handler under the local app directory."""
+    from dusty.work_area import linked, protected_paths
+
     logs = user_dir / "logs"
-    logs.mkdir(parents=True, exist_ok=True)
     logger = logging.getLogger("dusty")
     logger.setLevel(logging.INFO)
     logger.propagate = False
     target = logs / "dusty.log"
+    protected = protected_paths(user_dir)
+    blocked = (
+        linked(logs)
+        or protected is None
+        or any(
+            p.is_relative_to(logs.resolve()) or logs.resolve().is_relative_to(p) for p in protected
+        )
+    )
     for existing in list(logger.handlers):
-        if isinstance(existing, RotatingFileHandler) and Path(existing.baseFilename) != target:
+        if isinstance(existing, logging.NullHandler) or (
+            isinstance(existing, RotatingFileHandler)
+            and (blocked or Path(existing.baseFilename) != target)
+        ):
             logger.removeHandler(existing)
             existing.close()
+    if blocked:
+        logger.addHandler(logging.NullHandler())
+        return logger
+    logs.mkdir(parents=True, exist_ok=True)
     if not logger.handlers:
         handler = RotatingFileHandler(target, maxBytes=1024 * 1024, backupCount=4, encoding="utf-8")
         handler.addFilter(RedactionFilter())
