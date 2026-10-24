@@ -27,15 +27,15 @@ No PR, merge or published release has been created.
 | SPEC M5 task or acceptance item | Status | Evidence / remaining work |
 |---|---|---|
 | 1. PyInstaller, bin/resources | Done | Separate onedir app/fetch, engine-v2 and minimal FFmpeg, exact PE pins, license/SBOM/notices gates. No models bundled. |
-| 2. Generated installer pages, download, self-tests | Partial | Shared catalog/consent, model-free real-GPU/RAM probe, Auto per model plus smallest CPU test, VAD verification, Retry/CPU/Finish without, revised pages implemented. Native cancellation rerun and fresh VM pending. |
+| 2. Generated installer pages, download, self-tests | Partial | Shared catalog/consent, model-free real-GPU/RAM probe, Auto per model plus smallest CPU test, VAD verification, Retry/CPU/Finish without, revised pages implemented. Native cancellation passed in CI 40065869279; fresh VM pending. |
 | 3. Upgrade | Partial | Verified hashes and write times preserved with fetch blocked in CI. New two-version tagged evidence pending below. Damaged models show Needs download again. |
-| 4. Uninstall | Partial | Both automated variants and transcript sentinel pass for ISSUE-020 repair. Conservative owned-content cleanup preserves unknown/linked/changed files. Final native Cancel and VM both variants pending. |
+| 4. Uninstall | Partial | Both automated variants and transcript sentinel pass for ISSUE-020 repair. Conservative owned-content cleanup preserves unknown/linked/changed files. Native Cancel passed in CI 40065869279; VM both variants pending. |
 | 5. Gated draft release | Partial | Read-only prior gated artifact, strict receipt checks, upload-order negative test and five-asset staging implemented. Final repaired tag runs pending. |
 | 6. SmartScreen README | Done | Plain unsigned explanation, More info/Run anyway, full SHA comparison using Get-FileHash. |
 | Acceptance: tagged CI draft and artifacts | Pending | Final repaired test tags listed below when all gates finish. Historical drafts are not recommended. |
 | Acceptance: fresh Windows 11 VM, SPEC 11.6 | Owner needed | Checklist includes expected results, standard user, model tamper, normal/crash interruption, upgrade, both uninstall variants and protected outputs. |
 | Acceptance: installer size | Pending | Record final asset bytes and hashes after the gated draft completes. |
-| Brief: all native pages light 100%/150% | Partial | New native page bundle pending. Effective 96 DPI on unchanged 175% desktop is disclosed; genuine native scaling remains VM acceptance. |
+| Brief: all native pages light 100%/150% | Partial | 21 new native page PNGs plus README uploaded. Effective 96 DPI on unchanged 175% desktop is disclosed; genuine native scaling remains VM acceptance. |
 | Brief: Setup/probe/GUI/fetch WFP | Done for repair | CI 40061186069: Setup 0, GUI/probe 0, native 0, fetch allowed 4, blocked 0. Final tagged receipt pending. |
 
 ## Test and CI evidence
@@ -48,9 +48,9 @@ No PR, merge or published release has been created.
 - Page checkpoint `481535c`: CI 40063816476 all jobs green.
 - Cancellation checkpoint `bcad8fd`: CI 40064929172 source/offline/packaged gates
   passed, but installer compile failed with Type mismatch at generated line 716.
-  Corrected in `7b8d28b`; final native rerun pending. No failed binary uploaded.
+  Corrected in `7b8d28b`; CI 40065869279 all jobs green. No failed binary uploaded.
 - Output row `a75f1cf`: 29 GUI tests passed, lint and mypy passed. Full source
-  coverage rerun is pending. Sandbox TLS/junction denials were rerun with approved
+  coverage: 297 passed, 1 expected skip in 209.36 s, 94.2%. Sandbox TLS/junction denials were rerun with approved
   escalation; tests and assertions remain unchanged.
 
 ## Page review round
@@ -83,7 +83,11 @@ On the draft m5-screenshots release:
   logical window. SHA-256 `84552bcbff635ea4de685e9694bc147b930bfe5483d258aa48aad95092eb0c08`.
   Qt offscreen device-pixel ratios 1 and 1.5, no resized or fabricated UI images.
   PNG/README-only archive gate passed. No profiles/settings in the archive.
-- Final native page bundle pending. Historical review assets remain untouched.
+- `m5-installer-pages-pm-round-7b8d28b-light.zip`: 21 native PNGs plus README,
+  7,725,089 bytes, SHA-256 `27a3731c91478669cc5f13778b8ef432624c404cb2fb2adaf0fccb2905dbe1b0`.
+  Gated CI 40065869279. Actual light native controls, explicit synthetic states,
+  96 effective DPI on unchanged 175% display; no native monitor-scale claim.
+  PNG-only archive gate passed. Historical assets remain untouched.
 
 ## Probe and privacy evidence
 
@@ -100,9 +104,12 @@ exact pinned platform PE exceptions and dynamic WFP remain enforced.
 
 ## Final draft builds and release assets
 
-`v0.5.0-m5.8` points to `a75f1cf`; its gated draft run is in progress. A second
-repaired build will follow the successful first one. Exact runs, size, checksums,
-true-upgrade and calibrated WFP receipts will replace this pending entry.
+`v0.5.0-m5.8` / 40066137913 failed true-upgrade inventory: old versioned own
+LICENSE/NOTICE remained. No draft or gated installer upload. ISSUE-022 repair
+`ca6ff44` adds exact byte/hash-checked obsolete own-license cleanup before copy;
+unknown/changed/linked/protected contents preserve and block. Unit tests pass.
+`v0.5.0-m5.9` / 40067407725 is the repaired rerun. A second successful repaired
+build follows for the Owner's VM upgrade test. Final assets/receipts pending.
 Five assets only: unsigned installer, THIRD_PARTY_NOTICES.md, versioned CycloneDX
 SBOM, installer-jedi-source.zip, SHA256SUMS.txt. No portable asset.
 
@@ -135,7 +142,8 @@ AUDIT-NOTES.md. No hardware/VM/failure result is fabricated.
 ## Branches and limitations
 
 `m5-installer` holds implementation/evidence. `m6-docs-v2` carries the ISSUE-020
-repair through `8c199b0`; final behavior documentation sync follows the gates.
+repair through `7ec6c59`, with installer/output-row behavior guides updated. The new ISSUE-022
+helper will be carried after its gates.
 Reference `m5-packaging-spike` (`95dd90b`) and `m6-docs` (`c855b52`) stay untouched.
 No M6 acceptance, PR, publication, merge or repository setting change is claimed.
 
