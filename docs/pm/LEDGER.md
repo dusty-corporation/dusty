@@ -831,3 +831,18 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   installed payload/PE/WFP, both uninstall choices, unchanged outputs and a fresh
   CURRENT-installer download/probe audit. Asset staging now rejects missing/false
   receipts. Focused receipt/upload regressions: 11 passed. No completion claimed.
+
+### M5 repeated-audit correction and synchronized documentation branch
+
+- .5 run 40041077970 failed installer acceptance: auditpol `Error 0x00000050`,
+  then `Installer audit backup failed`. Cause: the second calibrated audit reused
+  the first CSV filename. 7db67d4 gives each audit a unique backup and preserves
+  independent restoration. No connection violation was reported; no binary upload.
+- .7 run 40042648483 is the final corrected receipt/true-upgrade experiment.
+  The earlier chat run number 40042684409 was a mistaken ID and was immediately
+  corrected; it is not evidence. All report/evidence links use verified IDs.
+- m6-docs-v2 0e005ea pushed normally with final M5 code/test-helper corrections.
+  `git diff m5-installer..m6-docs-v2 -- src tools installer .github tests
+  pyproject.toml uv.lock` is empty. User docs differ; reference branches unchanged.
+- Non-urgent independent-audit notes added for explicit external license-browser
+  links and partial-deletion failure reporting. No new application work started.

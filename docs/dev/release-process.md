@@ -41,3 +41,26 @@ The installed-app processing-only audit also blocks processing executables.
 Clean Windows 11 standard-user testing and SmartScreen remain Owner actions in
 [the checklist](../pm/M5-checklist.md). Native page-review screenshots are layout
 evidence with synthetic progress/errors, not a substitute for lifecycle tests.
+
+## Draft upgrade inputs and release receipts (final M5)
+
+Earlier experiments showed that a read-only repository token does not see draft
+release listings. GitHub documents that distinction in its
+[release API](https://docs.github.com/en/rest/releases/releases#list-releases).
+The final implementation does not broaden validation/build jobs to write access:
+it selects an earlier successful tagged release workflow, reads that workflow's
+already-gated installer artifact with actions:read, and checks its companion
+SHA256SUMS before execution. Checkout credentials are not persisted and GH_TOKEN
+is removed before app/test children run. Only the existing draft-creation job
+needs contents:write. No repository settings are changed.
+
+For test tags N >= 3, release staging independently requires receipts proving an
+increasing-version upgrade, model hash/write-time preservation, current installed
+payload/PE/WFP gates, both uninstall choices, unchanged user outputs and a fresh
+CURRENT-installer download/probe audit with zero Setup/GUI/native events. Missing
+or false receipts prevent draft creation. The first successful build can have no
+prior upgrade input. Intermediate experiments are not two-version evidence.
+
+Each calibrated WFP phase uses a unique repository-local audit-policy CSV and
+restores its own snapshot. Reusing a file fails auditpol with 0x00000050; the
+expanded two-audit lifecycle is the regression for this correction.

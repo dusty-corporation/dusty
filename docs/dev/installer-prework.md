@@ -137,3 +137,7 @@ acceptance, driver/RAM defaults, actual cancel/resume and failure/retry, shortcu
 upgrade reuse, both uninstall choices and installed-app WFP acceptance. The CI
 artifact contains the existing app-bundle SBOM; a final installer-wide SBOM and
 release workflow remain M5 release work, not completed acceptance in this draft.
+
+- DialogFontSize belongs in [LangOptions], not [Setup], in pinned 6.7.3.
+  Compiler source Shared.LangOptionsSectionDirectives.pas and the successful
+  native build verify this; the generator regression checks section placement.
