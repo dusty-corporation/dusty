@@ -91,6 +91,8 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     assert "WizardForm.NextButton.Enabled := False" in failure
     assert "Action := NewButton" not in text
     assert "BackButtonClick" in text and "ReturnModelsRequested := Result" in text
+    assert "if not ModelsTouched then ModelsPage.Values[I]" in text
+    assert "if ModelIds[I] = 'large-v3-turbo-q8_0' then ModelsPage.CheckListBox.ItemCaption" in text
     assert "FileSize64" in text and "Amount.Caption" in text
     assert "runasoriginaluser" in text and "skipifsilent" in text
     assert "(CurPageID = wpFinished) and not Busy" in text

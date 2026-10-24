@@ -227,10 +227,10 @@ begin
     Memory.Length := 64;
     if WinMemoryStatus(Memory) then begin
       if Memory.TotalPhysical < @@MIN_RAM@@ then MemoryNotice.Caption := CustomMessage('LowMemory');
-      if (Code = 0) and (Memory.TotalPhysical >= @@MIN_RAM@@) and not ModelsTouched then
+      if (Code = 0) and (Memory.TotalPhysical >= @@MIN_RAM@@) then
         for I := 0 to GetArrayLength(ModelIds) - 1 do begin
-          ModelsPage.Values[I] := ModelIds[I] = 'large-v3-turbo-q8_0';
-          if ModelsPage.Values[I] then ModelsPage.CheckListBox.ItemCaption[I] := ModelRecommendedLabels[I] + ModelDetails[I]
+          if not ModelsTouched then ModelsPage.Values[I] := ModelIds[I] = 'large-v3-turbo-q8_0';
+          if ModelIds[I] = 'large-v3-turbo-q8_0' then ModelsPage.CheckListBox.ItemCaption[I] := ModelRecommendedLabels[I] + ModelDetails[I]
           else ModelsPage.CheckListBox.ItemCaption[I] := ModelLabels[I] + ModelDetails[I];
         end;
     end;
