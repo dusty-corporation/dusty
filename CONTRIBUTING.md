@@ -48,7 +48,7 @@ Start with [Build from source](docs/dev/build-from-source.md). The
   green CI. Put non-essential ideas in docs/pm/BACKLOG.md and audit soft spots
   in docs/pm/AUDIT-NOTES.md.
 - Fixtures must be public domain or CC0 with source and extraction boundaries
-  documented in tests/fixtures/audio/AUDIO_SOURCES.md. Never submit private recordings.
+  documented in tests/fixtures/AUDIO_SOURCES.md. Never submit private recordings.
 - Do not log recording names/paths, transcript text or vocabulary hints. Do not
   include sensitive local settings, state or screenshots in issue reports.
 

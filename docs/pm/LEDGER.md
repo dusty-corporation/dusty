@@ -1239,3 +1239,12 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   control text in another process. The driver now uses Microsoft-documented
   WM_GETTEXT through SendMessageTimeoutW (250 ms, abort-if-hung/error-on-exit).
   This corrects the discovery API while retaining actual native acceptance.
+
+### M6 documentation final alignment
+
+- User guides now describe successful Setup selection preservation, the supported
+  Windows Apps uninstall route and separate local About/notices. Corrected the
+  contributor fixture-provenance location to the actual tests/fixtures path.
+- No new screenshot/image source; accepted review images remain historical links.
+  Current native-driver validation is 40125892713, code fc2c6e5; earlier visibility
+  driver validation 40125713083 remains separate evidence.

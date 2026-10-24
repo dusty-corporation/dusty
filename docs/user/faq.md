@@ -38,6 +38,13 @@ Dusty is free and open source. Its own code uses Apache-2.0; bundled components
 have their own notices. Review builds are unsigned, so SmartScreen may warn.
 Follow the source and checksum checks in [Install](install.md), not a blind bypass.
 
+## Where can I read the licenses?
+
+Open Help > About Dusty, then Third-party notices. These notices open from the
+installed app, without a download. About also shows the app version, Apache-2.0
+license and a repository address you can select and copy. Privacy and accuracy
+has the separate privacy and transcript warning.
+
 ## Does clearing the list erase my recordings?
 
 No. It removes the app's list. Finished transcripts stay in your chosen folder.

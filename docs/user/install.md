@@ -63,6 +63,9 @@ that a file is safe.
 
 ## Upgrade or remove Dusty
 
+To remove Dusty, open Windows Settings > Apps, find Dusty and choose Uninstall.
+Dusty's confirmation lets you choose whether to keep the downloaded models.
+
 An upgrade keeps models that still verify, avoiding another download. Uninstall
 offers a choice to remove downloaded models as well as the app's settings,
 unfinished-recording list, logs and temporary work. Read that choice carefully.

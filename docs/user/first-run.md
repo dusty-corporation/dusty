@@ -14,6 +14,10 @@
 Start explains just above the button when a folder, model or recording is missing.
 You can also choose the destination from File > Choose where to save transcripts.
 
+After successful Setup tests, an empty or unavailable saved model choice is
+replaced with the tested default. A saved choice that is still installed and
+passes verification is kept.
+
 The first graphics check may take longer while your driver prepares itself.
 Keep the computer awake and wait for the checks to finish. Automatic uses graphics when they
 work and can fall back to the processor if necessary.
