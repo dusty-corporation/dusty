@@ -95,6 +95,28 @@ Expected: both full hashes match, including the corresponding SHA256SUMS.txt
 entries. Stop on mismatch. Run only the local Downloads copies. Keep the host
 share read-only. The other assets are notices, CycloneDX SBOM and JEDI source.
 
+### SmartScreen eligibility after gh/shared-folder transfer
+
+The Owner confirmed that gh downloads carried no Mark of the Web, so SmartScreen
+did not appear in the ThinkPad .14 test. That is not a SmartScreen PASS. After
+copying to the guest's local NTFS Downloads folder and checking the hashes, add
+the internet zone to BOTH installers before launching either one:
+
+```powershell
+foreach ($testInstaller in @($earlier, $later)) {
+    Set-Content -LiteralPath $testInstaller -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3"
+    Get-Content -LiteralPath $testInstaller -Stream Zone.Identifier
+}
+Get-FileHash -LiteralPath $earlier,$later -Algorithm SHA256
+```
+
+Expected: ZoneId=3 on both, and the same file hashes as above. The alternate
+stream does not change installer bytes. If the filesystem cannot store the
+stream, record that limitation; do not claim this check passed. The zone tag
+makes the file eligible for internet-download checks; Windows security settings,
+policy and reputation still determine which warning appears. Record the actual
+result. Do not disable security to force or bypass a warning.
+
 ## SPEC 11.6 checks (standard user)
 
 | # | Action | Expected result |

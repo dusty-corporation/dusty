@@ -1263,3 +1263,15 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - Search for both forbidden dash characters: no matches. Brief hash unchanged;
   m5-packaging-spike and m6-docs references unchanged. No PR, merge, publication
   or deletion of branch/tag/release/run. Stop pending Owner VM and PM acceptance.
+
+### Owner ThinkPad .14 evidence, 2026-10-24
+
+- Real ThinkPad Iris Xe, 150%: no UAC, recommended Turbo pre-selection, Vulkan
+  and CPU fallback tests, Finish launch, correct TXT/DOCX, OneDrive Documents
+  warning, layout and model-removal uninstall all PASS. No app/app-data/models
+  remained; transcripts untouched. Fresh Windows VM acceptance remains pending.
+- SmartScreen NOT TESTED: gh download lacked Mark of the Web. Added exact guest
+  Zone.Identifier/ZoneId=3 commands after local copy and hash verification.
+- PM assigned model-selection handoff, About/notices and redundant uninstall
+  confirmation fixes to M6 only. This M5 update is documentation only. .13/.14
+  tags/releases/binaries unchanged; no PR/publication.
