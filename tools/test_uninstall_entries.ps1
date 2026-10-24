@@ -2,6 +2,7 @@ param([Parameter(Mandatory)][string]$InstallPath, [Parameter(Mandatory)][string]
 
 $ErrorActionPreference = 'Stop'
 if ($env:GITHUB_ACTIONS -ne 'true') { throw 'Installed entry audit is disposable CI only' }
+$InstallPath = [IO.Path]::GetFullPath($InstallPath)
 $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{7B3110E8-7983-41AC-A0ED-F6EB13DBB72A}_is1'
 $values = Get-ItemProperty -LiteralPath $key
 $expected = $values.UninstallString
@@ -32,5 +33,5 @@ try {
         }
     }
 } finally { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($shell) }
-if (@($checked | Where-Object { $_.target -eq 'dusty\dusty.exe' }).Count -ne 2) { throw 'Expected Start Menu and default Desktop app shortcuts' }
 @{registered_commands=$registered;shortcuts=$checked;bare_uninstall_entries=0} | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $Output -Encoding utf8NoBOM
+if (@($checked | Where-Object { $_.target -eq (Join-Path 'dusty' 'dusty.exe') }).Count -ne 2) { throw 'Expected Start Menu and default Desktop app shortcuts' }

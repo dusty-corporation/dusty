@@ -1,0 +1,45 @@
+{
+  "purpose": "PM-approved-public-root-certificates",
+  "roots": [
+    {
+      "file": "usertrust-ecc.pem",
+      "subject": "USERTrust ECC Certification Authority",
+      "official_ca_download_url": "http://crt.sectigo.com/USERTrustECCCertificationAuthority.crt",
+      "official_index": "https://www.sectigo.com/knowledge-base/detail/Sectigo-Root-Certificates",
+      "obtained_from": "Existing Windows ROOT store, DER byte copy; official HTTP URL NOT fetched",
+      "retrieved": "2026-10-24",
+      "pem_sha256": "08fb40ba4144166f6ae80c7ab60be23e97e5083836d45fa85a33a5d0bfec10f8",
+      "der_sha256": "4ff460d54b9c86dabfbcfc5712e0400d2bed3fbc4d4fbdaa86e06adcd2a9ad7a"
+    },
+    {
+      "file": "usertrust-rsa.pem",
+      "subject": "USERTrust RSA Certification Authority",
+      "official_ca_download_url": "http://crt.sectigo.com/USERTrustRSACertificationAuthority.crt",
+      "official_index": "https://www.sectigo.com/knowledge-base/detail/Sectigo-Root-Certificates",
+      "obtained_from": "Existing Windows ROOT store, DER byte copy; official HTTP URL NOT fetched",
+      "retrieved": "2026-10-24",
+      "pem_sha256": "8a3dbcb92ab1c6277647fe2ab8536b5c982abbfdb1f1df5728e01b906aba953a",
+      "der_sha256": "e793c9b02fd8aa13e21c31228accb08119643b749c898964b1746d46c3d4cbd2"
+    },
+    {
+      "file": "isrg-x1.pem",
+      "subject": "ISRG Root X1",
+      "official_ca_download_url": "https://letsencrypt.org/certs/isrgrootx1.pem",
+      "official_index": "https://letsencrypt.org/certificates/",
+      "obtained_from": "Official CA HTTPS download, validated TLS",
+      "retrieved": "2026-10-24",
+      "pem_sha256": "22b557a27055b33606b6559f37703928d3e4ad79f110b407d04986e1843543d1",
+      "der_sha256": "96bcec06264976f37460779acf28c5a7cfe8a3c0aae11a8ffcee05c0bddf08c6"
+    },
+    {
+      "file": "isrg-x2.pem",
+      "subject": "ISRG Root X2",
+      "official_ca_download_url": "https://letsencrypt.org/certs/isrg-root-x2.pem",
+      "official_index": "https://letsencrypt.org/certificates/",
+      "obtained_from": "Official CA HTTPS download, validated TLS",
+      "retrieved": "2026-10-24",
+      "pem_sha256": "a13d881e11fe6df181b53841f9fa738a2d7ca9ae7be3d53c866f722b4242b013",
+      "der_sha256": "69729b8e15a86efc177a57afb7171dfc64add28c2fca8cf1507e34453ccb1470"
+    }
+  ]
+}

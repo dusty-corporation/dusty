@@ -62,7 +62,10 @@ Downloading is reserved for the separate explicit downloader, dusty-fetch. The
 Model Manager asks before starting it; the installer uses it for selected models
 and voice detection. It requests public model files over HTTPS from exactly
 `github.com` and the verified redirect host `release-assets.githubusercontent.com`.
-It uses the Windows certificate store and checks every redirect. GitHub and normal
+It uses the Windows certificate store plus four bundled, fingerprint-checked public
+CA roots and checks every redirect. It does not retrieve missing Windows roots
+or contact a Microsoft update host. Certificate files are local public trust data;
+no certificate refresh runs at startup or in the background. GitHub and normal
 network infrastructure can see the download connection and requested public asset.
 No recording, transcript, vocabulary hint or local recording metadata is included
 in that request. A bundled catalog provides expected SHA-256 values; no remote

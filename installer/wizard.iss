@@ -202,8 +202,15 @@ begin
 end;
 
 procedure ShowMemoryWarning;
-var Memory: TMemoryStatus;
+var Memory: TMemoryStatus; I: Integer;
 begin
+  for I := 0 to GetArrayLength(ModelIds) - 1 do begin
+    if not ModelsTouched then ModelsPage.Values[I] := ModelIds[I] = RecommendedModel;
+    if ModelIds[I] = RecommendedModel then ModelsPage.CheckListBox.ItemCaption[I] := ModelRecommendedLabels[I] + ModelDetails[I]
+    else ModelsPage.CheckListBox.ItemCaption[I] := ModelLabels[I] + ModelDetails[I];
+  end;
+  ModelsPage.CheckListBox.Enabled := True;
+  if WizardForm.CurPageID = ModelsPage.ID then WizardForm.NextButton.Enabled := True;
   MemoryNotice.Caption := '';
   Memory.Length := 64;
   if WinMemoryStatus(Memory) then
@@ -224,6 +231,20 @@ begin
   ReviewTick;
   Exit;
 #endif
+  { Return the page to Windows before extraction so every catalog row paints. }
+  if Stage = -4 then begin
+    if WizardForm.CurPageID <> ModelsPage.ID then Exit;
+    Stage := 0;
+    try ExtractTemporaryFiles('{tmp}\probe\*');
+    except ShowMemoryWarning; Exit; end;
+    ProbeRoot := ExpandConstant('{tmp}\probe');
+    Stage := -1; ProbeBegan := Tick;
+    if not StartChild(ProbeRoot + '\dusty\dusty.exe', '--probe-vulkan --out ' +
+      Quoted(ExpandConstant('{tmp}\probe-result.json'))) then begin
+      Stage := 0; ShowMemoryWarning;
+    end;
+    Exit;
+  end;
   { Explicit, disposable CI acceptance: stop a real transfer after bytes arrive. }
   if WizardSilent and (GetEnv('GITHUB_ACTIONS') = 'true') and
      (ExpandConstant('{param:TESTCANCEL|}') = 'yes') and (Stage = 1) and not StopRequested then begin
@@ -246,6 +267,7 @@ begin
     Stage := 0; Exit;
   end;
   if Stage = -1 then begin
+    ShowMemoryWarning; { Restore Small before applying a successful GPU result. }
     MemoryNotice.Caption := '';
     Memory.Length := 64;
     if WinMemoryStatus(Memory) then begin
@@ -537,12 +559,13 @@ begin
     ProbeStarted := True;
 #ifndef ReviewOnly
     MemoryNotice.Caption := CustomMessage('CheckingGraphics');
-    try ExtractTemporaryFiles('{tmp}\probe\*');
-    except ShowMemoryWarning; Exit; end;
-    ProbeRoot := ExpandConstant('{tmp}\probe');
-    Stage := -1; ProbeBegan := Tick;
-    if not StartChild(ProbeRoot + '\dusty\dusty.exe', '--probe-vulkan --out ' +
-      Quoted(ExpandConstant('{tmp}\probe-result.json'))) then Stage := 0;
+    for I := 0 to GetArrayLength(ModelIds) - 1 do begin
+      if not ModelsTouched then ModelsPage.Values[I] := False;
+      ModelsPage.CheckListBox.ItemCaption[I] := ModelLabels[I] + ModelDetails[I];
+    end;
+    ModelsPage.CheckListBox.Enabled := False;
+    WizardForm.NextButton.Enabled := False;
+    Stage := -4; { PollChild starts extraction on a later event-loop turn. }
 #endif
   end;
   if Page = DownloadPage.ID then begin
@@ -617,6 +640,7 @@ begin
   Result := True;
   if StopRequested then Exit;
   if (CurPageID = ModelsPage.ID) or (CurPageID = ReturnModelsPage.ID) then begin
+    if (Stage = -4) or (Stage = -1) then begin Result := False; Exit; end;
     Count := 0; for I := 0 to GetArrayLength(ModelIds) - 1 do if ModelsPage.Values[I] then Count := Count + 1;
     Result := Count > 0;
     if not Result then MemoryNotice.Caption := CustomMessage('NeedModel');

@@ -602,9 +602,7 @@ INSTALLER.update(
     LicenseNotices="Third-party notices",
     LicenseMicrosoft="Microsoft runtime terms",
     BestFor="Best for: %1",
-    CheckingGraphics=(
-        "Checking the graphics device... Small is the safe choice if this check cannot finish."
-    ),
+    CheckingGraphics="Checking this computer...",
     LowMemory=(
         "This computer has less memory than these models recommend. You can "
         "still install Dusty, but transcription may be slow or may not finish."

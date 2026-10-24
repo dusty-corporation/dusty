@@ -100,6 +100,19 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     assert "Finish without a model" in text
     assert "GraphicsCandidate" not in text
     assert "--probe-vulkan --out" in text
+    initial = text.split("procedure InitializeWizard;", 1)[1].split("procedure CurPageChanged", 1)[
+        0
+    ]
+    assert initial.count("ModelsPage.Add(") == len(manifest_data["models"])
+    changed = text.split("procedure CurPageChanged", 1)[1].split("function NextButtonClick", 1)[0]
+    probe = changed.split("if (Page = ModelsPage.ID) and not ProbeStarted", 1)[1].split(
+        "if Page = DownloadPage.ID", 1
+    )[0]
+    assert "Stage := -4" in probe and "ExtractTemporaryFiles" not in probe
+    assert "WizardForm.NextButton.Enabled := False" in probe
+    assert "ModelsPage.CheckListBox.Enabled := False" in probe
+    assert "Checking this computer..." in text
+    assert "if (Stage = -4) or (Stage = -1)" in text
     assert "--installer-cancel-part --model " in text
     assert "DeleteFile(ExpandConstant('{localappdata}" not in text
     partial = text.split("procedure CleanupActivePartial", 1)[1].split("procedure WithoutClick", 1)[

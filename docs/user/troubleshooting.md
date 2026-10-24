@@ -9,6 +9,7 @@
 | There is no audio | Some video files have no audio track. Choose a recording with sound. |
 | Not enough free disk space | Make room on both the models/work drive and the output drive, then retry. Temporary decoded audio also needs space. |
 | A model is Damaged | Use Manage models > Download again. Do not use a model that fails verification. |
+| A download stops immediately on a new Windows installation | M6 includes the public certificates needed by the approved GitHub download hosts. Use the Owner-approved fixed build. Do not disable certificate checks, install an unknown certificate or send a recording to another service. If it still fails, report the app version and plain error. |
 | A download fails | Check your connection and free space. Try the download again. Normal Cancel/close starts fresh next time; after a crash a recent partial can resume with full verification. Only approved GitHub HTTPS hosts are accepted. Enterprise proxy support is not implemented. |
 | Graphics fails or seems stuck | In Options, choose Processor only, then retry. Automatic may already have completed the recording on the processor. Update graphics drivers through your normal trusted source if appropriate. |
 | Translation is unavailable | Choose Medium. Turbo and English-only models cannot translate to English. |

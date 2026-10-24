@@ -1335,3 +1335,23 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   two-host ECC/RSA chains, no automatic root retrieval or dependency. Existing
   TLS/hostname/allowlist/redirect/model-hash safeguards unchanged. Live canary
   and absent-root local TLS tests queued. Full model list during probe queued.
+
+### ISSUE-029 trust and model-page repair checkpoint
+
+- Four roots now pinned by PEM SHA-256 and DER fingerprint: USERTrust ECC/RSA,
+  ISRG X1/X2. Live verified chains observed for GitHub ECC/RSA and release-assets
+  RSA through YR1/Root YR/X1. Release-assets ECC profile not served, explicitly
+  labelled; no insecure fallback. Root provenance documented in docs/dev/tls-roots.md.
+- Approval review rejected HTTP and crt.sh root downloads; neither ran. Safer
+  approved acquisition copied exact pre-existing trusted Windows USERTrust roots
+  with official CA reference URLs, and fetched ISRG over validated official HTTPS.
+  No Windows trust-store edits or automatic root retrieval.
+- Empty-system-store local TLS positive/negative/integrity tests: 8 pass, 4.33 s.
+  TLS minimum/hostname/two-host/redirect/model-hash checks remain. Public-root
+  data gets exact-file-only SBOM/license attribution, never a general code waiver.
+- Model page initializes every catalog item before entering, returns to event loop
+  before extraction/probe, shows Checking this computer..., disables Next/selection
+  until bounded completion/fallback, then applies recommendation. Native validation
+  pending. Earlier native run 40128744173 failed shortcut audit comparison; normalize
+  mixed slash install path before comparing actual Shell targets, retain counts
+  in receipt before assertion. No installer uploaded by that failed run.

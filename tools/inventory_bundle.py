@@ -93,6 +93,13 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
             kind="data",
         ),
     }
+    components["public-ca-certificates"] = component(
+        "public-ca-certificates",
+        "2026-10-24",
+        "LicenseRef-Public-CA-Certificate",
+        "resources/tls/sources.json",
+        kind="data",
+    )
     file_owners = {}
     dists = {}
     for dist in metadata.distributions():
@@ -223,6 +230,8 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
             keys = {"ffmpeg" if relative.startswith("bin/ffmpeg/") else "whisper.cpp"}
         elif relative == "resources/selftest.wav":
             keys = {"jfk-fixture"}
+        elif relative.startswith("resources/tls/") and relative.endswith(".pem"):
+            keys = {"public-ca-certificates"}
         elif relative.startswith(("resources/", "licenses/")):
             keys = {"dusty"}  # Documentation/data, original third-party attribution is retained.
         elif path.name == "base_library.zip":
@@ -284,6 +293,14 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
             f"{item['copyright']} | {item['source']} |"
         )
     lines += [
+        "",
+        "## Public CA trust-anchor data",
+        "",
+        "PM-approved public certificate data, not Dusty-owned software or a new library.",
+        "Only four fingerprint-pinned PEM files may use this data attribution.",
+        "Official CA references, fingerprints and acquisition provenance are retained",
+        "in resources/tls/sources.json. No CA update service is invoked.",
+        "No Apache-2.0 license is claimed for these public certificate records.",
         "",
         "## Native pins",
         "",
