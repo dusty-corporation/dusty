@@ -949,3 +949,16 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   bytes before every inventory update and permanently preserves that invocation
   after any mismatch/read/write error. Two enabled regressions cover marker
   removal and mutation before bookkeeping. No Owner data was touched.
+
+### M6 docs v2 M5 behavior sync (2026-10-24)
+
+- Explicit reviewed M5 files carried from d90d706 on a verified clean branch.
+  Source/installer/tests/tools/workflows match m5-installer; reference branches
+  m6-docs and m5-packaging-spike remain unchanged.
+- Updated installer guide for Next=Download, current processor retry label,
+  checked Open Dusty now, controlled stop, and conservative partial ownership.
+  Transcribing guide now explains Choose folder, Saving to and full-path tooltip.
+- Automatic review rejected the earlier broad restore; after clean-tree checks
+  the explicit file list was approved. No existing documentation was overwritten.
+- Local M5 source: 297 passed/1 expected skip, 94.2% required coverage. This is
+  documentation prework only, not M6 acceptance. Native M5 final gates pending.

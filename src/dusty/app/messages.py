@@ -42,7 +42,10 @@ MORE_FORMATS = "More formats"
 ADVANCED = "Advanced"
 OUTPUT = "Save transcripts to"
 CHOOSE_FOLDER = "Choose folder"
-NO_OUTPUT = "Not chosen yet"
+CHOOSE_OUTPUT_BUTTON = "Choose folder..."
+SAVING_TO = "Saving to {path}"
+NO_OUTPUT = "No folder chosen yet"
+SAVING_NEXT_TO = "Saving next to each recording. Change this in Options."
 CHOOSE_OUTPUT_FIRST = "Choose where to save transcripts first."
 CHOOSE_OUTPUT_MENU = "Choose where to save transcripts..."
 CLEAR_FINISHED = "Clear finished"
@@ -450,6 +453,16 @@ DOWNLOAD_PROGRESS = "{done} of {total}"
 DOWNLOADING_MODEL = "Downloading {name}"
 DOWNLOAD_TITLE = "Download transcription files?"
 DOWNLOAD_CONFIRM = "Download {names} from github.com ({size})?"
+
+
+def format_size(size_bytes: int) -> str:
+    large = round(size_bytes / 1_000_000, 1) >= 1000
+    return MODEL_SIZE.format(
+        value=size_bytes / (1_000_000_000 if large else 1_000_000),
+        unit=GIGABYTES if large else MEGABYTES,
+    )
+
+
 DELETE_TITLE = "Delete this downloaded model?"
 DELETE_CONFIRM = "Delete {name}? You can download it again later."
 DELETE_SELECTED = (
@@ -569,16 +582,24 @@ INSTALLER.update(
         "still install Dusty, but transcription may be slow or may not finish."
     ),
     DownloadConsent="Download %1 from github.com (%2)?",
-    DownloadAction="Download and test",
+    DownloadAction="Download",
     DownloadPage="Download transcription models",
-    DownloadPageHelp=(
-        "Voice detection is included. Only the separate downloader connects to github.com."
-    ),
+    DownloadPageHelp="Dusty needs at least one model to transcribe.",
+    DownloadHeading="Downloading %1 (%2)",
+    DownloadAmount=DOWNLOAD_PROGRESS.format(done="%1", total="%2"),
+    SizeMegabytes=MODEL_SIZE.replace("{value:.1f}", "%1").replace("{unit}", MEGABYTES),
+    SizeGigabytes=MODEL_SIZE.replace("{value:.1f}", "%1").replace("{unit}", GIGABYTES),
+    VoiceIncluded="Voice detection (%1) is always included. It lets Dusty skip silent parts.",
+    WelcomeDescription="This will install Dusty on your computer.",
+    OpenDustyNow="Open Dusty now",
+    OpenFromStartMenu="Dusty is installed. Open it from the Start menu.",
+    UninstallTitle="Uninstall Dusty",
+    UninstallAction="Uninstall",
     DownloadWorking="Downloading %1",
     CheckingModel="Checking %1",
     GpuSelfTestFailed=(
-        "The graphics transcription test did not pass. Retry, try the processor, "
-        "or finish without choosing a model."
+        "The test on the graphics card did not pass. You can try again, "
+        "use the processor instead (slower), or finish without a model."
     ),
     InstallFiles="Installing Dusty",
     InstallFilesHelp="Copying the application files to this computer.",
@@ -592,20 +613,20 @@ INSTALLER.update(
         "The transcription test did not pass. Retry, or finish without choosing a model."
     ),
     Retry="Retry",
-    RetryCpu="Retry on CPU",
+    RetryCpu="Use the processor instead",
     FinishWithout="Finish without a model",
     FinishedWithout=(
-        "Dusty is installed. Model setup did not finish. Open Options to choose"
-        " a transcription model, or download one in Model Manager."
+        "Dusty is installed, but no model is ready yet. "
+        "Dusty will show you what to do when you open it."
     ),
-    SetupComplete=(
-        "The selected models and voice detection were checked. Transcription tests passed."
-    ),
+    SetupComplete=("Dusty is ready. Your model was downloaded and tested."),
+    SetupCompletePlural="Dusty is ready. Your models were downloaded and tested.",
     CpuOutcome=(
         "The test passed on the processor (CPU). Graphics acceleration was not used for this test."
     ),
     GpuOutcome="The test passed using Vulkan graphics acceleration.",
-    RemoveModels="Also remove downloaded models (%1 GB)",
+    RemoveModels="Also remove downloaded models (%1)",
+    RemoveModelsHelp="Your recordings and transcripts are never removed.",
     StopInstall=(
         "Stop installation? The current partial download will be removed. Verified models are kept."
     ),

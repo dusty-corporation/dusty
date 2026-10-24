@@ -3,9 +3,11 @@
 1. Use **Add files**, **Add folder**, or drop recordings onto the window. For a
    folder, choose whether to include subfolders. Unsupported files are counted
    and skipped. A recording already in the list is highlighted, not added twice.
-2. Check **Save transcripts to** and choose the destination. A sync-folder warning
+2. Use **Choose folder...** and check the **Saving to** destination. A long path
+   is shortened in the middle; point at it to see the full path. A sync-folder warning
    means another program may upload the transcripts. Choose a local folder if
-   that would be inappropriate.
+   that would be inappropriate. If saving next to each recording is on, change
+   it in Options to choose one destination folder. No folder is chosen automatically.
 3. Open **Options...**. Choose the model, spoken language and **Transcribe** or
    **Translate to English**. Choose Text and/or Word on the main window; captions
    and JSON are under **More formats** in Options. Keep **Skip silent parts** on

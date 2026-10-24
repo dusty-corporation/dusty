@@ -7,7 +7,7 @@ Do not send recordings, transcript contents, settings or raw Security logs.
 
 ## Owner actions before testing
 
-1. Enable AMD SVM in the desktop firmware, then restart. Owner action only.
+1. Owner confirmed AMD SVM enabled on 2026-10-23. Check it remains enabled.
    Task Manager > Performance > CPU should say Virtualization: Enabled.
 2. Use the installed VirtualBox 7.2.22 on Windows 11 Home. Full client Hyper-V
    is not supplied with Home. No Extension Pack is needed for this test.
@@ -42,16 +42,17 @@ identified by Dusty. Do not download an unofficial Windows image.
 ## Get the two draft installers into the guest
 
 Draft releases require the Owner's authenticated GitHub access. On the host,
-use `gh release list --repo dusty-corporation/dusty` to identify two successful
-`v0.5.0-m5.N` drafts. Do not publish either. Download all five assets for each
-version into separate host folders:
+use only the two repaired, successful drafts identified in M5-report.md.
+Do not use historical .1 through .7 builds: they predate the ISSUE-020 repair.
+Do not publish either. Download all five assets for each version into separate
+host folders. The final report identifies the exact safe tag numbers:
 
 ```powershell
-gh release download v0.5.0-m5.1 --repo dusty-corporation/dusty --dir .\m5-test-1
-gh release download v0.5.0-m5.2 --repo dusty-corporation/dusty --dir .\m5-test-2
+gh release download <earlier-safe-tag-from-report> --repo dusty-corporation/dusty --dir .\m5-test-1
+gh release download <later-safe-tag-from-report> --repo dusty-corporation/dusty --dir .\m5-test-2
 ```
 
-Use the actual successful tag numbers from the M5 report if these two failed.
+Replace the angle-bracket placeholders with the report's successful tags.
 In the guest browser, sign in to GitHub yourself, open the draft release and
 save the installer and SHA256SUMS.txt in Downloads. Alternatively make a read-only
 ISO containing the host download folders, mount it in VirtualBox's optical drive,
@@ -71,19 +72,22 @@ THIRD_PARTY_NOTICES.md, the versioned CycloneDX SBOM and installer-jedi-source.z
 |---|--------|-----------------|
 | 1 | Run the earlier installer. If SmartScreen appears, after the hash check select More info, Run anyway. | Unsigned warning explained; no UAC/admin prompt. If policy prevents running it, record that rather than disable security. |
 | 2 | Open each of the three license views. Read the catalog; choose Tiny for a fast test, leave Voice detection included. | Apache/NOTICE, third-party notices and Microsoft runtime EULA reachable; agreement required. Physical GPU probe bounded, no model opened. VM defaults Small; changing to Tiny remains respected. |
-| 3 | Accept the inline download consent and finish installation to the default folder. | Only github.com downloads through dusty-fetch; selected model and Voice detection verify. Each selected model tested on Auto, smallest once on CPU. Plain progress; no failed test called success. |
-| 4 | Launch from Start Menu; test optional Desktop shortcut if selected. | Both open Dusty, no admin prompt. Welcome only while output folder unset. Choose a guest-local output folder and add the public JFK fixture from the repository's tests/fixtures/audio/formats/jfk.wav. |
+| 3 | Install to the default folder. On the model-download page, use Back to change Tiny to Small and back; then press Download. | Consent names and size change with the selection. Back is available before download and disabled during it. Consent becomes Downloading; byte totals appear below the bar. Each selected model is tested on Auto, smallest once on CPU, Voice detection verifies. Success uses the actual singular/plural result. |
+| 4 | Leave Open Dusty now checked and press Finish. Close and reopen from Start Menu; test the default-checked Desktop shortcut too. | Dusty survives Setup exit and runs as DustyTester, no admin prompt. Welcome only while output folder unset. Choose a guest-local output folder and add the public JFK fixture from the repository's tests/fixtures/audio/formats/jfk.wav. |
 | 5 | Disconnect the VM network adapter, close Dusty and reboot guest. Open Dusty and transcribe JFK to Text and Word. | Offline startup/transcription/export work, intelligible expected speech; output saved only in chosen folder, models unchanged. VM CPU fallback works. Reconnect adapter afterwards. |
 | 6 | Install the later test version over the earlier one. Before/after record model hashes and LastWriteTime with Get-FileHash/Get-Item. | Version changes; verified model bytes and modification times unchanged, no model redownload. Output folder and user settings preserved. |
 | 7 | In Model Manager start an extra download. Cancel normally; repeat and close normally. | Active .part disappears immediately, no corrupt final model. Next attempt starts fresh. |
-| 8 | Start an extra download and force-end Dusty in Task Manager. Relaunch and try again. | Child downloader dies; a recent .part can resume but must pass full size/SHA before final rename. Partials older than 7 days are removed at next startup. No unverified file can run. |
+| 8 | Start an extra download and force-end Dusty in Task Manager. Relaunch and try again. | Child downloader dies; a recent .part can resume but must pass full size/SHA before final rename. Older-than-seven-day partials with a valid matching ownership receipt are removed at startup; unknown or changed files are preserved. No unverified file can run. |
 | 9 | With Dusty closed, back up Tiny to a test-only folder. Change one byte in installed ggml-tiny.bin, leaving size unchanged; then Verify all and try using Tiny. Restore the backup only after the test. | Damaged state, cannot transcribe with the tampered model; explicit download repairs it and verifies before use. Never use a real recording. |
 | 10 | Test Setup with network disconnected before its model download. | Plain failure, Retry and Finish without a model. No false success. Retry after reconnect succeeds. |
 | 11 | Exercise Finish without a model after a failed download/self-test. | Verified/pre-existing models remain. Failed default selection cleared, warning shown, Choose a transcription model in Options state if models exist; recommendation prompt only if none exist. Record any failure that cannot safely be induced. |
-| 12 | Uninstall, uncheck Also remove downloaded models. Leave a sentinel text file in the chosen transcript folder. | Real model size shown. App files, shortcuts, registration, settings/state/logs/work removed. Only chosen models remain under %LOCALAPPDATA%\Dusty; transcript folder and sentinel untouched. |
+| 12 | Uninstall, uncheck Also remove downloaded models. Leave a sentinel text file in the chosen transcript folder. | Compact Uninstall Dusty dialog, true model size, initially checked box, legible text and Cancel as default. App files, shortcuts, registration and known owned settings/state/logs/work removed. Chosen models remain; transcript folder and sentinel untouched. Unknown files or unsafe ownership metadata are always preserved. |
 | 13 | Reinstall, select same model. | Kept verified models reused without download; shortcuts work. |
 | 14 | Uninstall with Also remove downloaded models checked. | No app directory, owned app data, shortcuts or uninstall registration remain; user transcript folder and sentinel unchanged. |
 | 15 | From clean snapshot, repeat license/catalog/download/error/finish screens at 150% display scale. | Readable, no clipped controls or hidden consent/buttons. Changing guest display scale is an Owner action. |
+| 16 | From a disposable snapshot, begin Setup's model download three times; stop via Cancel, window X, then Escape. Retry afterwards. | Confirmation while active; child stops, active partial disappears, verified/pre-existing models survive. Setup closes normally without launching Dusty. Retry succeeds. Repeat when idle on the post-copy model page. |
+| 17 | In the test profile only, put a sentinel under an old unmarked work folder, and choose an app-managed work/models folder as output or add a recording from it. | Unknown sentinel survives startup/self-test/uninstall. Managed source/output is refused with one plain choose-another-folder message. Existing legacy output settings are cleared with a notice, while their folder contents stay untouched. |
+| 18 | If a real GPU self-test failure is reproducible, try Retry, Use the processor instead, and Finish without a model. Also select multiple models once. | GPU failure is stated plainly, CPU retry outcome is truthful, all selected models tested and one smallest CPU fallback test counted. Without preserves verified/pre-existing files and clears a failed default. Do not fabricate a failure; report unavailable hardware coverage. |
 
 For the tamper test, use a guest PowerShell window with Dusty closed:
 

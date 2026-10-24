@@ -137,3 +137,56 @@ acceptance, driver/RAM defaults, actual cancel/resume and failure/retry, shortcu
 upgrade reuse, both uninstall choices and installed-app WFP acceptance. The CI
 artifact contains the existing app-bundle SBOM; a final installer-wide SBOM and
 release workflow remain M5 release work, not completed acceptance in this draft.
+
+- DialogFontSize belongs in [LangOptions], not [Setup], in pinned 6.7.3.
+  Compiler source Shared.LangOptionsSectionDirectives.pas and the successful
+  native build verify this; the generator regression checks section placement.
+
+## PM page review round (2026-10-24)
+
+Verified against the pinned Inno Setup 6.7.3 source already retained for ADR 0023:
+
+- Shared.ScriptFunc.pas exposes FileSize64(Name, var Size: Int64). Download progress
+  polls the active manifest partial during transfer and the final file during
+  checking. It adds completed model sizes, including voice detection. Setup never
+  opens a socket and no Inno downloader API is used.
+- Setup.WizardForm.pas GetPreviousPageID deliberately stops at wpInstalling.
+  A separate, initially skipped post-copy model page lets Back revisit the same
+  model controls before download. It cannot return through file copying. The
+  page is skipped again after a valid selection; Back is disabled once started.
+- Setup.WizardForm.pas calls the script NextButtonClick before finishing wpFinished.
+  Only at that final, non-busy point does Setup clear its completed outer Job's
+  kill-on-close limit. The requested postinstall GUI may then outlive Setup.
+  All transfer/test children are stopped first; active download protection is
+  unchanged. A failure disables auto-launch and explains Start menu use.
+- The postinstall run entry uses runasoriginaluser, nowait and skipifsilent, with
+  its checkbox checked by default. The desktop task is checked by default too.
+- CreateCustomForm's size handling is in Setup.ScriptFunc.pas and
+  Setup.SetupForm.pas InitializeFont. The compact uninstall form fixes client
+  dimensions after creation, lays out controls inside them and makes Cancel the
+  default button. Its size helper is UTF-8 decoded to preserve the shared
+  nonbreaking space between values and decimal MB/GB units.
+- Production text is generated from messages.py. Consent becomes a persistent
+  download heading; Next starts the transfer and becomes Next after completion.
+  Voice detection wording uses its catalog size. Success has singular/plural
+  forms; failures never get the success message.
+- Review-only Retry/processor/Finish-without handlers are no-ops. Their enabled
+  appearance reflects the real failure page without permitting a transfer or
+  settings change. Preview counters derive from the selected catalog totals;
+  they are explicitly examples, not measurements or acceptance results.
+
+The native window inspection and the fresh standard-user VM remain separate
+from compiler/source checks. The VM must confirm Open Dusty now survives Setup
+exit, Back changes models before download, and uninstall works at both scales.
+
+### Post-copy normal cancellation
+
+Pinned Setup.MainForm.Close handles only ssPreInstall and ssInstall, and native
+button visibility disables Cancel after wpInstalling. Both post-copy model pages
+therefore explicitly enable Cancel/Close and bind Cancel.OnClick and OnCloseQuery
+to a shared stop routine. The previous handlers remain for all earlier pages.
+The stop path uses Inno's ordinary Finish processing with every postinstall run
+unchecked, never ExitProcess; custom exit code is 130. Failed defaults are cleared
+before finishing. A CI-only explicit TESTCANCEL parameter is gated by silent mode
+and GITHUB_ACTIONS=true; it stops only after real prefix bytes arrive, exercising
+the same routine under calibrated WFP before retry/uninstall acceptance.

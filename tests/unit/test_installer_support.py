@@ -138,3 +138,20 @@ def test_installer_selftest_runs_selected_backend_exactly_once(
         == ("TEXT_MISMATCH_" if failed else "OK_") + expected.upper()
     )
     assert calls == [expected]
+
+
+def test_uninstall_size_uses_shared_units_and_ignores_unknown_files(tmp_path):
+    from dusty.app import messages as M
+    from dusty.runtime_paths import RuntimePaths
+
+    models = tmp_path / "models"
+    models.mkdir()
+    (models / "ggml-tiny.bin").write_bytes(b"0" * 1_000_000)
+    (models / "unrecognized.bin").write_bytes(b"unknown")
+    paths = RuntimePaths(
+        tmp_path / "bin",
+        models,
+        Path(__file__).resolve().parents[2] / "resources",
+        tmp_path / "user",
+    )
+    assert installer_support.model_size(paths) == M.format_size(1_000_000)

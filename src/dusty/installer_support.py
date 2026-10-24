@@ -70,7 +70,9 @@ def model_size(paths: RuntimePaths) -> str:
                 and not file.is_junction()
             ):
                 total += file.stat().st_size
-    return f"{total / 1_000_000_000:.1f}"
+    from dusty.app import messages as M
+
+    return M.format_size(total)
 
 
 def model_status(paths: RuntimePaths) -> dict[str, str]:

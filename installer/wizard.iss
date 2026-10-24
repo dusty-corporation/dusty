@@ -1,5 +1,7 @@
 { Shared production and review page controls. No installer HTTP calls. }
 function InitializeUninstall: Boolean; forward;
+procedure FinishStopped; forward;
+procedure StopModelSetup(Confirm: Boolean); forward;
 #ifdef ReviewOnly
 procedure ReviewTick; forward;
 #endif
@@ -37,6 +39,58 @@ begin
   end;
 end;
 
+function DownloadText: String;
+var I, Mask, Bit: Integer;
+begin
+  Mask := 0; Bit := 1;
+  for I := 0 to GetArrayLength(ModelIds) - 1 do begin
+    if ModelsPage.Values[I] then Mask := Mask + Bit;
+    Bit := Bit * 2;
+  end;
+  Result := '';
+  case Mask of
+@@DOWNLOAD_CASES@@
+  end;
+end;
+
+function SizeText(Bytes: Int64): String;
+var Tenths: Int64; UnitName: String;
+begin
+  Tenths := (Bytes + 50000) div 100000;
+  UnitName := CustomMessage('SizeMegabytes');
+  if Tenths >= 10000 then begin
+    Tenths := (Bytes + 50000000) div 100000000;
+    UnitName := CustomMessage('SizeGigabytes');
+  end;
+  Result := FmtMessage(UnitName, [IntToStr(Tenths div 10) + '.' + IntToStr(Tenths mod 10)]);
+end;
+
+function SuccessText: String;
+begin
+  if GetArrayLength(Selected) > 1 then Result := CustomMessage('SetupCompletePlural')
+  else Result := CustomMessage('SetupComplete');
+end;
+
+procedure ShowAmount;
+var Bytes, Current: Int64; FileName: String;
+begin
+  Current := 0;
+  if (Stage >= 0) and (Stage <= 2) and (DownloadIndex < GetArrayLength(Downloads)) then begin
+    if Downloads[DownloadIndex] < 0 then FileName := '@@VAD_FILE@@'
+    else FileName := ModelFiles[Downloads[DownloadIndex]];
+    FileName := ExpandConstant('{localappdata}\Dusty\models\') + FileName;
+    if Stage = 1 then FileName := FileName + '.part';
+    if not FileSize64(FileName, Current) then Current := 0;
+    if Downloads[DownloadIndex] < 0 then Bytes := @@VAD_BYTES@@
+    else Bytes := ModelBytes[Downloads[DownloadIndex]];
+    if Current > Bytes then Current := Bytes;
+  end;
+  Bytes := CompletedModelBytes + Current;
+  Amount.Caption := FmtMessage(CustomMessage('DownloadAmount'), [SizeText(Bytes), SizeText(TotalModelBytes)]);
+  if (Stage >= 0) and (Stage <= 2) and (TotalModelBytes > 0) then
+    Meter.Position := Bytes * 100 div TotalModelBytes;
+end;
+
 procedure ReleaseChild;
 begin
   if ChildJob <> 0 then CloseChild(ChildJob);
@@ -70,7 +124,6 @@ procedure Failure(IsTest: Boolean);
 var S: AnsiString; GpuFailed: Boolean;
 begin
   Busy := False;
-  Action.Visible := False;
   TestFailed := TestFailed or IsTest;
   GpuFailed := False;
   if IsTest then
@@ -128,10 +181,11 @@ end;
 procedure FinishReady;
 begin
   Busy := False; InstallationReady := True;
-  Action.Visible := False;
-  Phase.Caption := CustomMessage('SetupComplete'); Meter.Position := 100;
+  Phase.Caption := SuccessText; Meter.Position := 100;
   RetryButton.Visible := False; CpuButton.Visible := False; WithoutButton.Visible := False;
   WizardForm.NextButton.Enabled := True;
+  WizardForm.NextButton.Caption := SetupMessage(msgButtonNext);
+  WizardForm.BackButton.Enabled := False;
 end;
 
 procedure ShowMemoryWarning;
@@ -151,12 +205,21 @@ begin
 end;
 
 procedure PollChild(A, B, C, D: LongWord);
-var Code: LongWord; I: Integer; Memory: TMemoryStatus; S: AnsiString;
+var Code: LongWord; I: Integer; Memory: TMemoryStatus; S: AnsiString; Prefix, Expected: Int64; Part: String;
 begin
 #ifdef ReviewOnly
   ReviewTick;
   Exit;
 #endif
+  { Explicit, disposable CI acceptance: stop a real transfer after bytes arrive. }
+  if WizardSilent and (GetEnv('GITHUB_ACTIONS') = 'true') and
+     (ExpandConstant('{param:TESTCANCEL|}') = 'yes') and (Stage = 1) and not StopRequested then begin
+    if Downloads[DownloadIndex] < 0 then begin Part := '@@VAD_FILE@@'; Expected := @@VAD_BYTES@@; end
+    else begin Part := ModelFiles[Downloads[DownloadIndex]]; Expected := ModelBytes[Downloads[DownloadIndex]]; end;
+    if FileSize64(ExpandConstant('{localappdata}\Dusty\models\') + Part + '.part', Prefix) then
+      if (Prefix > 0) and (Prefix < Expected) then begin StopModelSetup(False); Exit; end;
+  end;
+  if DownloadStarted and Busy then ShowAmount;
   if (Stage = -1) and (Child.Process <> 0) and (Tick - ProbeBegan > 7000) then begin
     ReleaseChild; ShowMemoryWarning; CheckExistingModels; Exit;
   end;
@@ -174,10 +237,10 @@ begin
     Memory.Length := 64;
     if WinMemoryStatus(Memory) then begin
       if Memory.TotalPhysical < @@MIN_RAM@@ then MemoryNotice.Caption := CustomMessage('LowMemory');
-      if (Code = 0) and (Memory.TotalPhysical >= @@MIN_RAM@@) and not ModelsTouched then
+      if (Code = 0) and (Memory.TotalPhysical >= @@MIN_RAM@@) then
         for I := 0 to GetArrayLength(ModelIds) - 1 do begin
-          ModelsPage.Values[I] := ModelIds[I] = 'large-v3-turbo-q8_0';
-          if ModelsPage.Values[I] then ModelsPage.CheckListBox.ItemCaption[I] := ModelRecommendedLabels[I] + ModelDetails[I]
+          if not ModelsTouched then ModelsPage.Values[I] := ModelIds[I] = 'large-v3-turbo-q8_0';
+          if ModelIds[I] = 'large-v3-turbo-q8_0' then ModelsPage.CheckListBox.ItemCaption[I] := ModelRecommendedLabels[I] + ModelDetails[I]
           else ModelsPage.CheckListBox.ItemCaption[I] := ModelLabels[I] + ModelDetails[I];
         end;
     end;
@@ -189,6 +252,8 @@ begin
     Busy := False; FinishedWithout := True;
     Phase.Caption := CustomMessage('FinishedWithout');
     WizardForm.NextButton.Enabled := True;
+    WizardForm.NextButton.Caption := SetupMessage(msgButtonNext);
+    if StopRequested then FinishStopped;
     Exit;
   end;
   if Stage = 6 then begin
@@ -203,8 +268,10 @@ begin
     if (Stage = 0) and (Code <> 0) then begin Stage := 1; BeginFetch('download'); Exit; end;
     if Code <> 0 then begin Failure(False); Exit; end;
     if Stage = 1 then begin Stage := 2; BeginFetch('verify'); Exit; end;
+    if Downloads[DownloadIndex] < 0 then CompletedModelBytes := CompletedModelBytes + @@VAD_BYTES@@
+    else CompletedModelBytes := CompletedModelBytes + ModelBytes[Downloads[DownloadIndex]];
     DownloadIndex := DownloadIndex + 1;
-    Meter.Position := 40 * DownloadIndex div GetArrayLength(Downloads);
+    ShowAmount;
     if DownloadIndex < GetArrayLength(Downloads) then begin Stage := 0; BeginFetch('verify'); end
     else begin Stage := 3; TestIndex := 0; BeginTest; end;
   end else begin
@@ -231,6 +298,9 @@ end;
 procedure DownloadClick(Sender: TObject);
 var I, Count: Integer;
 begin
+#ifdef ReviewOnly
+  Exit; { Native preview controls must never start a real transfer. }
+#endif
   SetArrayLength(Selected, 0); Smallest := -1;
   for I := 0 to GetArrayLength(ModelIds) - 1 do if ModelsPage.Values[I] then begin
     Count := GetArrayLength(Selected); SetArrayLength(Selected, Count + 1); Selected[Count] := I;
@@ -241,15 +311,25 @@ begin
   SetArrayLength(Downloads, GetArrayLength(Selected) + 1);
   for I := 0 to GetArrayLength(Selected) - 1 do Downloads[I] := Selected[I];
   Downloads[GetArrayLength(Selected)] := -1;
+  TotalModelBytes := @@VAD_BYTES@@; CompletedModelBytes := 0;
+  for I := 0 to GetArrayLength(Selected) - 1 do
+    TotalModelBytes := TotalModelBytes + ModelBytes[Selected[I]];
+  DownloadStarted := True; Consent.Caption := DownloadText;
+  Meter.Visible := True; Amount.Visible := True;
+  WizardForm.BackButton.Enabled := False;
   Busy := True; DownloadIndex := 0; Stage := -2;
   Meter.Position := 0; Outcome.Caption := '';
-  Action.Enabled := False; Action.Visible := False; WizardForm.NextButton.Enabled := False;
+  ShowAmount;
+  WizardForm.NextButton.Enabled := False;
   RetryButton.Visible := False; CpuButton.Visible := False; WithoutButton.Visible := False;
   if not StartChild(ExpandConstant('{app}\dusty\dusty.exe'), '--installer-prepare') then Failure(False);
 end;
 
 procedure RetryClick(Sender: TObject);
 begin
+#ifdef ReviewOnly
+  Exit;
+#endif
   RetryButton.Visible := False; CpuButton.Visible := False; WithoutButton.Visible := False;
   Busy := True;
   if Stage = 5 then begin
@@ -262,6 +342,9 @@ end;
 
 procedure CpuClick(Sender: TObject);
 begin
+#ifdef ReviewOnly
+  Exit;
+#endif
   RetryButton.Visible := False; CpuButton.Visible := False; WithoutButton.Visible := False;
   Busy := True; CpuRetry := True; BeginTest;
 end;
@@ -278,6 +361,9 @@ end;
 
 procedure WithoutClick(Sender: TObject);
 begin
+#ifdef ReviewOnly
+  Exit;
+#endif
   ReleaseChild;
   CleanupActivePartial;
   Stage := 5;
@@ -287,14 +373,71 @@ begin
   end else begin
     Busy := False; FinishedWithout := True; Phase.Caption := CustomMessage('FinishedWithout');
     WizardForm.NextButton.Enabled := True;
+    WizardForm.NextButton.Caption := SetupMessage(msgButtonNext);
   end;
-  Action.Enabled := False; Action.Visible := False; RetryButton.Visible := False;
+  RetryButton.Visible := False;
   CpuButton.Visible := False; WithoutButton.Visible := False;
+end;
+
+procedure FinishStopped;
+var I: Integer;
+begin
+  { Use Inno's ordinary finish/cleanup, with no postinstall application launch. }
+  if WizardForm.CurPageID = ReturnModelsPage.ID then
+    WizardForm.NextButton.OnClick(WizardForm.NextButton);
+  if WizardForm.CurPageID = DownloadPage.ID then
+    WizardForm.NextButton.OnClick(WizardForm.NextButton);
+  if WizardForm.CurPageID = wpFinished then begin
+    for I := 0 to WizardForm.RunList.Items.Count - 1 do WizardForm.RunList.Checked[I] := False;
+    WizardForm.NextButton.OnClick(WizardForm.NextButton);
+  end;
+end;
+
+procedure StopModelSetup(Confirm: Boolean);
+begin
+  if StopRequested then Exit;
+  if Busy and Confirm then
+    if SuppressibleMsgBox(CustomMessage('StopInstall'), mbConfirmation, MB_YESNO, IDNO) <> IDYES then Exit;
+  StopRequested := True;
+  if InstallationReady then begin ReleaseChild; FinishStopped; end
+  else begin
+    WithoutClick(nil);
+    if not Busy and FinishedWithout then FinishStopped;
+  end;
+end;
+
+procedure SetupCancelClick(Sender: TObject);
+begin
+#ifndef ReviewOnly
+  if (WizardForm.CurPageID = DownloadPage.ID) or (WizardForm.CurPageID = ReturnModelsPage.ID) then begin
+    StopModelSetup(True); Exit;
+  end;
+#endif
+  OriginalCancelClick(Sender);
+end;
+
+procedure SetupCloseQuery(Sender: TObject; var CanClose: Boolean);
+begin
+#ifndef ReviewOnly
+  if (WizardForm.CurPageID = DownloadPage.ID) or (WizardForm.CurPageID = ReturnModelsPage.ID) then begin
+    CanClose := False;
+    StopModelSetup(True); Exit;
+  end;
+#endif
+  { Pinned native form has no OnCloseQuery handler. Leave earlier pages to its OnClose. }
+end;
+
+procedure EnableModelPageCancel;
+begin
+  WizardForm.CancelButton.Visible := True;
+  WizardForm.CancelButton.Enabled := True;
+  SetupEnableMenuItem(SetupSystemMenu(WizardForm.Handle, False), $F060, 0);
 end;
 
 procedure ModelsClick(Sender: TObject);
 begin
   ModelsTouched := True;
+  ShowMemoryWarning;
 end;
 
 procedure LicenseClick(Sender: TObject);
@@ -309,7 +452,7 @@ begin
 end;
 
 procedure InitializeWizard;
-var I: Integer; Requested: String; Notice: TNewStaticText; Button: TNewButton;
+var I: Integer; Requested: String; Button: TNewButton;
 begin
   ModelsPage := CreateInputOptionPage(wpLicense, CustomMessage('ChooseModels'),
     CustomMessage('ChooseModelsHelp'), '', False, True);
@@ -320,12 +463,12 @@ begin
 @@MODEL_SETUP@@
   ModelsPage.CheckListBox.OnClickCheck := @ModelsClick;
   ModelsPage.CheckListBox.Height := ModelsPage.SurfaceHeight - ModelsPage.CheckListBox.Top - ScaleY(160);
-  Notice := NewLabel(ModelsPage.Surface, 0, 40, @@VOICE_DESCRIPTION@@);
-  Notice.Top := ModelsPage.CheckListBox.Top + ModelsPage.CheckListBox.Height + ScaleY(4);
-  Notice := NewLabel(ModelsPage.Surface, 0, 45, '@@MODEL_REVIEW@@');
-  Notice.Top := ModelsPage.CheckListBox.Top + ModelsPage.CheckListBox.Height + ScaleY(48);
+  VoiceNotice := NewLabel(ModelsPage.Surface, 0, 40, @@VOICE_DESCRIPTION@@);
+  VoiceNotice.Top := ModelsPage.CheckListBox.Top + ModelsPage.CheckListBox.Height + ScaleY(4);
+  AccuracyNotice := NewLabel(ModelsPage.Surface, 0, 45, '@@MODEL_REVIEW@@');
+  AccuracyNotice.Top := ModelsPage.CheckListBox.Top + ModelsPage.CheckListBox.Height + ScaleY(48);
   MemoryNotice := NewLabel(ModelsPage.Surface, 0, 60, '');
-  MemoryNotice.Top := Notice.Top + ScaleY(45);
+  MemoryNotice.Top := AccuracyNotice.Top + ScaleY(45);
   Requested := ExpandConstant('{param:MODELS|small}');
   for I := 0 to GetArrayLength(ModelIds) - 1 do begin
     ModelsPage.Values[I] := Pos(',' + ModelIds[I] + ',', ',' + Requested + ',') > 0;
@@ -340,26 +483,37 @@ begin
   Button := NewButton(WizardForm.LicensePage, 300, 0, 180, CustomMessage('LicenseMicrosoft'), @LicenseClick);
   Button.Tag := 2; Button.Top := WizardForm.LicenseMemo.Top + WizardForm.LicenseMemo.Height + ScaleY(4);
 #ifdef ReviewOnly
-  DownloadPage := CreateCustomPage(wpSelectTasks, CustomMessage('DownloadPage'), CustomMessage('DownloadPageHelp'));
+  ReturnModelsPage := CreateCustomPage(wpSelectTasks, CustomMessage('ChooseModels'), CustomMessage('ChooseModelsHelp'));
 #else
-  DownloadPage := CreateCustomPage(wpInstalling, CustomMessage('DownloadPage'), CustomMessage('DownloadPageHelp'));
+  ReturnModelsPage := CreateCustomPage(wpInstalling, CustomMessage('ChooseModels'), CustomMessage('ChooseModelsHelp'));
 #endif
-  Consent := NewLabel(DownloadPage.Surface, 8, 70, '');
-  Phase := NewLabel(DownloadPage.Surface, 90, 70, '');
+  DownloadPage := CreateCustomPage(ReturnModelsPage.ID, CustomMessage('DownloadPage'), CustomMessage('DownloadPageHelp'));
+  Consent := NewLabel(DownloadPage.Surface, 8, 52, '');
+  Phase := NewLabel(DownloadPage.Surface, 68, 60, '');
   Meter := TNewProgressBar.Create(WizardForm); Meter.Parent := DownloadPage.Surface;
-  Meter.SetBounds(0, ScaleY(170), DownloadPage.SurfaceWidth, ScaleY(24)); Meter.Max := 100;
-  Outcome := NewLabel(DownloadPage.Surface, 215, 65, '');
-  Action := NewButton(DownloadPage.Surface, 0, 300, 160, CustomMessage('DownloadAction'), @DownloadClick);
-  RetryButton := NewButton(DownloadPage.Surface, 0, 300, 110, CustomMessage('Retry'), @RetryClick);
-  CpuButton := NewButton(DownloadPage.Surface, 120, 300, 145, CustomMessage('RetryCpu'), @CpuClick);
-  WithoutButton := NewButton(DownloadPage.Surface, 275, 300, 200, CustomMessage('FinishWithout'), @WithoutClick);
+  Meter.SetBounds(0, ScaleY(132), DownloadPage.SurfaceWidth, ScaleY(24)); Meter.Max := 100;
+  Amount := NewLabel(DownloadPage.Surface, 160, 24, '');
+  Outcome := NewLabel(DownloadPage.Surface, 232, 68, '');
+  RetryButton := NewButton(DownloadPage.Surface, 0, 192, 95, CustomMessage('Retry'), @RetryClick);
+  CpuButton := NewButton(DownloadPage.Surface, 105, 192, 220, CustomMessage('RetryCpu'), @CpuClick);
+  WithoutButton := NewButton(DownloadPage.Surface, 335, 192, 215, CustomMessage('FinishWithout'), @WithoutClick);
   RetryButton.Visible := False; CpuButton.Visible := False; WithoutButton.Visible := False;
+  OriginalCancelClick := WizardForm.CancelButton.OnClick;
+  WizardForm.CancelButton.OnClick := @SetupCancelClick;
+  WizardForm.OnCloseQuery := @SetupCloseQuery;
   Timer := SetTimer(0, 0, 100, CreateCallback(@PollChild));
 end;
 
 procedure CurPageChanged(Page: Integer);
-var Code: Integer; I: Integer; Mode: String;
+var Code: Integer; I, Count: Integer; Mode: String;
 begin
+  if Page = ReturnModelsPage.ID then begin
+    EnableModelPageCancel;
+    ModelsPage.CheckListBox.Parent := ReturnModelsPage.Surface;
+    VoiceNotice.Parent := ReturnModelsPage.Surface;
+    AccuracyNotice.Parent := ReturnModelsPage.Surface;
+    MemoryNotice.Parent := ReturnModelsPage.Surface;
+  end;
   if (Page = ModelsPage.ID) and not ProbeStarted then begin
     ProbeStarted := True;
 #ifndef ReviewOnly
@@ -373,16 +527,41 @@ begin
 #endif
   end;
   if Page = DownloadPage.ID then begin
-    Consent.Caption := ConsentText;
-    WizardForm.BackButton.Enabled := False;
-    WizardForm.NextButton.Enabled := InstallationReady or FinishedWithout;
+    EnableModelPageCancel;
+    WizardForm.BackButton.Visible := True;
+    WizardForm.BackButton.Enabled := not DownloadStarted;
+    WizardForm.NextButton.Enabled := not DownloadStarted or InstallationReady or FinishedWithout;
+    if DownloadStarted then begin
+      Consent.Caption := DownloadText;
+      WizardForm.NextButton.Caption := SetupMessage(msgButtonNext);
+    end else begin
+      Consent.Caption := ConsentText;
+      WizardForm.NextButton.Caption := CustomMessage('DownloadAction');
+    end;
+    Meter.Visible := DownloadStarted; Amount.Visible := DownloadStarted;
 #ifdef ReviewOnly
     Mode := ExpandConstant('{param:REVIEWSTATE|consent}');
     Phase.Caption := CustomMessage('ReviewOnly');
-    Action.Enabled := False; WizardForm.NextButton.Enabled := False;
-    if Mode <> 'consent' then Action.Visible := False;
-    if Mode = 'download' then begin Phase.Caption := FmtMessage(CustomMessage('DownloadWorking'), [ModelNames[1]]); Meter.Position := 32; end;
-    if Mode = 'test' then begin Phase.Caption := FmtMessage(CustomMessage('SelfTestWorking'), [ModelNames[1], '2', '3']); Meter.Position := 70; end;
+    WizardForm.NextButton.Enabled := Mode = 'consent';
+    if Mode <> 'consent' then begin
+      DownloadStarted := True; Consent.Caption := DownloadText;
+      Meter.Visible := True; Amount.Visible := True;
+      TotalModelBytes := @@VAD_BYTES@@;
+      SetArrayLength(Selected, 0);
+      for I := 0 to GetArrayLength(ModelIds) - 1 do
+        if ModelsPage.Values[I] then begin
+          TotalModelBytes := TotalModelBytes + ModelBytes[I];
+          Count := GetArrayLength(Selected); SetArrayLength(Selected, Count + 1); Selected[Count] := I;
+        end;
+      CompletedModelBytes := TotalModelBytes * 32 div 100; Stage := 3;
+      if (Mode = 'test') or (Mode = 'test-failure') or (Mode = 'complete') then
+        CompletedModelBytes := TotalModelBytes;
+      ShowAmount;
+      WizardForm.NextButton.Caption := SetupMessage(msgButtonNext);
+      WizardForm.BackButton.Enabled := False;
+    end;
+    if Mode = 'download' then begin Phase.Caption := FmtMessage(CustomMessage('DownloadWorking'), [ModelNames[Selected[0]]]); Meter.Position := 32; end;
+    if Mode = 'test' then begin Phase.Caption := FmtMessage(CustomMessage('SelfTestWorking'), [ModelNames[Selected[0]], '1', IntToStr(GetArrayLength(Selected))]); Meter.Position := 70; end;
     if Mode = 'failure' then Failure(False);
     if Mode = 'test-failure' then begin
       Failure(True); Phase.Caption := CustomMessage('GpuSelfTestFailed'); CpuButton.Visible := True;
@@ -391,23 +570,56 @@ begin
     if Mode = 'without' then begin Phase.Caption := CustomMessage('FinishedWithout'); WithoutButton.Visible := False; end;
     if Mode = 'uninstall' then begin
       Consent.Caption := CustomMessage('RemoveModelsHelp');
-      Phase.Caption := FmtMessage(CustomMessage('RemoveModels'), ['1.4']);
+      Phase.Caption := FmtMessage(CustomMessage('RemoveModels'), ['@@REVIEW_MODELS_SIZE@@']);
     end;
-    RetryButton.Enabled := False; CpuButton.Enabled := False; WithoutButton.Enabled := False;
 #endif
   end;
-  if (Page = wpFinished) and FinishedWithout then WizardForm.FinishedLabel.Caption := CustomMessage('FinishedWithout');
+  if Page = wpFinished then begin
+    WizardForm.BackButton.Visible := False;
+    if StopRequested then
+      for I := 0 to WizardForm.RunList.Items.Count - 1 do WizardForm.RunList.Checked[I] := False;
+    if FinishedWithout then WizardForm.FinishedLabel.Caption := CustomMessage('FinishedWithout')
+    else WizardForm.FinishedLabel.Caption := SuccessText;
+  end;
+end;
+
+function BackButtonClick(CurPageID: Integer): Boolean;
+begin
+  Result := True;
+  if CurPageID = DownloadPage.ID then begin
+    Result := not DownloadStarted;
+    ReturnModelsRequested := Result;
+  end;
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
-var I, Count: Integer;
+var I, Count: Integer; Info: TJobLimits32;
 begin
   Result := True;
-  if CurPageID = ModelsPage.ID then begin
+  if StopRequested then Exit;
+  if (CurPageID = ModelsPage.ID) or (CurPageID = ReturnModelsPage.ID) then begin
     Count := 0; for I := 0 to GetArrayLength(ModelIds) - 1 do if ModelsPage.Values[I] then Count := Count + 1;
     Result := Count > 0;
+    if not Result then MemoryNotice.Caption := CustomMessage('NeedModel');
+    if Result then ReturnModelsRequested := False;
   end;
-  if CurPageID = DownloadPage.ID then Result := InstallationReady or FinishedWithout;
+  if CurPageID = DownloadPage.ID then begin
+    Result := InstallationReady or FinishedWithout;
+#ifndef ReviewOnly
+    if not DownloadStarted then begin DownloadClick(nil); Result := False; end;
+#endif
+  end;
+#ifndef ReviewOnly
+  if (CurPageID = wpFinished) and not Busy and (InstallationReady or FinishedWithout) then begin
+    { No downloader/test remains. The explicitly requested GUI must outlive Setup. }
+    ReleaseChild;
+    for I := 0 to 111 do Info[I] := 0;
+    if not WinSetJob(DownloadJob, 9, Info, 112) then begin
+      if WizardForm.RunList.Items.Count > 0 then WizardForm.RunList.Checked[0] := False;
+      SuppressibleMsgBox(CustomMessage('OpenFromStartMenu'), mbInformation, MB_OK, IDOK);
+    end;
+  end;
+#endif
 #ifdef ReviewOnly
   if CurPageID = DownloadPage.ID then Result := False;
   if CurPageID = wpReady then Result := False;
@@ -419,6 +631,7 @@ begin
   if (CurStep = ssPostInstall) and WizardSilent then begin
     DownloadClick(nil);
     while Busy do begin Sleep(100); PollChild(0, 0, 0, 0); end;
+    if StopRequested then Exit;
     if not InstallationReady then RaiseException(CustomMessage('SelfTestFailed'));
   end;
 end;
@@ -440,19 +653,20 @@ end;
 
 function GetCustomSetupExitCode: Integer;
 begin
-  if InstallationReady or FinishedWithout then Result := 0 else Result := 10;
+  if StopRequested then Result := 130
+  else if InstallationReady or FinishedWithout then Result := 0 else Result := 10;
 end;
 
 function UninstallModelSize: String;
 var Code: Integer; S: AnsiString;
 begin
-  Result := '0.0';
+  Result := '@@ZERO_SIZE@@';
 #ifdef ReviewOnly
-  Result := '1.4'; Exit;
+  Result := '@@REVIEW_MODELS_SIZE@@'; Exit;
 #endif
   if Exec(ExpandConstant('{app}\dusty\dusty.exe'), '--model-size --out ' +
     Quoted(ExpandConstant('{tmp}\model-size.txt')), '', SW_HIDE, ewWaitUntilTerminated, Code) then
-    if (Code = 0) and LoadStringFromFile(ExpandConstant('{tmp}\model-size.txt'), S) then Result := String(S);
+    if (Code = 0) and LoadStringFromFile(ExpandConstant('{tmp}\model-size.txt'), S) then Result := UTF8Decode(S);
 end;
 
 #ifdef ReviewOnly
@@ -507,11 +721,13 @@ begin
       WizardForm.NextButton.Visible := False; WizardForm.BackButton.Visible := False;
     end;
     if Wanted = 'finish' then begin
-      WizardForm.FinishedLabel.Caption := CustomMessage('SetupComplete');
+      WizardForm.FinishedLabel.Caption := SuccessText;
       WizardForm.OuterNotebook.ActivePage := WizardForm.FinishedPage;
       WizardForm.NextButton.Caption := SetupMessage(msgButtonFinish);
       WizardForm.NextButton.Enabled := True;
       WizardForm.BackButton.Visible := False; WizardForm.CancelButton.Visible := False;
+      WizardForm.RunList.AddCheckBox(CustomMessage('OpenDustyNow'), '', 0, True, True, True, True, nil);
+      WizardForm.RunList.Visible := True;
     end;
     if Wanted = 'finish-without' then begin
       WizardForm.FinishedLabel.Caption := CustomMessage('FinishedWithout');
@@ -519,6 +735,8 @@ begin
       WizardForm.NextButton.Caption := SetupMessage(msgButtonFinish);
       WizardForm.NextButton.Enabled := True;
       WizardForm.BackButton.Visible := False; WizardForm.CancelButton.Visible := False;
+      WizardForm.RunList.AddCheckBox(CustomMessage('OpenDustyNow'), '', 0, True, True, True, True, nil);
+      WizardForm.RunList.Visible := True;
     end;
     if Wanted = 'uninstall' then InitializeUninstall;
     Exit;
@@ -531,6 +749,7 @@ end;
 function ShouldSkipPage(Page: Integer): Boolean;
 begin
   Result := False;
+  if Page = ReturnModelsPage.ID then Result := not ReturnModelsRequested;
 #ifdef ReviewOnly
   if (Page = DownloadPage.ID) and (ExpandConstant('{param:REVIEWPAGE|}') = 'ready') then Result := True;
 #endif

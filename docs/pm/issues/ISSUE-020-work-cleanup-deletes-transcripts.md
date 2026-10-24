@@ -2,7 +2,7 @@
 
 - Severity: S0 (SPEC NN-7)
 - Milestone: M5 self-review; underlying cleanup predates M5
-- Status: Open, implementation stopped pending PM decision
+- Status: Resolved (2026-10-24), PM-approved ownership repair verified
 - Environment: Windows desktop, Python 3.12.11, m5-installer at 078b262
 
 ## Steps to reproduce
@@ -89,3 +89,15 @@ outputs inside managed areas, preserve legacy destinations and clear their saved
 selection with a one-time explanation. Cover startup, jobs, probes, self-tests and
 uninstall, then source/package/installed WFP/uninstall gates. Repair is in progress;
 this issue remains open until the gates pass.
+
+## Resolution evidence
+
+Final repair 1b62946 passed CI 40061186069: source 293 passed/2 expected skips
+plus the separate real-network test; measured coverage 94.2%. Packaged PE,
+license, GUI, WFP, installed WFP, same-version upgrade preservation and both
+uninstall choices pass. Setup/GUI/native connection counts are 0; fetch has
+4 allowed/0 blocked events, calibrated. Source/implementation parity with
+m6-docs-v2 8c199b0 verified. See M5-interim-9.md for the complete delete sweep.
+The three original regressions, junction/symlink tests, unknown-content tests,
+and marker-loss/change continuity regressions are enabled. No Owner data touched.
+Two-version release acceptance and fresh VM testing remain separate M5 tasks.

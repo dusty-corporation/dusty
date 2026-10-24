@@ -38,7 +38,15 @@ RestartApplications=no
 DialogFontSize=10
 
 [Tasks]
-Name: desktopicon; Description: "{cm:DesktopShortcut}"; Flags: unchecked
+Name: desktopicon; Description: "{cm:DesktopShortcut}"
+
+[Messages]
+WelcomeLabel2=@@WELCOME_DESCRIPTION@@
+
+[Run]
+#ifndef ReviewOnly
+Filename: "{app}\dusty\dusty.exe"; Description: "{cm:OpenDustyNow}"; Flags: nowait postinstall skipifsilent runasoriginaluser
+#endif
 
 [Files]
 Source: "DUSTY-LICENSE.txt"; Flags: dontcopy
@@ -105,6 +113,10 @@ function TerminateChild(Process, Code: LongWord): Boolean;
   external 'TerminateProcess@kernel32.dll stdcall';
 function Tick: Int64;
   external 'GetTickCount64@kernel32.dll stdcall';
+function SetupSystemMenu(Wnd: LongWord; Revert: Boolean): LongWord;
+  external 'GetSystemMenu@user32.dll stdcall';
+function SetupEnableMenuItem(Menu, Item, Flags: LongWord): LongWord;
+  external 'EnableMenuItem@user32.dll stdcall';
 #ifdef ReviewOnly
 function WindowDpi(Wnd: LongWord): LongWord;
   external 'GetDpiForWindow@user32.dll stdcall';
@@ -116,11 +128,12 @@ function KillTimer(Wnd, Id: LongWord): Boolean;
 
 var
   ModelsPage: TInputOptionWizardPage;
+  ReturnModelsPage: TWizardPage;
   DownloadPage: TWizardPage;
   ProgressPage: TOutputMarqueeProgressWizardPage;
   ModelIds, ModelNames, ModelFiles, ModelLabels, ModelRecommendedLabels, ModelDetails: TArrayOfString;
-  Consent, Phase, Outcome, MemoryNotice: TNewStaticText;
-  Action, RetryButton, CpuButton, WithoutButton: TNewButton;
+  Consent, Phase, Outcome, MemoryNotice, VoiceNotice, AccuracyNotice, Amount: TNewStaticText;
+  RetryButton, CpuButton, WithoutButton: TNewButton;
   Meter: TNewProgressBar;
   Child: TProcInfo;
   ChildJob, Timer: LongWord;
@@ -136,6 +149,10 @@ var
   RemoveModels: Boolean;
   LastFetchCode: Integer;
   DownloadActive: Boolean;
+  DownloadStarted, ReturnModelsRequested: Boolean;
+  TotalModelBytes, CompletedModelBytes: Int64;
+  StopRequested: Boolean;
+  OriginalCancelClick: TNotifyEvent;
   DownloadJob: LongWord;
 
 function InitializeSetup: Boolean;
@@ -185,32 +202,35 @@ begin
     Exit;
   end;
 #endif
-  Page := CreateCustomForm(ScaleX(480), ScaleY(180), False, False);
+  Page := CreateCustomForm(ScaleX(500), ScaleY(160), True, True);
   try
-    Page.Caption := 'Dusty';
+    Page.ClientWidth := ScaleX(500);
+    Page.ClientHeight := ScaleY(160);
+    Page.Caption := CustomMessage('UninstallTitle');
     Choice := TNewCheckBox.Create(Page);
     Choice.Parent := Page;
-    Choice.SetBounds(ScaleX(20), ScaleY(20), ScaleX(440), ScaleY(24));
+    Choice.SetBounds(ScaleX(20), ScaleY(18), ScaleX(460), ScaleY(26));
     Choice.Caption := FmtMessage(CustomMessage('RemoveModels'), [UninstallModelSize]);
     Choice.Checked := True;
     Help := TNewStaticText.Create(Page);
     Help.Parent := Page;
-    Help.SetBounds(ScaleX(20), ScaleY(55), ScaleX(440), ScaleY(60));
+    Help.SetBounds(ScaleX(20), ScaleY(54), ScaleX(460), ScaleY(32));
     Help.AutoSize := False;
     Help.WordWrap := True;
     Help.Caption := CustomMessage('RemoveModelsHelp');
     Confirm := TNewButton.Create(Page);
     Confirm.Parent := Page;
-    Confirm.SetBounds(ScaleX(260), ScaleY(130), ScaleX(95), ScaleY(28));
-    Confirm.Caption := SetupMessage(msgButtonOK);
+    Confirm.SetBounds(ScaleX(250), ScaleY(112), ScaleX(110), ScaleY(30));
+    Confirm.Caption := CustomMessage('UninstallAction');
     Confirm.ModalResult := mrOk;
-    Confirm.Default := True;
+    Confirm.Default := False;
     Cancel := TNewButton.Create(Page);
     Cancel.Parent := Page;
-    Cancel.SetBounds(ScaleX(365), ScaleY(130), ScaleX(95), ScaleY(28));
+    Cancel.SetBounds(ScaleX(370), ScaleY(112), ScaleX(110), ScaleY(30));
     Cancel.Caption := SetupMessage(msgButtonCancel);
     Cancel.ModalResult := mrCancel;
     Cancel.Cancel := True;
+    Cancel.Default := True;
     Result := Page.ShowModal = mrOk;
     RemoveModels := Choice.Checked;
   finally

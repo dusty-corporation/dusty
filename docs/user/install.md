@@ -46,17 +46,20 @@ that a file is safe.
    choice. Voice detection is always included.
 3. Keep the suggested per-user app folder unless you have a reason to change it.
    Installation should not require administrator approval.
-4. Review the GitHub download confirmation. Model files can be large; wait for
+4. Review the GitHub download confirmation. Back lets you change the model before
+   starting. Press Download. Model files can be large; wait for
    download and verification to finish. No recording is sent.
 5. Setup checks downloaded files and tests each selected transcription model
    with Automatic, plus the smallest selected model once on the processor.
-   A failure offers Retry. A failed graphics test also offers Retry on CPU,
+   A failure offers Retry. A failed graphics test also offers Use the processor instead,
    and says which device actually worked. You can choose Finish without a model
    instead. That finishes installing the app, not a successful model test.
    Verified and pre-existing files stay; a failed default choice is cleared.
    Dusty shows the warning and asks you to choose a model in Options, or download
    one if none is installed.
-6. Open Dusty from the Start Menu and follow [First run](first-run.md).
+6. Leave Open Dusty now checked to open it when you press Finish, or use the
+   Start Menu later. The desktop shortcut starts checked too.
+   Follow [First run](first-run.md).
 
 ## Upgrade or remove Dusty
 
@@ -69,7 +72,13 @@ The [privacy guide](../privacy.md) explains the locations and deletion limits.
 
 Normal Cancel or normal close removes the active partial download. After a crash
 or forced close, a recent partial may resume, but its full size and SHA-256 must
-still match before use. At startup, partials older than seven days are removed.
+still match before use. At startup, partials older than seven days are removed
+only when a matching ownership receipt proves Dusty wrote their current contents.
+Unknown or changed files are preserved.
+
+Cancel, Escape or window Close during Setup's model stage stops the child and
+removes the active partial, while keeping verified models and the installed app.
+It does not open Dusty automatically after a stopped setup.
 
 The uninstaller's Also remove downloaded models checkbox starts checked and
 shows the actual size. Uncheck it to keep verified models for reinstallation.
