@@ -47,9 +47,9 @@ is **not met**, and the final receipt-based release run was stopped.
 |---|---|---|
 | Task 1: split onedir packaging, bin/resources | Done | Existing approved split payload, exact PE pins, runtime provenance, license gates and packaged GUI/WFP tests retained. |
 | Task 2: installer pages, downloads and tests | Partial | Shared strings, license views, bounded real-GPU/RAM probe and failure/retry flows implemented; PM page review and clean-machine acceptance pending. |
-| Task 3: upgrade preserves verified models | Partial | Existing silent lifecycle passes on earlier CI; new two-version path verifies increasing PE versions, model SHA/write-time identity with fetch blocked. Await final tag evidence. |
+| Task 3: upgrade preserves verified models | Blocked | Earlier runs had two_distinct_versions=false. Final corrected receipt-based run 40042648483 was cancelled after ISSUE-020; no final two-version acceptance claimed. |
 | Task 4: uninstall and model-size choice | Partial | Known owned files only, explicit retain/remove choice, protected transcript sentinel and source regressions; fresh VM both variants pending. |
-| Task 5: gated tag draft release and assets | Partial | release.yml reuses all CI gates; approved tag validation/version map and exact asset closure tested. Two draft tag runs pending. |
+| Task 5: gated tag draft release and assets | Partial, S0 blocked | Drafts were produced; final staging requires actual upgrade/current-installer WFP receipts. Corrected run stopped for ISSUE-020 before final acceptance. |
 | Task 6: SmartScreen README | Done | README gives unsigned explanation, More info/Run anyway, Get-FileHash and full checksum comparison. |
 | Acceptance: draft CI release with artifacts | Done | v0.5.0-m5.2, run 40038534920, all gates and draft creation passed; five assets. |
 | Acceptance: SPEC 11.6 fresh VM | Owner needed | Final M5-checklist.md, standard user, all cases and expected results. |
@@ -92,11 +92,15 @@ all gates passed. Installer 34,670,296 bytes. No portable release asset.
 | installer-jedi-source.zip | 4dac842302518887fd2e8692da73ca1f2adcac9092c32cb634e4f7143f4ae217 |
 | SHA256SUMS.txt | 3484ed0475b5f46bd950253d389a7e970464630c87d3618ce01d3723d173b766 |
 
+These historical assets are not safe release candidates while ISSUE-020 is open.
 The .2 installer audit is calibrated: Setup 0, GUI/probe 0, native 0, fetch
 allowed 4, blocked 0. Installed processing-only audit and both uninstall choices
 passed; transcript sentinel unchanged. Its upgrade reused the same build and is
-not two-version evidence. The corrected test tag .4 runs a true .2-to-.4 upgrade,
-including prior-installer checksum verification and downloader blocking.
+not two-version evidence. Later successful .3/.4 runs also lacked a prior draft
+input and are not true-upgrade evidence. The final pipeline reads a prior gated
+workflow artifact with read-only access, verifies its checksum, and rejects false
+upgrade/current-installer WFP receipts. The corrected .7 run was cancelled for
+ISSUE-020; final two-version acceptance is withheld.
 CI .2 source: 256 passed, 2 skipped, 94.6% coverage; separate real-network
 download test 1 passed. The failed .1 source golden/version attempt produced no
 release or installer upload. Its tag/history remain unchanged.
@@ -168,3 +172,13 @@ seven-day cleanup and SmartScreen. Exact SPEC 9.6 wording is retained.
 Reference m6-docs (c855b52) and m5-packaging-spike (95dd90b) remain untouched.
 No M6 acceptance or PR is claimed. Later M5 evidence-only report updates are on
 m5-installer; the documentation branch is available for PM review after M5.
+
+## Incident checkpoint and stop
+
+S0 regression/report checkpoint c621c88 is pushed on m5-installer. The same
+enabled failing regressions and incident warnings are pushed on m6-docs-v2 at
+5c8b285, so its packaging is blocked too. All five requested cancellations are
+confirmed completed/cancelled: 40043241355, 40042984627, 40042648483,
+40042645271 and 40042365579. No run, branch, tag, artifact or release was deleted;
+no PR, merge or publication. Source of truth and Owner brief remain unchanged.
+Normal milestone work is stopped pending the PM-approved NN-7 repair.

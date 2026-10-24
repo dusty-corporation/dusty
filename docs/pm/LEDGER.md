@@ -863,3 +863,14 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
   40042648483, 40042645271 and 40042365579. No run/artifact/tag/release was deleted.
 - Screenshots and M6 docs prework are pushed, but neither is acceptance for the
   affected code. Keep all M5 drafts unpublished and postpone VM installation.
+
+### Final incident containment checkpoint
+
+- All five requested workflow cancellations are confirmed completed/cancelled.
+- m5-installer incident regression commit c621c88 pushed; m6-docs-v2 5c8b285
+  also carries the enabled failing tests and S0 warnings, blocking packaging.
+- Reference heads remain 95dd90b (m5-packaging-spike) and c855b52 (m6-docs).
+  Working tree is on m5-installer; no product repair or further work after stop.
+- M5-report.md / M5-interim-8.md are the morning handoff. PM approval for the
+  cleanup-ownership repair is required before resuming. No final CI/VM/release
+  acceptance is claimed. Owner profile and output files were not touched.
