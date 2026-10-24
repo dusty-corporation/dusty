@@ -617,3 +617,7 @@ INSTALLER_TEST_WARNING = (
     "The installer transcription test did not pass. Choose a "
     "transcription model in Options, or run the self-test again."
 )
+MANAGED_FOLDER = (
+    "Dusty uses this folder for its own files. Choose another folder for your recordings "
+    "and transcripts."
+)

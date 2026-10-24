@@ -89,7 +89,7 @@ def main() -> None:
     ):
         raise ValueError("Bundle output must stay inside the repository dist folder")
     if destination.exists():
-        shutil.rmtree(destination)
+        raise ValueError("Bundle destination already exists; use a fresh build workspace")
     subprocess.run(
         [
             sys.executable,

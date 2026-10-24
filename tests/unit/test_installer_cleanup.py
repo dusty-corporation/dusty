@@ -54,11 +54,14 @@ def test_cleanup_protects_internal_output_and_retains_metadata(tmp_path):
 
 
 def test_cleanup_removes_recognized_job_work_only(tmp_path):
+    from dusty.work_area import OwnedWork
+
     root = tmp_path / "Dusty"
-    work = root / "work/7661d396-f8aa-4abf-bdd0-6292417a66b2"
-    work.mkdir(parents=True)
+    owned = OwnedWork(root / "work", "job")
+    work = owned.path
     (work / "audio.wav").write_bytes(b"temporary")
     (work / "raw.json").write_text("temporary")
+    owned.record("audio.wav", "raw.json")
     paths = RuntimePaths(tmp_path, root / "models", ROOT / "resources", root)
     assert cleanup(paths, remove_models=False)
     assert not root.exists()

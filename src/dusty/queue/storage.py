@@ -2,6 +2,7 @@
 
 import json
 import os
+import tempfile
 from dataclasses import asdict, fields
 from datetime import UTC, datetime
 from pathlib import Path
@@ -12,10 +13,15 @@ from dusty.core import BatchOptions, FailureCode, Job, JobStatus
 
 
 def atomic_json(path: Path, value: object) -> None:
+    from dusty.work_area import linked
+
+    if linked(path):
+        raise OSError("Linked state file")
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(path.name + ".dusty-tmp")
+    descriptor, name = tempfile.mkstemp(suffix=".dusty-tmp", dir=path.parent)
+    temporary = Path(name)
     try:
-        with temporary.open("w", encoding="utf-8", newline="\n") as stream:
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as stream:
             json.dump(value, stream, ensure_ascii=False, indent=2)
             stream.flush()
             os.fsync(stream.fileno())

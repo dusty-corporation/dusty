@@ -469,6 +469,10 @@ class MainWindow(QMainWindow):
         self._startup_dialogs_active = True
         self._startup_dialogs_shown = True
         try:
+            if self.settings.get("managed_folder_notice", False):
+                self.settings["managed_folder_notice"] = False
+                self.show_error(text=M.MANAGED_FOLDER)
+                self._save_settings()
             # A saved folder is the welcome gate, including older settings files.
             # exec() keeps recovery behind welcome even with nested Qt events.
             if not self.output_dir:
@@ -524,7 +528,11 @@ class MainWindow(QMainWindow):
             if key in settings:
                 self._set_combo(combo, settings[key])
         if settings.get("output_dir"):
-            self.output_dir = Path(settings["output_dir"])
+            from dusty.work_area import managed_destination
+
+            output = Path(settings["output_dir"])
+            if not managed_destination(output, self.paths):
+                self.output_dir = output
         for key, box in (
             ("same_folder", self.same_folder),
             ("keep_structure", self.keep_structure),
@@ -929,11 +937,21 @@ class MainWindow(QMainWindow):
     def choose_output(self) -> None:
         folder = QFileDialog.getExistingDirectory(self, M.CHOOSE_FOLDER)
         if folder:
+            from dusty.work_area import managed_destination
+
+            if managed_destination(Path(folder), self.paths):
+                self.show_error(text=M.MANAGED_FOLDER)
+                return
             self.output_dir = Path(folder)
             self._rules()
 
     def add_paths(self, paths: list[Path], *, recursive: bool = False) -> None:
         if self.running or (self.scanner and self.scanner.isRunning()):
+            return
+        from dusty.work_area import managed_destination
+
+        if any(managed_destination(path, self.paths) for path in paths):
+            self.show_error(text=M.MANAGED_FOLDER)
             return
         self.status.setText(M.SCANNING)
         self.scanner = ScanWorker(paths, recursive, list(self.model.jobs), self.paths)
@@ -946,7 +964,14 @@ class MainWindow(QMainWindow):
 
     @Slot(object)
     def _scanned(self, result: ScanResult) -> None:
+        from dusty.work_area import managed_destination
+
+        if any(managed_destination(job.source, self.paths) for job in result.jobs):
+            self.show_error(text=M.MANAGED_FOLDER)
+            return
         self.model.set_jobs(self.model.jobs + list(result.jobs))
+        if result.rejected:
+            self.show_error(text=M.MANAGED_FOLDER)
         name = result.duplicate_paths[0].name if len(result.duplicate_paths) == 1 else ""
         self.status.setText(
             M.scan_summary(len(result.jobs), result.unsupported, result.duplicates, name)
@@ -1052,6 +1077,16 @@ class MainWindow(QMainWindow):
         if not self.ready or self.running or not self.start_button.isEnabled():
             return
         options = self.batch_options()
+        from dusty.queue.outputs import output_targets
+        from dusty.work_area import managed_destination
+
+        if any(
+            managed_destination(path, self.paths)
+            for job in self.model.jobs
+            for path in (job.source, *output_targets(job, replace(options, collision="overwrite")))
+        ):
+            self.show_error(text=M.MANAGED_FOLDER)
+            return
         destinations = {
             job.source.parent if options.same_folder else options.output_dir
             for job in self.model.jobs

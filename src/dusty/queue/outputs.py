@@ -1,10 +1,12 @@
 """Plan collision-safe names and atomically publish rendered outputs."""
 
 import os
+import tempfile
 from pathlib import Path
 
 from dusty.core import BatchOptions, Job, Transcript
 from dusty.export import render_docx, render_json, render_srt, render_txt, render_vtt
+from dusty.work_area import linked
 
 RENDERERS = {
     "txt": render_txt,
@@ -47,6 +49,8 @@ def write_outputs(job: Job, options: BatchOptions, transcript: Transcript) -> li
     published: list[Path] = []
     try:
         for fmt, target in zip(options.formats, targets, strict=True):
+            if linked(target.parent):
+                raise OSError("Linked output folder")
             target.parent.mkdir(parents=True, exist_ok=True)
             if fmt == "json":
                 content = render_json(transcript, job.source)
@@ -54,9 +58,10 @@ def write_outputs(job: Job, options: BatchOptions, transcript: Transcript) -> li
                 content = render_docx(transcript, job.source)
             else:
                 content = RENDERERS[fmt](transcript)
-            temporary = target.with_name(target.name + f".{job.id}.dusty-tmp")
+            descriptor, name = tempfile.mkstemp(suffix=".dusty-tmp", dir=target.parent)
+            temporary = Path(name)
             try:
-                with temporary.open("xb") as stream:
+                with os.fdopen(descriptor, "wb") as stream:
                     stream.write(content)
                     stream.flush()
                     os.fsync(stream.fileno())

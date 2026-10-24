@@ -79,3 +79,13 @@ cancellation of own active runs 40043241355, 40042984627, 40042648483,
 40042645271 and 40042365579. No run, tag, branch, artifact or release was deleted.
 Existing M5 drafts must remain unpublished and unused pending repair. The main
 M4 cleanup path also needs review. Owner profile and output folders were untouched.
+
+## PM repair decision (2026-10-23)
+
+Approved: Dusty deletes only content it can prove it created. Unique random work,
+probe and self-test folders require purpose/inventory markers. Preserve unknown,
+changed, unmarked or linked content, with redacted skip logs. Reject sources and
+outputs inside managed areas, preserve legacy destinations and clear their saved
+selection with a one-time explanation. Cover startup, jobs, probes, self-tests and
+uninstall, then source/package/installed WFP/uninstall gates. Repair is in progress;
+this issue remains open until the gates pass.

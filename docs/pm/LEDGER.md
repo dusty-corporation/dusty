@@ -874,3 +874,30 @@ is needed. Return the workspace to m4-downloader with a clean tree for the Owner
 - M5-report.md / M5-interim-8.md are the morning handoff. PM approval for the
   cleanup-ownership repair is required before resuming. No final CI/VM/release
   acceptance is claimed. Owner profile and output files were not touched.
+
+### ISSUE-020 repair authorized by PM (2026-10-23)
+
+- PM approved unique work ownership markers, explicit content inventories,
+  conservative unknown-content preservation, no reparse traversal, managed-area
+  source/output rejection and preservation of legacy internal destinations.
+- Repair in progress on m5-installer. Three original regressions stay enabled.
+  Part 2 page changes wait for all Part 1 gates, including installed WFP/uninstall.
+- Owner reports AMD SVM enabled on the desktop; VM setup no longer awaits that.
+- Damaged existing models must show "Needs download again" on Choose model.
+- Latest pre-repair CI 40044102299 fails the intentional preservation regressions.
+
+### ISSUE-020 first repair checkpoint
+
+- Implemented unique purpose-marked work folders and explicit SHA-256 inventories;
+  cleanup validates the entire flat inventory before deleting any file. No runtime
+  recursive deletion remains. Unknown, changed, unmarked, linked and protected work
+  is preserved with a path-free log line.
+- Startup clears legacy internal output selection, retains persistent protection,
+  and gives a one-time shared message. GUI and coordinator reject managed-area
+  source/output paths, including save-next-to-source and resolved aliases.
+- Focused ownership/probe tests: 39 passed. Lint, mypy (76 sources), all three
+  source policy checks passed. Full suite and CI pending; ISSUE-020 stays open.
+- Deterministic atomic temporary files replaced with exclusive random files;
+  repeated local bundle builds refuse existing destinations instead of rmtree.
+- Old name-only cleanup test fixtures now create explicit owned inventories;
+  crash recovery expects uncertain killed-writer output to survive, per PM rule.

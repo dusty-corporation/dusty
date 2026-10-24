@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import shutil
+import tempfile
 import tomllib
 import urllib.request
 import zipfile
@@ -36,7 +37,11 @@ def download_verified(url: str, target: Path, expected_sha256: str) -> None:
     if target.exists() and sha256_file(target) == expected_sha256:
         return
     target.parent.mkdir(parents=True, exist_ok=True)
-    temporary = target.with_name(target.name + ".part")
+    descriptor, name = tempfile.mkstemp(suffix=".part", dir=target.parent)
+    import os
+
+    os.close(descriptor)
+    temporary = Path(name)
     try:
         with urllib.request.urlopen(url, timeout=120) as response, temporary.open("wb") as stream:
             shutil.copyfileobj(response, stream)

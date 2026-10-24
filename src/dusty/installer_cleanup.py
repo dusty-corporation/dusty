@@ -3,10 +3,10 @@
 import json
 import re
 from pathlib import Path
-from uuid import UUID
 
 from dusty.models import load_manifest
 from dusty.runtime_paths import RuntimePaths
+from dusty.work_area import cleanup_owned, linked, protected_paths
 
 
 def _cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
@@ -29,9 +29,6 @@ def _cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
         elif key in {"output_dir", "outputs", "source"} and isinstance(value, str):
             protected.add(Path(value).resolve())
 
-    def linked(path: Path) -> bool:
-        return path.is_symlink() or path.is_junction()
-
     try:
         # Reparse points anywhere in the owned subtree make cleanup uncertain.
         if linked(root) or any(linked(p) for p in root.rglob("*")):
@@ -49,14 +46,10 @@ def _cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
         candidates += [
             p for p in (root / "logs").glob("*") if re.fullmatch(r"dusty\.log(?:\.[1-5])?", p.name)
         ]
-        work_names = {"audio.wav", "raw.json", "raw-cpu.json", "raw-vulkan.json"}
+        ownership_protection = protected_paths(root)
         for directory in (root / "work").glob("*"):
-            try:
-                UUID(directory.name)
-            except ValueError:
-                if directory.name not in {"probe", "selftest"}:
-                    continue
-            candidates += [directory / name for name in work_names]
+            if directory.is_dir():
+                cleanup_owned(directory, protected=ownership_protection)
         if remove_models:
             manifest = load_manifest(paths.resources_dir / "models.json")
             names = [m.file_name for m in manifest.models.values()] + [manifest.vad_file_name]
@@ -78,6 +71,9 @@ def _cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
             (p for p in root.rglob("*") if p.is_dir()), key=lambda p: len(p.parts), reverse=True
         )
         for path in [*directories, root]:
+            if path != root / "work" and path.is_relative_to(root / "work"):
+                # Even an empty unmarked work folder is not proven app-owned.
+                continue
             resolved = path.resolve()
             if any(
                 resolved == p or resolved.is_relative_to(p) or p.is_relative_to(resolved)

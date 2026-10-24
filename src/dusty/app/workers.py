@@ -14,6 +14,7 @@ from dusty.queue import Coordinator, cleanup_orphaned_work, load_batch
 from dusty.queue.scanning import scan_inputs
 from dusty.queue.storage import load_settings
 from dusty.runtime_paths import RuntimePaths
+from dusty.work_area import managed_destination, sanitize_output
 
 
 @dataclass
@@ -40,6 +41,7 @@ class PrepareWorker(QThread):
         from dusty.engine.backend import probe_vulkan
 
         try:
+            sanitize_output(self.paths)
             cleanup_stale_partials(self.paths.models_dir)
             cleanup_orphaned_work(self.paths.user_dir / "work")
             installed = []
@@ -86,6 +88,10 @@ class ScanWorker(QThread):
         try:
             result = scan_inputs(self.paths, recursive=self.recursive, existing=self.existing)
             if self.runtime:
+                allowed = tuple(
+                    job for job in result.jobs if not managed_destination(job.source, self.runtime)
+                )
+                result = replace(result, jobs=allowed, rejected=len(result.jobs) - len(allowed))
                 from dusty.engine import DecoderError, probe_audio
 
                 for job in result.jobs:
@@ -98,7 +104,7 @@ class ScanWorker(QThread):
                     except (DecoderError, OSError):
                         pass
             self.ready.emit(result)
-        except OSError:
+        except (OSError, ValueError):
             self.failed.emit()
 
 
