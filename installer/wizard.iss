@@ -143,6 +143,13 @@ begin
     if Memory.TotalPhysical < @@MIN_RAM@@ then MemoryNotice.Caption := CustomMessage('LowMemory');
 end;
 
+procedure CheckExistingModels;
+begin
+  Stage := -3;
+  if not StartChild(ProbeRoot + '\dusty\dusty.exe', '--installer-status --out ' +
+    Quoted(ExpandConstant('{tmp}\model-status.json'))) then Stage := 0;
+end;
+
 procedure PollChild(A, B, C, D: LongWord);
 var Code: LongWord; I: Integer; Memory: TMemoryStatus; S: AnsiString;
 begin
@@ -151,10 +158,18 @@ begin
   Exit;
 #endif
   if (Stage = -1) and (Child.Process <> 0) and (Tick - ProbeBegan > 7000) then begin
-    ReleaseChild; Stage := 0; ShowMemoryWarning; Exit;
+    ReleaseChild; ShowMemoryWarning; CheckExistingModels; Exit;
   end;
   if (Child.Process = 0) or (WaitChild(Child.Process, 0) <> 0) then Exit;
   Code := 1; ChildExit(Child.Process, Code); ReleaseChild;
+  if Stage = -3 then begin
+    if (Code = 0) and LoadStringFromFile(ExpandConstant('{tmp}\model-status.json'), S) then
+      for I := 0 to GetArrayLength(ModelIds) - 1 do
+        if Pos('"' + ModelIds[I] + '":"damaged"', String(S)) > 0 then
+          ModelsPage.CheckListBox.ItemCaption[I] := ModelsPage.CheckListBox.ItemCaption[I] +
+            #13#10 + CustomMessage('NeedsDownload');
+    Stage := 0; Exit;
+  end;
   if Stage = -1 then begin
     MemoryNotice.Caption := '';
     Memory.Length := 64;
@@ -167,7 +182,7 @@ begin
           else ModelsPage.CheckListBox.ItemCaption[I] := ModelLabels[I] + ModelDetails[I];
         end;
     end;
-    Stage := 0;
+    CheckExistingModels;
     Exit;
   end;
   if Stage = 5 then begin

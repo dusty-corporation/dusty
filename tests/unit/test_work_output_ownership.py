@@ -43,7 +43,10 @@ def test_installer_selftest_preserves_saved_transcript_folder(tmp_path, monkeypa
 
 
 @pytest.mark.parametrize("damage", ["missing", "unreadable", "mismatch", "unknown", "changed"])
-def test_uncertain_work_preserved(tmp_path, damage, caplog):
+def test_uncertain_work_preserved(tmp_path, damage):
+    from dusty.privacy.logging import configure_logger
+
+    configure_logger(tmp_path / "user")
     owned = OwnedWork(tmp_path / "work", "job")
     audio = owned.path / "audio.wav"
     audio.write_bytes(b"generated")
@@ -59,12 +62,12 @@ def test_uncertain_work_preserved(tmp_path, damage, caplog):
         (owned.path / "patient-secret.txt").write_text("preserve")
     else:
         audio.write_bytes(b"user replacement")
-    with caplog.at_level("INFO", logger="dusty"):
-        assert not cleanup_owned(owned.path, protected=set())
+    assert not cleanup_owned(owned.path, protected=set())
     assert audio.exists()
-    assert "work_cleanup=preserved" in caplog.text
-    assert str(owned.path) not in caplog.text
-    assert "patient-secret" not in caplog.text
+    log = (tmp_path / "user/logs/dusty.log").read_text(encoding="utf-8")
+    assert "work_cleanup=preserved" in log
+    assert str(owned.path) not in log
+    assert "patient-secret" not in log
 
 
 @pytest.mark.parametrize("kind", ["junction", "symlink"])
@@ -137,3 +140,15 @@ def test_marked_work_with_protected_known_file_is_preserved(tmp_path):
     owned.record("audio.wav")
     assert not cleanup_owned(owned.path, protected={file.resolve()})
     assert file.exists()
+
+
+def test_installer_reports_damaged_model_without_removing_it(tmp_path):
+    from dusty.installer_support import model_status
+
+    models = tmp_path / "models"
+    models.mkdir()
+    damaged = models / "ggml-tiny.bin"
+    damaged.write_bytes(b"damaged synthetic model")
+    paths = RuntimePaths(tmp_path / "install/bin", models, ROOT / "resources", tmp_path / "user")
+    assert model_status(paths)["tiny"] == "damaged"
+    assert damaged.read_bytes() == b"damaged synthetic model"

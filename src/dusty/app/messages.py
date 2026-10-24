@@ -556,6 +556,7 @@ INSTALLER = {
 }
 
 INSTALLER.update(
+    NeedsDownload="Needs download again",
     LicenseDusty="Dusty's license",
     LicenseNotices="Third-party notices",
     LicenseMicrosoft="Microsoft runtime terms",
