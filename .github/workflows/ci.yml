@@ -1,0 +1,346 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      release_tag:
+        type: string
+        required: false
+        default: ''
+      previous_tag:
+        type: string
+        required: false
+        default: ''
+      previous_run_id:
+        type: string
+        required: false
+        default: ''
+
+env:
+  DUSTY_RELEASE_TAG: ${{ inputs.release_tag || '' }}
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  source:
+    if: github.event.repository.private == true && (github.event_name == 'push' || github.event_name == 'pull_request')
+    runs-on: windows-latest
+    timeout-minutes: 10
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Install locked source dependencies
+        run: |
+          python -m pip install uv==0.8.18
+          uv sync --locked
+          if ($LASTEXITCODE -ne 0) { throw 'Source environment setup failed' }
+      - name: Lint
+        run: uv run ruff check .
+      - name: Format
+        run: uv run ruff format --check .
+      - name: Types
+        run: uv run mypy
+      - name: Unit tests without native downloads or integration runs
+        run: uv run pytest -q tests --ignore=tests/integration
+      - name: Source policies and documentation
+        run: |
+          foreach ($tool in @('check_docs.py','check_no_network.py','check_no_huggingface.py','check_licenses.py','check_workflow_budget.py')) {
+            uv run python (Join-Path tools $tool)
+            if ($LASTEXITCODE -ne 0) { throw "Source gate failed: $tool" }
+          }
+
+  checks:
+    if: github.event.repository.private == false || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Apply approved release version
+        if: inputs.release_tag != ''
+        run: python tools/release_version.py '${{ inputs.release_tag }}' --apply
+      - name: Install uv
+        run: python -m pip install uv==0.8.18
+      - name: Install locked dependencies
+        run: uv sync --locked
+      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: |
+            build/downloads
+            build/bin
+            build/models
+          key: ${{ runner.os }}-m2-assets-${{ hashFiles('native/versions.toml') }}
+      - name: Fetch verified development assets
+        run: uv run python tools/fetch_dev_binaries.py
+      - name: Lint
+        run: uv run ruff check .
+      - name: Format
+        run: uv run ruff format --check .
+      - name: Types
+        run: uv run mypy
+      - name: Documentation consistency
+        run: uv run python tools/check_docs.py
+      - name: Tests and strict-package coverage
+        run: uv run python tools/measure_coverage.py
+        env:
+          QT_QPA_PLATFORM: offscreen
+      - name: CI-only downloader public release integration
+        run: uv run pytest -q -m real_network tests/integration/test_downloader_network.py
+        env:
+          DUSTY_CI_REAL_NETWORK: '1'
+      - name: CI-only live bundled root chain canary
+        run: uv run python -m dusty_fetch.tls_canary
+        env:
+          DUSTY_CI_CA_CANARY: '1'
+      - name: Workflow visibility policy
+        run: uv run python tools/check_workflow_budget.py
+      - name: Network isolation
+        run: uv run python tools/check_no_network.py
+      - name: Model host exclusion
+        run: uv run python tools/check_no_huggingface.py
+      - name: License allowlist
+        run: uv run python tools/check_licenses.py
+
+  offline:
+    if: github.event.repository.private == false || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Apply approved release version
+        if: inputs.release_tag != ''
+        run: python tools/release_version.py '${{ inputs.release_tag }}' --apply
+      - name: Install locked dependencies
+        run: |
+          python -m pip install uv==0.8.18
+          uv sync --locked
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency setup failed' }
+      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: |
+            build/downloads
+            build/bin
+            build/models
+          key: ${{ runner.os }}-m2-assets-${{ hashFiles('native/versions.toml') }}
+      - name: Fetch verified development assets
+        run: uv run python tools/fetch_dev_binaries.py
+      - name: Validate WFP event parser
+        run: ./tests/offline/test_wfp_events.ps1
+      - name: Firewall and WFP offline acceptance
+        run: ./tools/test_network_isolation.ps1
+      - name: Model Manager GUI and allowed downloader WFP audit
+        run: ./tools/test_model_download_isolation.ps1
+      - name: Preserve redacted Model Manager audit evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: m4-download-audit
+          path: |
+            build/model-download-*/summary.json
+            build/model-download-*/download-result.json
+          if-no-files-found: warn
+
+  installer-upload-regression:
+    if: github.event.repository.private == false || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - name: Simulate passing installed acceptance
+        id: installer_acceptance
+        run: exit 0
+      - name: Deliberately fail the synthetic license gate
+        id: installer_licenses
+        continue-on-error: true
+        run: exit 1
+      - name: Upload must never run after that failure
+        id: installer_upload
+        if: success() && steps.installer_licenses.outcome == 'success' && steps.installer_acceptance.outcome == 'success'
+        run: throw 'Regression - a failing installer license gate allowed upload'
+      - name: Prove the upload was skipped
+        if: always()
+        run: |
+          if ('${{ steps.installer_licenses.outcome }}' -ne 'failure') { throw 'Synthetic negative gate did not fail' }
+          if ('${{ steps.installer_upload.outcome }}' -ne 'skipped') { throw 'Upload was not skipped after gate failure' }
+
+  packaging-spike:
+    if: github.event.repository.private == false || github.event_name == 'workflow_dispatch'
+    needs: [checks, offline, installer-upload-regression]
+    # Read a prior gated CI artifact; no repository-write token is needed.
+    permissions:
+      contents: read
+      actions: read
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Apply approved release version
+        if: inputs.release_tag != ''
+        run: python tools/release_version.py '${{ inputs.release_tag }}' --apply
+      - name: Install locked dependencies
+        run: |
+          python -m pip install uv==0.8.18
+          uv python install 3.12.11
+          if ($LASTEXITCODE -ne 0) { throw 'Pinned Python installation failed' }
+          uv sync --locked --python 3.12.11
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency setup failed' }
+      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: |
+            build/downloads
+            build/bin
+            build/models
+          key: ${{ runner.os }}-m2-assets-${{ hashFiles('native/versions.toml') }}
+      - name: Fetch pinned production engine inputs
+        run: uv run python tools/fetch_dev_binaries.py
+      - name: Build separate onedir bundles and verify VC redist provenance
+        run: |
+          uv run python -m tools.build_bundle 2>&1 | Tee-Object -FilePath build/packaging-build.log
+          if ($LASTEXITCODE -ne 0) { throw 'PyInstaller build failed' }
+      - name: Enforce Qt exclusions and executable layout
+        run: uv run python tools/check_bundle.py dist/Dusty
+      - name: Offline PE imports and exact platform hashes
+        run: uv run python tools/check_pe_imports.py dist/Dusty/dusty --native dist/Dusty/bin
+      - name: Smoke-test packaged Qt window
+        run: uv run python tools/smoke_packaged_gui.py dist/Dusty
+      - name: Verify packaged Windows executable versions
+        run: uv run python -m tools.check_bundle_version dist/Dusty
+      - name: Inventory bundle and generate draft notices and SBOM
+        run: uv run python -m tools.inventory_bundle dist/Dusty
+      - name: Validate WFP event parser
+        run: ./tests/offline/test_wfp_events.ps1
+      - name: Packaged Tiny download and calibrated WFP self-test
+        run: ./tools/test_network_isolation.ps1 -Bundle dist/Dusty
+      - name: Packaged Model Manager download and separate process WFP counts
+        run: ./tools/test_model_download_isolation.ps1 -Bundle dist/Dusty
+      - name: Audit every bundled file against the license allowlist
+        run: |
+          uv run python tools/check_licenses.py --bundle dist/Dusty --inventory build/packaging/audit/inventory.json 2>&1 | Tee-Object -FilePath build/packaging/audit/license-findings.txt
+          if ($LASTEXITCODE -ne 0) { throw 'Bundle contains unresolved or unapproved licenses; see audit evidence' }
+      - name: Preserve audit evidence only, never unapproved binaries
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: packaging-spike-audit
+          path: |
+            build/packaging/audit
+            build/packaging-build.log
+            build/pyinstaller/dusty/warn-dusty.txt
+            build/offline-*/summary.json
+            build/model-download-*/summary.json
+            build/model-download-*/download-result.json
+          if-no-files-found: error
+      - name: Preserve audited review bundle for the Owner
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: m4-review-bundle
+          path: dist/Dusty
+          if-no-files-found: error
+      - name: Stage exact FFmpeg corresponding source and build script
+        run: uv run python -m tools.ffmpeg_source build/installer
+      - name: Compile unsigned installer draft with pinned Inno Setup 6
+        run: ./tools/build_installer.ps1
+      - name: Installer wrapper redistribution license policy
+        run: uv run python -m tools.inventory_installer
+      - name: Installer download audit negative parser cases
+        run: ./tests/offline/test_installer_download_events.ps1
+      - name: Silent install upgrade uninstall and installed WFP acceptance
+        id: installer_acceptance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIOUS_TAG: ${{ inputs.previous_tag || '' }}
+          PREVIOUS_RUN_ID: ${{ inputs.previous_run_id || '' }}
+        run: |
+          if ($env:PREVIOUS_TAG) {
+            $previous = gh release view $env:PREVIOUS_TAG --repo '${{ github.repository }}' --json isDraft,isPrerelease | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0 -or $previous.isDraft -or $previous.isPrerelease) { throw 'Previous public release is missing or still a draft/prerelease' }
+            gh release download $env:PREVIOUS_TAG --repo '${{ github.repository }}' --pattern 'Dusty-*-Setup.exe' --pattern SHA256SUMS.txt --dir build/previous-release
+            if ($LASTEXITCODE -ne 0) { throw 'Previous published installer download failed' }
+            $older = @(Get-ChildItem build/previous-release -Recurse -Filter '*.exe')
+            if ($older.Count -ne 1) { throw 'Expected one previous installer' }
+            $sums = Join-Path $older[0].Directory.FullName 'SHA256SUMS.txt'
+            uv run python -c 'from pathlib import Path; from tools.release_assets import verify_checksum; import sys; verify_checksum(Path(sys.argv[1]), Path(sys.argv[2]))' $older[0].FullName $sums
+            if ($LASTEXITCODE -ne 0) { throw 'Previous installer checksum verification failed' }
+            $env:GH_TOKEN = $null
+            ./tools/test_installer.ps1 -PreviousInstaller $older[0].FullName
+          } else {
+            $env:GH_TOKEN = $null
+            ./tools/test_installer.ps1
+          }
+      - name: Installer-wide redistribution license policy
+        id: installer_licenses
+        if: always()
+        run: uv run python tools/check_installer_licenses.py
+      - name: Preserve unsigned installer as CI artifact only
+        id: installer_upload
+        if: success() && steps.installer_licenses.outcome == 'success' && steps.installer_acceptance.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: m5-installer-draft-unsigned
+          path: |
+            build/installer/output
+            build/installer/inputs.json
+            build/installer/LICENSE.txt
+            build/packaging/audit/sbom.cdx.json
+            build/installer/sbom.cdx.json
+            build/installer/THIRD_PARTY_NOTICES.md
+            build/installer/installer-jedi-source.zip
+            build/installer/ffmpeg-n9.0.2-946fcce.tar.gz
+            build/installer/build_ffmpeg.sh
+            build/installer/acceptance/summary.json
+            build/installer/acceptance/download-wfp.json
+            build/installer/acceptance/download-wfp-cancel.json
+          if-no-files-found: error
+      - name: Preserve installer draft audit metadata even when policy blocks binaries
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: m5-installer-draft-audit
+          path: |
+            build/installer/inputs.json
+            build/installer/LICENSE.txt
+            build/installer/output/installer.json
+            build/installer/output/SHA256SUMS.txt
+            build/installer/license-findings.txt
+            build/installer/inventory.json
+            build/installer/sbom.cdx.json
+            build/installer/THIRD_PARTY_NOTICES.md
+            build/installer/acceptance/*.json
+            build/installer/acceptance/*.log
+            build/installer/runtime-inputs.json
+          if-no-files-found: warn
+      - name: Preserve gated installer page review only
+        if: success() && steps.installer_licenses.outcome == 'success' && steps.installer_acceptance.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: m5-installer-page-review
+          path: build/installer/review/Dusty-page-review.exe
+          if-no-files-found: error
+      - name: Capture changed native installer pages at 100 percent
+        if: success() && steps.installer_licenses.outcome == 'success' && steps.installer_acceptance.outcome == 'success'
+        run: ./tools/capture_review_pages.ps1
+      - name: Preserve changed native installer screenshots
+        if: success() && steps.installer_licenses.outcome == 'success' && steps.installer_acceptance.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: m7-installer-page-screenshots-100
+          path: |
+            build/installer/screenshots/*.png
+            build/installer/screenshots/*.json
+            build/installer/screenshots/README.md
+          if-no-files-found: error

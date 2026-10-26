@@ -1,0 +1,68 @@
+name: Gated release draft
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate:
+    if: github.event.repository.private == false
+    runs-on: windows-latest
+    outputs:
+      previous_tag: ${{ steps.version.outputs.previous_tag }}
+      previous_run_id: ${{ steps.version.outputs.previous_run_id }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Reject unapproved tags
+        id: version
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python tools/release_version.py $env:RELEASE_TAG
+          if ($LASTEXITCODE -ne 0) { throw 'Unapproved release tag' }
+          $repo = gh repo view '${{ github.repository }}' --json nameWithOwner,isPrivate | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or $repo.nameWithOwner -ne 'dusty-corporation/dusty' -or $repo.isPrivate) { throw 'Release builds require the public source repository' }
+          $runs = gh release list --repo '${{ github.repository }}' --limit 100 --json tagName,isDraft,isPrerelease
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot discover prior gated release workflows' }
+          $result = python -m tools.release_policy $env:RELEASE_TAG "$runs"
+          if ($LASTEXITCODE -ne 0) { throw 'Release upgrade input validation failed' }
+          $result | Add-Content -LiteralPath $env:GITHUB_OUTPUT
+
+  gates:
+    if: github.event.repository.private == false
+    needs: validate
+    uses: ./.github/workflows/ci.yml
+    with:
+      release_tag: ${{ github.ref_name }}
+      previous_tag: ${{ needs.validate.outputs.previous_tag }}
+      previous_run_id: ${{ needs.validate.outputs.previous_run_id }}
+  draft:
+    if: github.event.repository.private == false
+    needs: [validate, gates]
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: m5-installer-draft-unsigned
+          path: build/release-input
+      - name: Stage approved assets and checksums
+        shell: pwsh
+        run: python -m tools.release_assets --source build/release-input --output build/release-assets --tag '${{ github.ref_name }}'
+      - name: Create draft only after every source and installed gate passes
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = '${{ github.ref_name }}'
+          $version = $tag.Substring(1)
+          gh release create $tag --repo '${{ github.repository }}' --verify-tag --draft --title "Dusty $version" --notes "Private transcription on your Windows computer. Download Dusty-$version-Setup.exe and check it against SHA256SUMS.txt. This installer is unsigned; see the installation guide for Windows SmartScreen steps. Models download only with your permission during Setup or in Model Manager." build/release-assets/*
+          if ($LASTEXITCODE -ne 0) { throw 'Draft release creation failed' }

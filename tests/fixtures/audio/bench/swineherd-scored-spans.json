@@ -1,0 +1,10 @@
+{
+  "source": "Project Gutenberg eBook 1597, The Swineherd",
+  "time_unit": "milliseconds",
+  "line_numbers": "1-based inclusive in swineherd-reference.txt",
+  "spans": [
+    {"start_ms": 8000, "end_ms": 248000, "first_line": 2, "last_line": 74},
+    {"start_ms": 256000, "end_ms": 334000, "first_line": 79, "last_line": 105},
+    {"start_ms": 343000, "end_ms": 642000, "first_line": 109, "last_line": 197}
+  ]
+}

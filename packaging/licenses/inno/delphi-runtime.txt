@@ -1,0 +1,19 @@
+Embarcadero Delphi RTL/VCL runtime
+Copyright Embarcadero Technologies, Inc. All rights reserved.
+
+Used only as compiled into the unmodified Inno Setup 6.7.3 runtime distributed
+by its authors. Upstream README identifies Delphi 12.3 Athens with the May Patch.
+No Delphi compiler, SDK, standalone runtime package, database driver or IDE is
+redistributed by Dusty. No Delphi runtime is added to the Dusty app folders.
+
+PM-approved basis (ADR 0023): Embarcadero redistribution terms for compiled
+applications, as exercised by the Inno Setup authors. The Software License and
+Support Agreement section 2.2 permits designated redistributables only as parts
+of compiled works, preserving notices; it does not permit distributing the
+compiler or arbitrary product files. We retain the upstream runtime unmodified.
+These terms apply only to that runtime, not to Dusty code or other components.
+
+Official references, checked 2026-10-23:
+https://docwiki.embarcadero.com/RADStudio/Athens/en/Deploying_Applications_Overview
+https://github.com/Embarcadero/pa-radserver-docker/blob/7d666264ae4e9e8426f9562c0f45f867a14e7dc3/LICENSE.md
+https://github.com/jrsoftware/issrc/blob/is-6_7_3/README.md

@@ -1,0 +1,322 @@
+; Draft M5 prework. Compile with pinned Inno Setup 6.7.3; no publishing.
+[Setup]
+AppId={{7B3110E8-7983-41AC-A0ED-F6EB13DBB72A}
+AppName=Dusty
+AppVersion=@@VERSION@@
+VersionInfoVersion=@@NUMERIC_VERSION@@
+DefaultDirName={localappdata}\Programs\Dusty
+DefaultGroupName=Dusty
+PrivilegesRequired=lowest
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
+MinVersion=10.0
+DisableWelcomePage=no
+DisableProgramGroupPage=yes
+LicenseFile=LICENSE.txt
+#ifdef ReviewOnly
+OutputDir=review
+OutputBaseFilename=Dusty-page-review
+#else
+OutputDir=output
+OutputBaseFilename=Dusty-@@VERSION@@-draft-unsigned
+#endif
+Compression=lzma2
+SolidCompression=yes
+WizardStyle=modern light
+WizardSizePercent=150,150
+#ifdef ReviewOnly
+Uninstallable=no
+CreateAppDir=no
+#endif
+UninstallDisplayIcon={app}\dusty\dusty.exe
+SetupIconFile=@@BUNDLE@@\resources\icons\dusty.ico
+SignedUninstaller=no
+CloseApplications=yes
+RestartApplications=no
+
+[LangOptions]
+DialogFontSize=10
+
+[Tasks]
+Name: desktopicon; Description: "{cm:DesktopShortcut}"
+
+[Messages]
+WelcomeLabel2=@@WELCOME_DESCRIPTION@@
+
+[Run]
+#ifndef ReviewOnly
+Filename: "{app}\dusty\dusty.exe"; WorkingDir: "{app}\dusty"; Description: "{cm:OpenDustyNow}"; Flags: nowait postinstall skipifsilent runasoriginaluser
+#endif
+
+[Files]
+Source: "DUSTY-LICENSE.txt"; Flags: dontcopy
+Source: "MICROSOFT-LICENSE.txt"; Flags: dontcopy
+Source: "THIRD_PARTY_NOTICES.md"; Flags: dontcopy
+Source: "@@BUNDLE@@\*"; DestDir: "{tmp}\probe"; Flags: dontcopy recursesubdirs
+#ifndef ReviewOnly
+Source: "@@BUNDLE@@\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+#endif
+#ifndef ReviewOnly
+Source: "@@INNO_LICENSE@@"; DestDir: "{app}\licenses"; DestName: "inno-setup.txt"; Flags: ignoreversion
+Source: "@@INSTALLER_NOTICES@@"; DestDir: "{app}\licenses"; DestName: "installer-THIRD_PARTY_NOTICES.md"; Flags: ignoreversion
+Source: "@@JEDI_SOURCE@@"; DestDir: "{app}\licenses"; DestName: "installer-jedi-source.zip"; Flags: ignoreversion
+#endif
+
+[Icons]
+#ifndef ReviewOnly
+Name: "{userprograms}\Dusty"; Filename: "{app}\dusty\dusty.exe"
+Name: "{userdesktop}\Dusty"; Filename: "{app}\dusty\dusty.exe"; Tasks: desktopicon
+
+#endif
+
+[CustomMessages]
+@@MESSAGES@@
+
+[Code]
+type
+  TJobLimits32 = array[0..111] of Byte;
+  TStartup = array[0..67] of Byte;
+  TProcInfo = record
+    Process, Thread, Pid, Tid: LongWord;
+  end;
+  TMemoryStatus = record
+    Length, Load: LongWord;
+    TotalPhysical, AvailablePhysical, TotalPageFile, AvailablePageFile: Int64;
+    TotalVirtual, AvailableVirtual, AvailableExtendedVirtual: Int64;
+  end;
+
+#ifndef ReviewOnly
+function AddCrashExclusion(Name: String; AllUsers: Boolean): Integer;
+  external 'WerAddExcludedApplication@{syswow64}\wer.dll stdcall loadwithalteredsearchpath';
+function RemoveCrashExclusion(Name: String; AllUsers: Boolean): Integer;
+  external 'WerRemoveExcludedApplication@{syswow64}\wer.dll stdcall loadwithalteredsearchpath';
+function RegisterCrashExclusions: Boolean; forward;
+function RemoveCrashExclusions(OnlyNew: Boolean): Boolean; forward;
+#endif
+function WinCreateJob(Security, Name: LongWord): LongWord;
+  external 'CreateJobObjectW@kernel32.dll stdcall';
+function WinSetJob(Job: LongWord; Kind: Integer; var Info: TJobLimits32; Length: LongWord): Boolean;
+  external 'SetInformationJobObject@kernel32.dll stdcall';
+function WinCurrentProcess: LongWord;
+  external 'GetCurrentProcess@kernel32.dll stdcall';
+function WinAssignJob(Job, Process: LongWord): Boolean;
+  external 'AssignProcessToJobObject@kernel32.dll stdcall';
+function WinTerminateJob(Job: LongWord; Code: LongWord): Boolean;
+  external 'TerminateJobObject@kernel32.dll stdcall';
+function WinMemoryStatus(var Info: TMemoryStatus): Boolean;
+  external 'GlobalMemoryStatusEx@kernel32.dll stdcall';
+
+function CreateChild(App: LongWord; Command: String; A, B: LongWord; Inherit: Boolean;
+  Flags, Env: LongWord; Dir: String; var Startup: TStartup; var Process: TProcInfo): Boolean;
+  external 'CreateProcessW@kernel32.dll stdcall';
+function ResumeChild(Thread: LongWord): LongWord;
+  external 'ResumeThread@kernel32.dll stdcall';
+function WaitChild(Process, Milliseconds: LongWord): LongWord;
+  external 'WaitForSingleObject@kernel32.dll stdcall';
+function ChildExit(Process: LongWord; var Code: LongWord): Boolean;
+  external 'GetExitCodeProcess@kernel32.dll stdcall';
+function CloseChild(Handle: LongWord): Boolean;
+  external 'CloseHandle@kernel32.dll stdcall';
+function TerminateChild(Process, Code: LongWord): Boolean;
+  external 'TerminateProcess@kernel32.dll stdcall';
+function Tick: Int64;
+  external 'GetTickCount64@kernel32.dll stdcall';
+function SetupSystemMenu(Wnd: LongWord; Revert: Boolean): LongWord;
+  external 'GetSystemMenu@user32.dll stdcall';
+function SetupEnableMenuItem(Menu, Item, Flags: LongWord): LongWord;
+  external 'EnableMenuItem@user32.dll stdcall';
+#ifdef ReviewOnly
+function WindowDpi(Wnd: LongWord): LongWord;
+  external 'GetDpiForWindow@user32.dll stdcall';
+function SetReviewDpiContext(Context: Integer): LongWord;
+  external 'SetThreadDpiAwarenessContext@user32.dll stdcall';
+function ReviewDC(Wnd: LongWord): LongWord;
+  external 'GetDC@user32.dll stdcall';
+function ReleaseReviewDC(Wnd, DC: LongWord): Integer;
+  external 'ReleaseDC@user32.dll stdcall';
+function CopyReviewBitmap(Dest: LongWord; X, Y, Width, Height: Integer;
+  Source: LongWord; SourceX, SourceY: Integer; Operation: LongWord): Boolean;
+  external 'BitBlt@gdi32.dll stdcall';
+function PositionReviewPopup(Wnd, After: LongWord; X, Y, Width, Height: Integer; Flags: LongWord): Boolean;
+  external 'SetWindowPos@user32.dll stdcall';
+function ReviewActiveWindow: LongWord;
+  external 'GetActiveWindow@user32.dll stdcall';
+function ReviewClientRect(Wnd: LongWord; var Bounds: TRect): Boolean;
+  external 'GetClientRect@user32.dll stdcall';
+function ReviewWindowProcess(Wnd: LongWord; var ProcessId: LongWord): LongWord;
+  external 'GetWindowThreadProcessId@user32.dll stdcall';
+function ReviewProcessId: LongWord;
+  external 'GetCurrentProcessId@kernel32.dll stdcall';
+function ReviewDialogItem(Wnd: LongWord; Id: Integer): LongWord;
+  external 'GetDlgItem@user32.dll stdcall';
+#endif
+function SetTimer(Wnd, Id, Milliseconds, Callback: LongWord): LongWord;
+  external 'SetTimer@user32.dll stdcall';
+function KillTimer(Wnd, Id: LongWord): Boolean;
+  external 'KillTimer@user32.dll stdcall';
+
+var
+  ModelsPage: TWizardPage;
+  ModelViewport: TSetupForm;
+  ModelChecks: array of TNewCheckBox;
+  ModelTitles: array of TNewCheckBox;
+  ModelDescriptions: array of TNewStaticText;
+  SkipChoice: TNewCheckBox;
+  UpdatingModels: Boolean;
+  ReturnModelsPage: TWizardPage;
+  DownloadPage: TWizardPage;
+  ProgressPage: TOutputMarqueeProgressWizardPage;
+  ModelIds, ModelNames, ModelFiles, ModelLabels, ModelRecommendedLabels, ModelDetails: TArrayOfString;
+  Consent, Phase, Outcome, MemoryNotice, VoiceNotice, AccuracyNotice, Amount: TNewStaticText;
+  RetryButton, CpuButton, WithoutButton: TNewButton;
+  Meter: TNewProgressBar;
+  Child: TProcInfo;
+  ChildJob, Timer: LongWord;
+  Selected, Downloads: array of Integer;
+  DownloadIndex, TestIndex, Smallest, Stage: Integer;
+  Busy, FinishedWithout, TestFailed, ModelsTouched, ProbeStarted: Boolean;
+  DownloadPlanReady, PlanStartRequested, MissingVoice: Boolean;
+  MissingModels: array of Boolean;
+  NeededMask: Integer;
+  CpuRetry, TestTimedOut: Boolean;
+  ProbeRoot: String;
+  RecommendedModel: String;
+  ProbeBegan, TestBegan, TestDeadline: Int64;
+  ReviewShown: Boolean;
+  ReviewCaptured, ReviewPositioned, ReviewDpiAdjusted: Boolean;
+  ReviewDialogPending, ReviewPopupPositioned: Boolean;
+  InitialModelDpi: Integer;
+#ifdef ReviewOnly
+  ReviewControls: array of TControl;
+  ReviewLefts, ReviewTops, ReviewWidths, ReviewHeights: array of Integer;
+#endif
+  ModelBytes: array of Int64;
+  InstallationReady, SilentFailed, InstallationBegan: Boolean;
+  AddedCrashExclusions: array[0..4] of Boolean;
+  RemoveModels: Boolean;
+  LastFetchCode: Integer;
+  DownloadActive: Boolean;
+  DownloadStarted, ReturnModelsRequested: Boolean;
+  TotalModelBytes, CompletedModelBytes: Int64;
+  StopRequested: Boolean;
+  OriginalCancelClick: TNotifyEvent;
+  DownloadJob: LongWord;
+
+function InitializeSetup: Boolean;
+var
+  Info: TJobLimits32;
+  I: Integer;
+begin
+#ifdef ReviewOnly
+  if SetReviewDpiContext(-4) = 0 then RaiseException(CustomMessage('ReviewDpiFailed'));
+#endif
+  { Silent deployment is explicit consent, not a suppressed affirmative dialog. }
+  Result := False;
+  if WizardSilent then
+    if (ExpandConstant('{param:ACCEPTTERMS|}') <> 'yes') or
+       (ExpandConstant('{param:ALLOWDOWNLOAD|}') <> 'yes') then Exit;
+  { Inno 6 Setup is PE32. The compiler gate asserts this; no x64 struct guessing. }
+  for I := 0 to 111 do Info[I] := 0;
+  Info[17] := $24; { KILL_ON_JOB_CLOSE | DIE_ON_UNHANDLED_EXCEPTION, offset 16. }
+  DownloadJob := WinCreateJob(0, 0);
+  Result := (DownloadJob <> 0) and WinSetJob(DownloadJob, 9, Info, 112);
+  if Result then Result := WinAssignJob(DownloadJob, WinCurrentProcess);
+#ifndef ReviewOnly
+  if Result then Result := RegisterCrashExclusions;
+#endif
+  { Keep the non-inheritable handle until process exit: all children die with Setup. }
+end;
+
+function Quoted(Value: String): String;
+begin
+  Result := '"' + Value + '"';
+end;
+
+@@WIZARD_CODE@@
+
+function InitializeUninstall: Boolean;
+var
+  Page: TSetupForm;
+  Choice: TNewCheckBox;
+  Help: TNewStaticText;
+  Confirm, Cancel: TNewButton;
+  Code: Integer;
+begin
+  Result := False;
+  RemoveModels := True;
+#ifndef ReviewOnly
+  if not Exec(ExpandConstant('{app}\dusty\dusty.exe'), '--installer-can-uninstall',
+    ExpandConstant('{app}\dusty'), SW_HIDE, ewWaitUntilTerminated, Code) then begin
+    ShowUninstallHelperUnavailable;
+    Exit;
+  end;
+  if Code <> 0 then begin
+    SuppressibleMsgBox(CustomMessage('UninstallProtected'), mbError, MB_OK, IDOK);
+    Exit;
+  end;
+  if UninstallSilent and (ExpandConstant('{param:DUSTYCONFIRM|}') <> 'yes') then begin
+    if ExpandConstant('{param:REMOVEMODELS|}') = 'yes' then begin
+      RemoveModels := True;
+      Result := True;
+    end else if ExpandConstant('{param:REMOVEMODELS|}') = 'no' then begin
+      RemoveModels := False;
+      Result := True;
+    end;
+    Exit;
+  end;
+#endif
+  Page := CreateCustomForm(ScaleX(500), ScaleY(160), True, True);
+  try
+    Page.ClientWidth := ScaleX(500);
+    Page.ClientHeight := ScaleY(160);
+    Page.Caption := CustomMessage('UninstallTitle');
+    Choice := TNewCheckBox.Create(Page);
+    Choice.Parent := Page;
+    Choice.SetBounds(ScaleX(20), ScaleY(18), ScaleX(460), ScaleY(26));
+    Choice.Caption := FmtMessage(CustomMessage('RemoveModels'), [UninstallModelSize]);
+    Choice.Checked := True;
+    Help := TNewStaticText.Create(Page);
+    Help.Parent := Page;
+    Help.SetBounds(ScaleX(20), ScaleY(54), ScaleX(460), ScaleY(32));
+    Help.AutoSize := False;
+    Help.WordWrap := True;
+    Help.Caption := CustomMessage('RemoveModelsHelp');
+    Confirm := TNewButton.Create(Page);
+    Confirm.Parent := Page;
+    Confirm.SetBounds(ScaleX(250), ScaleY(112), ScaleX(110), ScaleY(30));
+    Confirm.Caption := CustomMessage('UninstallAction');
+    Confirm.ModalResult := mrOk;
+    Confirm.Default := False;
+    Cancel := TNewButton.Create(Page);
+    Cancel.Parent := Page;
+    Cancel.SetBounds(ScaleX(370), ScaleY(112), ScaleX(110), ScaleY(30));
+    Cancel.Caption := SetupMessage(msgButtonCancel);
+    Cancel.ModalResult := mrCancel;
+    Cancel.Cancel := True;
+    Cancel.Default := True;
+    Result := Page.ShowModal = mrOk;
+    RemoveModels := Choice.Checked;
+  finally
+    Page.Free;
+  end;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  Mode: String;
+  Code: Integer;
+  Success: Boolean;
+begin
+  if CurUninstallStep = usUninstall then begin
+    if RemoveModels then Mode := 'remove-models' else Mode := 'keep-models';
+    Success := Exec(ExpandConstant('{app}\dusty\dusty.exe'), '--uninstall-data ' + Mode,
+      ExpandConstant('{app}\dusty'), SW_HIDE, ewWaitUntilTerminated, Code);
+    if not Success or (Code <> 0) then
+      SuppressibleMsgBox(CustomMessage('CleanupKept'), mbInformation, MB_OK, IDOK);
+  end;
+#ifndef ReviewOnly
+  if CurUninstallStep = usPostUninstall then
+    if not RemoveCrashExclusions(False) then
+      SuppressibleMsgBox(CustomMessage('CrashProtectionRemoveFailed'), mbInformation, MB_OK, IDOK);
+#endif
+end;

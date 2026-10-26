@@ -1,0 +1,1 @@
+"""Offline Qt desktop interface."""

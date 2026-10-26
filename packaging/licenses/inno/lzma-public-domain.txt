@@ -1,0 +1,8 @@
+LZMA SDK is placed in the public domain.
+
+Author: Igor Pavlov.
+Source: https://www.7-zip.org/sdk.html (License section), checked 2026-10-23.
+The author permits copying, modification, publication, use, compilation, sale and
+distribution of original LZMA SDK code in source or binary form for any purpose.
+The historic LGPL/CPL linking-exception header remains in lzma-loader.txt as
+provenance; ADR 0023 applies the later public-domain grant, as approved by PM.

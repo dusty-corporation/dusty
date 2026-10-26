@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "status": "validation-only-not-published",
+  "run_id": 40110881732,
+  "source_commit": "d0abc304942255a1d30d741fff0ca98c2c1cdf45",
+  "manifest_sha256": "6ba9e2d2796ad00991e8fa867fa08b09404a11a4990ed2960541ea75886112fe",
+  "backends": {
+    "cpu": {
+      "members": {
+        "ggml-base.dll": "112479fb3fe3e5a50bd8f0034329079e613ce9aa4fd9b571d32d0ee4c48222ed",
+        "ggml-cpu-alderlake.dll": "4a970bfec9ac7166a47aaf47470ce7618b24ee8e1d7c4523b5f2acf5d75689c5",
+        "ggml-cpu-cannonlake.dll": "7f8ce50c5ebb49564e33a31265cfded3352d8da7af7339d9c453c61c75bb564b",
+        "ggml-cpu-cascadelake.dll": "9736f756589ae79f6f426ab11c0ebbe67f3f011ee49920806242087e7b090e63",
+        "ggml-cpu-haswell.dll": "d6b8ab53cf42467c998ee4148deb8ac7ca8b68e8862d350fcec46cf4d7151f58",
+        "ggml-cpu-icelake.dll": "f5b2cff2e7412b5ac065ea5e3d89f471ccd6c5537cdf46bd0fddb55f030eeefa",
+        "ggml-cpu-sandybridge.dll": "36081f5c67b6f36dda40bd1016b2db65af93f34be0cd058b116795211ec7386b",
+        "ggml-cpu-skylakex.dll": "ec9999c5ac197bf3e8c1257c40b0d04a49443277cc4e4c78ffc9afeea59d11ea",
+        "ggml-cpu-sse42.dll": "dc7d1b792f3e4f14e2528a2ed5ad0acfd9e86754819f8fa8d59262cc1e60b720",
+        "ggml-cpu-x64.dll": "660ad652e7dd7500c68a030bb72b4391dde30e14c1743c36dddacca8a4f27b83",
+        "ggml.dll": "493149cd3e65190f0dca49a3cccbc66c0ab9d537769b4857bf17651aaed72680",
+        "LICENSE.txt": "bcd8ec749126d45cb06737d0690295d73df4b6e7e194205bcf91190368f27285",
+        "whisper-bench.exe": "13dce03b2ecb5539a6e35545ad9a81cffa3e2b4364a7a600c53c3c171da9f677",
+        "whisper-cli.exe": "c1b270f8ce9b04204134e972d6dd2ea326ef85a1e84ea9ef3b995771d6a224af",
+        "whisper.dll": "586c2e216e4641350f1af7a7b2a81152dfba0c46fd320e5968cf789d611fe431"
+      },
+      "archive_sha256": "b47ec54df7ecb09b341bb7abc5f0f461f746f4bfe72b4873d5843340b9cef910",
+      "archive_bytes": 13225699
+    },
+    "vulkan": {
+      "members": {
+        "ggml-base.dll": "ffa5823a4939a6e8a07c270fc44a1150b8932830ee698f45bf7c6b0e66d30bb2",
+        "ggml-cpu-alderlake.dll": "eacb09d20b41ec16bc576a4bc3193b4f2b768c01f5e61a613c34f22b90a7d2cb",
+        "ggml-cpu-cannonlake.dll": "1ae7bac83ca3ac64f015ac275346f6fa7ab506df0b4b9a74b87fae7d6e738ec4",
+        "ggml-cpu-cascadelake.dll": "7e6c80856c03f4ad9f9390b0a34c5311f8a9e9ec25bcfe78e76a9b087b59e19a",
+        "ggml-cpu-haswell.dll": "8309579f5fa3879ccf8b3506093ad2c932144effb8870b70c9a1d10d744d35d9",
+        "ggml-cpu-icelake.dll": "f966da4a6783081c8e3a7dc920471313f9a0ea4470fc15218995cafa34748355",
+        "ggml-cpu-sandybridge.dll": "52d1e10bf595789bb19925eedf8804273c17c8c6a5be1adf9aae3ee44055e851",
+        "ggml-cpu-skylakex.dll": "c669c90d0d11daf053891768f5a783b9f6274c5053377e258f6b90915de33b6e",
+        "ggml-cpu-sse42.dll": "55fb753ac2f982fb88fcc9ab77c4776bfafd053dd765ea7abfcb3a159f4e0c77",
+        "ggml-cpu-x64.dll": "0f61239afeb6408b763351f08e2960f2cb3831f4ca9a5b6e40b4fd93f80f6175",
+        "ggml-vulkan.dll": "626fc6c0c99da589595f1be6bd1c47b9a07d662dacca0159bdb75af295b6eccf",
+        "ggml.dll": "5755e2fab7e53647b4ae5f00560567062e5fec84e4c84d251d5d49d51e385b18",
+        "LICENSE.txt": "bcd8ec749126d45cb06737d0690295d73df4b6e7e194205bcf91190368f27285",
+        "whisper-bench.exe": "7914ed2101cf714f3cb0e7e4e452c629b712a0b819e64a31f60ffb75fa59b38d",
+        "whisper-cli.exe": "952242be310cab5459bfa3dd3edf3fe5cc7e62822a5aa26a7c043b47f1e183af",
+        "whisper.dll": "4f4a664921623fe61310ff239b8f7f934ae8c257030d11898b65d79481f666ac"
+      },
+      "archive_sha256": "0e8f26c55c4abd7b708af1106027c2d75ed2d4592f103e10263f08e0c8d523c7",
+      "archive_bytes": 58828109
+    }
+  }
+}
