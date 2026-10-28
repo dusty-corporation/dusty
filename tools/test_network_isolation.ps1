@@ -11,6 +11,7 @@ $principal = [Security.Principal.WindowsPrincipal]::new($identity)
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Runner administrator access is required' }
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 . (Join-Path $PSScriptRoot 'wfp_events.ps1')
+. (Join-Path $PSScriptRoot 'offline_failure_diagnostics.ps1')
 $pythonPath = (Resolve-Path -LiteralPath $Python).Path
 $basePython = (& $pythonPath -c 'import sys; print(sys._base_executable)').Trim()
 if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve the Python base interpreter' }
@@ -33,32 +34,6 @@ $rules = [Collections.Generic.List[string]]::new()
 $oldLocal = $env:LOCALAPPDATA
 $oldQpa = $env:QT_QPA_PLATFORM
 $savedAudit = $false
-
-function Invoke-TestPython([string[]]$Arguments, [string]$Executable = $pythonPath, [int[]]$AllowedExitCodes = @(0)) {
-    $psi = [Diagnostics.ProcessStartInfo]::new()
-    $psi.FileName = $Executable
-    $psi.WorkingDirectory = $repo
-    $psi.UseShellExecute = $false
-    $psi.CreateNoWindow = $true
-    $psi.RedirectStandardOutput = $true
-    $psi.RedirectStandardError = $true
-    foreach ($argument in $Arguments) { [void]$psi.ArgumentList.Add($argument) }
-    $process = [Diagnostics.Process]::new()
-    $process.StartInfo = $psi
-    [void]$process.Start()
-    $outTask = $process.StandardOutput.ReadToEndAsync()
-    $errTask = $process.StandardError.ReadToEndAsync()
-    if (-not $process.WaitForExit(180000)) {
-        $process.Kill($true)
-        throw 'Offline process timed out'
-    }
-    $stdout = $outTask.Result
-    $null = $errTask.Result
-    $code = $process.ExitCode
-    $process.Dispose()
-    if ($code -notin $AllowedExitCodes) { throw "Offline process failed exit_code=$code" }
-    return $stdout.Trim()
-}
 
 function Read-ConnectionEvents([datetime]$Since) {
     try {

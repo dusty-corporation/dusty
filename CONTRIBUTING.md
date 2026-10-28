@@ -58,5 +58,6 @@ Contributions use the project's Apache-2.0 license. Confirm you have the right
 to contribute the code and any data. Third-party licenses remain separate.
 
 For a suspected privacy or data-loss defect, stop using confidential material
-and give the Owner a minimal public-data reproduction. Do not publish the private
-data itself. The Owner controls releases, repository settings and merges.
+and give the maintainer a minimal public-data reproduction. Do not publish the
+private data itself. The maintainer controls releases, repository settings and
+merges.

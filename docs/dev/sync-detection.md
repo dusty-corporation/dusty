@@ -12,7 +12,7 @@ that precedence and expands environment variables. Google's
 documents G: as the default streaming location. When no mount override exists,
 the helper treats G: as a warning root only if local DriveFS data is present.
 These sources were checked on 2026-10-22. Tests inject settings readers and
-temporary directories; they never write the Owner's registry or vendor data.
+temporary directories; they never write the maintainer's registry or vendor data.
 
 The detector does not parse undocumented account databases, enumerate network
 volumes, or identify arbitrary mirrored folders selected inside a vendor app.

@@ -35,7 +35,7 @@ fixture's segment and reconstructed word times inside the known 0-10.5 and
 boundaries of each segment and every word interval. Retain the total-word and
 outside-span checks and report the measured changes.
 
-Prepare new immutable CPU and Vulkan packages in draft engine-v2. The Owner
+Prepare new immutable CPU and Vulkan packages in draft engine-v2. The maintainer
 publishes it. Published engine-v1 is never modified. Existing FFmpeg is reused
 without changes and retains its verified digest.
 

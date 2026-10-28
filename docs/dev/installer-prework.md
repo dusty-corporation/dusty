@@ -43,7 +43,7 @@ GUI smoke, offline self-test and Model Manager download WFP gates. Then run:
 
 The bootstrap refuses non-CI execution, downloads only the pinned official
 Inno Setup 6.7.3 compiler installer and checks its SHA-256 before execution.
-No compiler or installer has been installed on the Owner's computer.
+No compiler or installer has been installed on the maintainer's computer.
 The compilation output is unsigned. ISSUE-017 currently blocks the installer
 binary artifact: InnoSetup is not in the redistribution allowlist. CI retains
 only installer audit metadata until PM clearance, never an automatic release or tag.
@@ -83,7 +83,7 @@ is included in the installer terms and installed licenses folder.
   and an enabled, existing registered ICD are found. Those conditions select
   Turbo as a candidate, not proof of a working backend. The real offline self-test
   performs the Vulkan probe; CPU fallback remains allowed. Unknown drivers use
-  the conservative Small default. Owner hardware review must confirm the wording
+  the conservative Small default. The maintainer hardware review must confirm the wording
   and behavior before M5 acceptance. `/MODELS=tiny` selects the small CI/smoke model;
   only IDs already in the catalog can be selected.
 - Models live in the user's Dusty data folder, outside the install folder;
@@ -107,7 +107,7 @@ tools/test_installer.ps1 runs only in disposable CI, with no pre-existing user
 data. Inno resolves {localappdata} through Windows known folders, not an environment
 override. The harness checks both roots agree, uses a repository-local install
 directory and checks real runner-user model/settings cleanup. It never runs on
-the Owner desktop. The installed-app WFP audit reuses its downloaded models.
+the maintainer desktop. The installed-app WFP audit reuses its downloaded models.
 
 tools/inventory_installer.py extends the actual app inventory and validated
 CycloneDX 1.6 SBOM with the wrapper and separately identified static components.

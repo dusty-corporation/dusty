@@ -14,7 +14,7 @@ available, attribution and transitive notices are unresolved, not waived.
 | Component | Version | License | Copyright | Source/evidence |
 |---|---|---|---|---|
 | cpython | 3.12.11 | PSF-2.0 | Copyright © 2001-2023 Python Software Foundation. Copyright © 2000 BeOpen.com. Copyright © 1995-2001 CNRI. Copyright © 1991-1995 SMC. | https://github.com/python/cpython |
-| dusty | 1.0.0 | Apache-2.0 | Copyright 2026 Dusty contributors | https://github.com/dusty-corporation/dusty |
+| dusty | 1.0.1 | Apache-2.0 | Copyright 2026 Dusty contributors | https://github.com/dusty-corporation/dusty |
 | ffmpeg | n9.0.2 | LGPL-2.1-or-later | Copyright 2000-2026 the FFmpeg developers; exact build banner retained below | https://git.ffmpeg.org/ffmpeg.git |
 | jfk-fixture | 1961 | LicenseRef-Public-Domain | 1961 US government work, President John F. Kennedy; public domain | https://github.com/ggml-org/whisper.cpp/blob/v1.9.5/samples/jfk.wav |
 | libffi | ABI-8 (CPython build 20250902) | MIT | libffi - Copyright (c) 1996-2024  Anthony Green, Red Hat, Inc and others. | https://github.com/libffi/libffi |
@@ -391,7 +391,7 @@ Exiting with exit code 0
 
 ## Microsoft Visual C++ runtime terms
 
-Redistribution basis: Owner-held VS 2022 Community individual license, section 4.a.i
+Redistribution basis: maintainer-held VS 2022 Community individual license, section 4.a.i
 and the Visual C++ Runtime Files redistribution list. The runtime EULA is protective
 end-user terms under section 4.b, not an independent redistribution grant.
 Only release VC/redist CRT files are copied unmodified; see crt-provenance.json

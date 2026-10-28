@@ -478,6 +478,7 @@ GIGABYTES = "GB"
 DOWNLOAD_NAMES_JOIN = " and "
 DOWNLOAD_PROGRESS = "{done} of {total}"
 DOWNLOADING_MODEL = "Downloading {name}"
+CONNECTION_LOST_RETRYING = "Connection lost, retrying..."
 DOWNLOAD_TITLE = "Download transcription files?"
 DOWNLOAD_CONFIRM = "Download {names} from github.com ({size})?"
 
@@ -617,7 +618,8 @@ INSTALLER = {
         "models for a future installation."
     ),
     "CleanupKept": (
-        "Some app data was kept because Dusty could not safely identify it. "
+        "Some Dusty data was kept in your Windows Local AppData folder. "
+        "To see it, open File Explorer and enter %LOCALAPPDATA%\\Dusty. "
         "Your recordings and transcripts were not removed."
     ),
     "DesktopShortcut": "Create a desktop shortcut",
@@ -654,6 +656,7 @@ INSTALLER.update(
     UninstallTitle="Uninstall Dusty",
     UninstallAction="Uninstall",
     DownloadWorking="Downloading %1",
+    ConnectionLostRetrying=CONNECTION_LOST_RETRYING,
     CheckingModel="Checking %1",
     CheckingInstalled="Checking the downloaded models...",
     CheckAndTest="Check and test",

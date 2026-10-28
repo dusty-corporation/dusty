@@ -231,14 +231,51 @@ begin
   else Result := ModelNames[Downloads[DownloadIndex]];
 end;
 
+function SafeFetchLogPath(Name: String): Boolean;
+var Attributes: LongWord; Parent: String;
+begin
+  Result := False;
+  while Name <> '' do begin
+    Attributes := LogFileAttributes(Name);
+    if (Attributes <> $FFFFFFFF) and ((Attributes and $400) <> 0) then Exit;
+    Parent := ExtractFileDir(Name);
+    if Parent = Name then Break;
+    Name := Parent;
+  end;
+  Result := True;
+end;
+
+procedure LogFetchParentFailure(IsStart: Boolean; Code: LongWord);
+var Folder, Detail: String;
+begin
+  if not IsStart and FileExists(ExpandConstant('{tmp}\fetch-failure-logged')) then Exit;
+  Folder := ExpandConstant('{localappdata}\Dusty\logs');
+  if IsStart then Detail := 'class=ProcessStartError winerror=0 code=IO exit_code=none'
+  else Detail := 'class=ProcessError winerror=0 code=PROTOCOL exit_code=' + IntToStr(Code);
+  if SafeFetchLogPath(Folder + '\dusty.log') and ForceDirectories(Folder) and
+     SafeFetchLogPath(Folder + '\dusty.log') then
+    SaveStringToFile(Folder + '\dusty.log',
+      'download_failure step=next_file ' + Detail + #13#10, True);
+end;
+
 procedure BeginFetch(Command: String);
+var Arguments: String;
 begin
   if Command = 'download' then Phase.Caption := FmtMessage(CustomMessage('DownloadWorking'), [CurrentName])
   else Phase.Caption := FmtMessage(CustomMessage('CheckingModel'), [CurrentName]);
-  if not StartChild(ExpandConstant('{app}\dusty-fetch\dusty-fetch.exe'),
-    Command + ' --id ' + Quoted(CurrentId) + ' --dest ' +
+  DeleteFile(ExpandConstant('{tmp}\fetch-retrying'));
+  DeleteFile(ExpandConstant('{tmp}\fetch-failure-logged'));
+  Arguments := Command + ' --id ' + Quoted(CurrentId) + ' --dest ' +
     Quoted(ExpandConstant('{localappdata}\Dusty\models')) + ' --manifest ' +
-    Quoted(ExpandConstant('{app}\resources\models.json'))) then Failure(False);
+    Quoted(ExpandConstant('{app}\resources\models.json'));
+  { The first verify checks for a missing model as normal control flow. }
+  if (Command = 'download') or (Stage = 2) then Arguments := Arguments +
+    ' --failure-log ' + Quoted(ExpandConstant('{localappdata}\Dusty\logs\dusty.log')) +
+    ' --failure-marker ' + Quoted(ExpandConstant('{tmp}\fetch-failure-logged'));
+  if Command = 'download' then Arguments := Arguments + ' --retry-status ' +
+    Quoted(ExpandConstant('{tmp}\fetch-retrying'));
+  if not StartChild(ExpandConstant('{app}\dusty-fetch\dusty-fetch.exe'),
+    Arguments) then begin LogFetchParentFailure(True, 0); Failure(False); end;
 end;
 
 function SelfTestDeadline(Id: String; ProcessorOnly: Boolean): Int64;
@@ -369,6 +406,11 @@ begin
       if (Prefix > 0) and (Prefix < Expected) then begin StopModelSetup(False); Exit; end;
   end;
   if DownloadStarted and Busy then ShowAmount;
+  if (Stage = 1) and Busy then begin
+    if FileExists(ExpandConstant('{tmp}\fetch-retrying')) then
+      Phase.Caption := CustomMessage('ConnectionLostRetrying')
+    else Phase.Caption := FmtMessage(CustomMessage('DownloadWorking'), [CurrentName]);
+  end;
   if (Stage = -1) and (Child.Process <> 0) and (Tick - ProbeBegan > 7000) then begin
     ReleaseChild; ShowMemoryWarning; CheckExistingModels; Exit;
   end;
@@ -432,15 +474,21 @@ begin
     Exit;
   end;
   if Stage = -2 then begin
-    if Code <> 0 then begin Failure(False); Exit; end;
+    if Code <> 0 then begin
+      Log('fetch_failed id=' + CurrentId + ' stage=' + IntToStr(Stage) +
+        ' exit_code=' + IntToStr(Code));
+      Failure(False); Exit;
+    end;
     Stage := 0; BeginFetch('verify'); Exit;
   end;
   if Stage <= 2 then begin
     if (Stage = 0) and (Code <> 0) then begin
-      if not CurrentDownloadWanted then begin Failure(False); Exit; end;
+      if not CurrentDownloadWanted then begin
+        LogFetchParentFailure(False, Code); Failure(False); Exit;
+      end;
       Stage := 1; BeginFetch('download'); Exit;
     end;
-    if Code <> 0 then begin Failure(False); Exit; end;
+    if Code <> 0 then begin LogFetchParentFailure(False, Code); Failure(False); Exit; end;
     if Stage = 1 then begin Stage := 2; BeginFetch('verify'); Exit; end;
     if CurrentDownloadWanted then begin
       if Downloads[DownloadIndex] < 0 then CompletedModelBytes := CompletedModelBytes + @@VAD_BYTES@@

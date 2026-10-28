@@ -18,7 +18,7 @@ Only the requested entry is selected; no downloader import of dusty is needed.
 
 Stdout is flushed JSON lines; no filenames, paths, URLs, signed query strings
 or exception text are printed. Events: downloading (bytes/total), verifying,
-complete (bytes/total/cached), verified (bytes/total), error (code), cancelled
+complete (bytes/total/cached), verified (bytes/total), retrying (attempt), error (code), cancelled
 (code). Argument errors use the same error record. --help is human-readable.
 Progress is monotonic except a legitimate restart when a server ignores Range.
 
@@ -69,6 +69,38 @@ A .part contains only the local download prefix. Range starts at its current
 length. HTTP 206 must describe that exact start, final end and manifest total;
 malformed ranges are refused without appending. A 200 response restarts rather
 than appending. Truncated responses retain the prefix for a later attempt.
+The downloader makes at most two attempts per file. Each socket operation has
+a 30-second timeout, with no total elapsed-time cap on a progressing transfer.
+A slow connection can keep transferring as long as reads continue to return
+data. A reset, timeout, temporary DNS failure or truncated response triggers
+one short retry, limited by attempt count rather than elapsed transfer time.
+It starts a fresh HTTPS request at the original GitHub URL, obtains a fresh
+redirect, and resumes the partial with Range. The GUI displays
+"Connection lost, retrying...". Setup uses a temporary retry-status file
+to display the same message while the child waits. The marker is deleted after
+the wait; it never contains a URL, path or model data. TLS and certificate
+errors, invalid redirect hosts, HTTP errors, malformed ranges and hash
+mismatches never retry automatically. Each transfer attempt uses a new opener,
+and Python's urllib also sends `Connection: close` rather than pooling an idle
+connection. Setup launches a separate dusty-fetch process per file.
+After the last byte, Windows antivirus can briefly hold the completed file.
+Local sharing/access failures (WinError 5, 32, 33, or Windows EACCES without
+an exposed winerror) share one 30-second retry window per fetch invocation,
+starting at the first local access failure, with short backoff. This covers closing/flushing the part, its receipt hash,
+the final SHA-256 read, rename and the next file's checks and lock open.
+A returned hash mismatch never retries. Real helper-process tests hold the
+completed file without sharing during hashing and rename.
+
+Setup and Model Manager pass `--failure-log` pointing to
+`%LOCALAPPDATA%/Dusty/logs/dusty.log`. A failed fetch writes one redacted line:
+`download_failure step=rename class=PermissionError winerror=32 code=IO exit_code=7`.
+Steps are connect, transfer, finalize, verify, rename or next_file. No URL,
+path or user content is recorded. The expected initial missing-model check
+in Setup is not logged. A temporary `--failure-marker` prevents duplicate
+Setup fallback lines; malformed or missing child reports get a fixed parent
+fallback. `winerror=0` means Windows did not expose a numeric code;
+`exit_code=none` means the process could not start. A real Model Manager
+child test and a Setup-style child command verify the log destination.
 SHA-256 and size are checked before atomic replacement in the same directory;
 a mismatch removes the part. Old/mismatched prefixes can never publish as a
 valid model because the full digest is always checked.

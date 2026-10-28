@@ -2,7 +2,7 @@
 - Status: Accepted
 - Date: 2026-10-21
 ## Context
-The intended audience uses a typical Windows laptop.
+Windows laptop testing guides the initial platform support and hardware defaults.
 ## Decision
 Target Windows 11 x64 first and support Windows 10 22H2 x64; keep core code portable.
 ## Consequences

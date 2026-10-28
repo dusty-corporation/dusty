@@ -1,6 +1,6 @@
 # 0024 - Windows native Unicode paths
 
-- Status: Accepted by PM; Owner publication confirmed, production pins activated
+- Status: Accepted by PM; maintainer publication confirmed, production pins activated
 - Date: 2026-10-24
 
 ## Context
@@ -13,7 +13,7 @@ non-ASCII Windows profile names, model folders and temporary audio paths.
 
 Embed activeCodePage=UTF-8 and longPathAware in the existing whisper.cpp EXEs
 at link time. Keep all CPU dispatch, no-network and VAD patch settings. Verify
-both rebuilt packages and publish a new engine release only through the Owner;
+both rebuilt packages and publish a new engine release only through the maintainer;
 do not alter engine-v2 or frozen M5 .13/.14. No new native component is introduced.
 
 Microsoft's [manifest reference](https://learn.microsoft.com/en-us/windows/win32/sbscs/application-manifests)
@@ -35,13 +35,13 @@ until the candidate has been activated and the full app gates pass.
 
 Prepare engine-v3 as a draft from exact native run 40110881732 at
 d0abc304942255a1d30d741fff0ca98c2c1cdf45, already gated by app run 40125892713.
-Keep engine-v2 unchanged. Owner publishes engine-v3 as a prerelease, not latest.
+Keep engine-v2 unchanged. The maintainer publishes engine-v3 as a prerelease, not latest.
 Prepare the pin switch only on m6-engine-v3-pins based on m6-hardening; do not
 merge it before the PM confirms publication.
 
 ## Publication and production activation
 
-Owner published engine-v3 as a prerelease on 2026-10-24. Its 12 assets retain
+The maintainer published engine-v3 as a prerelease on 2026-10-24. Its 12 assets retain
 the approved hashes and native source/run d0abc30 / 40110881732. engine-v2 and
 frozen M5 assets are unchanged. The isolated 299fea3 production-pin switch was
 integrated as f427da5 on m6-hardening-main after M5 PR #6 merged into main.

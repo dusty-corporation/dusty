@@ -21,7 +21,7 @@ jobs:
           if gh release view models-v1 --json isDraft --jq .isDraft >/tmp/draft-state 2>/dev/null; then
             test "$(cat /tmp/draft-state)" = true
           else
-            gh release create models-v1 --draft --prerelease --target "${{ github.sha }}" --title "M1 benchmark models" --notes "Draft benchmark candidates. Owner publishes after review."
+            gh release create models-v1 --draft --prerelease --target "${{ github.sha }}" --title "M1 benchmark models" --notes "Draft benchmark candidates. The maintainer publishes after review."
           fi
 
   convert:

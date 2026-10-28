@@ -135,7 +135,9 @@ def stage(bundle: Path, redist: Path, receipt: Path) -> None:
                 )
             pin = pins["files"][target.name.lower()]
             if not microsoft_vendor(source) or sha256(source) != pin["sha256"]:
-                raise ValueError(f"CRT source differs from Owner's pinned copy: {target.name}")
+                raise ValueError(
+                    f"CRT source differs from the maintainer's pinned copy: {target.name}"
+                )
             if file_version(source) != pin["version"]:
                 raise ValueError(f"CRT source version changed: {target.name}")
             collected_sha, collected_version = sha256(target), file_version(target)
@@ -165,4 +167,7 @@ def stage(bundle: Path, redist: Path, receipt: Path) -> None:
         item["imported_by"] = importers[key]
     receipt.parent.mkdir(parents=True, exist_ok=True)
     receipt.write_text(json.dumps({"files": records}, indent=2), encoding="utf-8", newline="\n")
-    print(f"Verified {len(records)} required app-local CRT copies against Owner's pinned VC/redist")
+    print(
+        f"Verified {len(records)} required app-local CRT copies "
+        "against the maintainer's pinned VC/redist"
+    )

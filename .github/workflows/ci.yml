@@ -245,7 +245,7 @@ jobs:
             build/model-download-*/summary.json
             build/model-download-*/download-result.json
           if-no-files-found: error
-      - name: Preserve audited review bundle for the Owner
+      - name: Preserve audited review bundle for the maintainer
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: m4-review-bundle

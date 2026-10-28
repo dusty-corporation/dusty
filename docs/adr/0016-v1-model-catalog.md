@@ -41,7 +41,7 @@ selectable in V1.
 
 The default depends on a runtime Vulkan probe. CPU-only users get a smaller
 translation-capable default. The app must prevent unsupported Translate
-selections and show the CPU speed warning before processing. The Owner must
+selections and show the CPU speed warning before processing. The maintainer must
 confirm Vulkan on the real Surface before M7.
 
 ## Alternatives considered

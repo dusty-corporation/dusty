@@ -715,7 +715,7 @@ class MainWindow(QMainWindow):
             and event.type() == QEvent.Type.MouseButtonRelease
         ):
             if event.button() == Qt.MouseButton.LeftButton:
-                # Intentional Owner-requested hidden greeting: memory-only, no side effects.
+                # Intentional maintainer-requested hidden greeting: memory-only, no side effects.
                 now = time.monotonic()
                 if not self._title_clicks or now - self._title_click_started > 4.0:
                     self._title_clicks = 0

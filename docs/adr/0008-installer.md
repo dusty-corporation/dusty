@@ -2,7 +2,7 @@
 - Status: Accepted
 - Date: 2026-10-21
 ## Context
-Nontechnical users need a per-user Windows installer.
+A per-user Windows installer lets people set up Dusty without administrator privileges.
 ## Decision
 Use Inno Setup 6 with `PrivilegesRequired=lowest`; unsigned for V1.
 ## Consequences

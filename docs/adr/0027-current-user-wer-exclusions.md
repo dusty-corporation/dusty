@@ -46,7 +46,7 @@ all five registered names. Observe real per-user and machine queue/archive/temp
 stores. Access errors fail the check, not turn a store into an empty set. Keep
 explicit bounded-observation and unproven-path limitations in the report. Verify
 installed entries, no HKLM changes, and exact uninstall removal while a separate
-unrelated current-user fixture entry survives. No real Owner-store crash test.
+unrelated current-user fixture entry survives. No crash test on the maintainer's real WER stores.
 
 
 The pinned Inno runtime is PE32 (the build gate verifies this). Its WER import

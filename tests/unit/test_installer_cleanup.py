@@ -123,7 +123,7 @@ def test_cleanup_removes_recognized_job_work_only(tmp_path):
     paths = RuntimePaths(tmp_path, root / "models", ROOT / "resources", root)
     assert not cleanup(paths, remove_models=False)
     assert (work / "audio.wav").read_bytes() == b"temporary"
-    del owned  # Owner has exited; only now is this orphaned work.
+    del owned  # The work-area owner has exited; only now is this orphaned work.
     assert cleanup(paths, remove_models=False)
     assert not root.exists()
 

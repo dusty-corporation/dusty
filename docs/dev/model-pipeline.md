@@ -22,7 +22,7 @@ converter log and runs the repository model-host policy checker. The
 complete 5,472,012-byte CI log was also downloaded and scanned locally
 with the checker's `PATTERN`; it had zero matches.
 
-The Owner published models-v1 after M1. Its assets and pinned manifest are
+The maintainer published models-v1 after M1. Its assets and pinned manifest are
 immutable inputs; do not rerun an upload against that release. Reproduction
 uses a separate ignored local output directory and compares hashes without
 changing the published release. See build-from-source.md for exact commands.

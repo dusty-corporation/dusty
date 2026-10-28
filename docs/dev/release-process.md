@@ -49,8 +49,8 @@ A file downloaded with gh may lack Windows' internet zone tag. In a disposable
 VM, add it before checking the actual prompt:
 
 ```powershell
-Set-Content -LiteralPath .\Dusty-1.0.0-Setup.exe -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3"
-Get-FileHash .\Dusty-1.0.0-Setup.exe -Algorithm SHA256
+Set-Content -LiteralPath .\Dusty-1.0.1-Setup.exe -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3"
+Get-FileHash .\Dusty-1.0.1-Setup.exe -Algorithm SHA256
 ```
 
 Compare with the exact release checksum first. Windows reputation and policy

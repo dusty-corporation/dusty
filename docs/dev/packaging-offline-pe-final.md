@@ -1,6 +1,6 @@
 # Final packaging PE and runtime provenance evidence
 
-Local Owner CRT rebuild, 2026-10-22. Final CI evidence is linked in M5-interim-4.md.
+Local maintainer CRT rebuild, 2026-10-22. Final CI evidence is linked in M5-interim-4.md.
 
 ## PE import gate
 
@@ -76,10 +76,10 @@ bin/vulkan/whisper-cli.exe
 bin/vulkan/whisper.dll
 ```
 
-## Collected copies replaced with Owner files
+## Collected copies replaced with maintainer files
 
 All collected and replacement files report version **14.44.35211.0**. The hashes
-differ, so the collected copies were replaced unmodified from the exact Owner
+differ, so the collected copies were replaced unmodified from the exact maintainer-provided
 14.44.35112 regular x64 folder. Packaged CPU/Vulkan self-test and GUI smoke pass.
 The five replacement hashes and exact source path are in ADR 0020.
 
@@ -101,4 +101,4 @@ Eleven copies, five unique names. QtCore/Gui/Widgets import msvcp140 and the _1/
 helpers; CPython/extensions and the CRT itself import vcruntime140 and _1.
 The downloader imports only vcruntime140. Normal and delayed imports are scanned.
 Receipts list each importing PE and the source/replacement hashes and versions.
-Other files in the Owner redist folder are not copied. No UCRT/API-set copies.
+Other files in the maintainer redist folder are not copied. No UCRT/API-set copies.

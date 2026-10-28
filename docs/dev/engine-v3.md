@@ -2,7 +2,7 @@
 
 ADR 0024 accepted by PM, 2026-10-24. Native run 40110881732 at
 d0abc304942255a1d30d741fff0ca98c2c1cdf45; app candidate gate 40125892713.
-Owner published engine-v3 as a prerelease on 2026-10-24. engine-v2 remains
+The maintainer published engine-v3 as a prerelease on 2026-10-24. engine-v2 remains
 byte-for-byte unchanged; published CPU/Vulkan/FFmpeg hashes below are verified.
 
 `tools.prepare_m6_candidate.candidate_archives` checks the pinned manifest,
@@ -23,9 +23,9 @@ patch and UTF-8 manifest. Source links and build recipes are in the release note
 Exact candidate archives include whisper-bench, as they did in validation; it
 remains excluded from the installed application. No model/server is included.
 
-Owner publication was confirmed with isDraft=false and isPrerelease=true;
+Publication by the maintainer was confirmed with isDraft=false and isPrerelease=true;
 source remains d0abc30 / native run 40110881732. Do not republish/edit it.
 The isolated production-pin commit 299fea3 was integrated as f427da5 on
 m6-hardening-main, based on actual main after M5 PR #6. Normal CI now fetches
 these public assets and runs without candidate mode. See M6-report.md for the
-final production/PR gates and consolidated Owner session.
+final production/PR gates and consolidated maintainer session.

@@ -2,12 +2,15 @@
 
 import errno
 import hashlib
+import http.client
 import json
 import os
 import re
 import shutil
+import socket
 import ssl
 import stat
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -22,6 +25,11 @@ from .tls import create_context
 
 HOSTS = frozenset({"github.com", "release-assets.githubusercontent.com"})
 CHUNK = 64 * 1024
+SOCKET_TIMEOUT = 30
+MAX_ATTEMPTS = 2
+RETRY_DELAY = 1.0
+LOCAL_RETRY_SECONDS = 30.0
+LOCAL_RETRY_DELAY = 0.25
 
 
 class Exit(IntEnum):
@@ -40,6 +48,68 @@ class FetchError(Exception):
     def __init__(self, code: Exit):
         self.code = code
         super().__init__(code.name)
+
+
+class TransientTransferError(ConnectionError):
+    """A response ended early, leaving a resumable partial file."""
+
+
+def transient_connection_error(exc: BaseException) -> bool:
+    """Retry transport interruption only, never trust or policy failures."""
+    if isinstance(exc, TransientTransferError):
+        return True
+    if isinstance(exc, ssl.SSLError | urllib.error.HTTPError):
+        return False
+    if isinstance(exc, urllib.error.URLError):
+        return isinstance(exc.reason, BaseException) and transient_connection_error(exc.reason)
+    if isinstance(exc, socket.gaierror):
+        code = exc.errno if exc.errno is not None else exc.args[0] if exc.args else None
+        return code == socket.EAI_AGAIN
+    if isinstance(exc, TimeoutError | ConnectionResetError | ConnectionAbortedError):
+        return True
+    if isinstance(exc, http.client.IncompleteRead):
+        return True
+    return isinstance(exc, OSError) and exc.errno in {
+        errno.ETIMEDOUT,
+        errno.ECONNRESET,
+        errno.ECONNABORTED,
+    }
+
+
+def temporary_file_access(exc: OSError) -> bool:
+    """Windows scanners can expose sharing failures as EACCES without winerror."""
+    winerror = getattr(exc, "winerror", None)
+    return winerror in {5, 32, 33} or (
+        os.name == "nt" and winerror is None and exc.errno == errno.EACCES
+    )
+
+
+@dataclass
+class LocalRetryBudget:
+    deadline: float | None = None
+
+
+def retry_local_file[T](
+    operation: Callable[[], T],
+    cancelled: Callable[[], bool] = lambda: False,
+    budget: LocalRetryBudget | None = None,
+) -> T:
+    """Share one 30-second window starting at the first local access failure."""
+    budget = budget if budget is not None else LocalRetryBudget()
+    while True:
+        if cancelled():
+            raise FetchError(Exit.CANCELLED)
+        try:
+            return operation()
+        except OSError as exc:
+            if not temporary_file_access(exc):
+                raise
+            now = time.monotonic()
+            if budget.deadline is None:
+                budget.deadline = now + LOCAL_RETRY_SECONDS
+            if now >= budget.deadline:
+                raise
+            time.sleep(min(LOCAL_RETRY_DELAY, budget.deadline - now))
 
 
 @dataclass(frozen=True)
@@ -159,11 +229,15 @@ def record_partial(path: Path) -> None:
 
 
 @contextmanager
-def download_lock(path: Path):
+def download_lock(
+    path: Path,
+    cancelled: Callable[[], bool] = lambda: False,
+    budget: LocalRetryBudget | None = None,
+):
     """OS-released lock survives cancellation without a stale PID lock protocol."""
     if linked(path):
         raise FetchError(Exit.IO)
-    with path.open("a+b") as handle:
+    with retry_local_file(lambda: path.open("a+b"), cancelled, budget) as handle:
         if handle.tell() == 0:
             handle.write(b"0")
             handle.flush()
@@ -195,14 +269,39 @@ class Downloader:
     def __init__(self, *, policy: HostPolicy | None = None, context: ssl.SSLContext | None = None):
         # Injection is for library tests only; the CLI has no host/TLS override.
         self.policy = policy or HostPolicy()
-        self.opener = urllib.request.build_opener(
+        self.context = context or create_context()
+        self.step = "next_file"
+        self.local_retry_budget = LocalRetryBudget()
+
+    def _local[T](self, step: str, operation: Callable[[], T], cancelled: Callable[[], bool]) -> T:
+        self.step = step
+        return retry_local_file(operation, cancelled, self.local_retry_budget)
+
+    @contextmanager
+    def _part_stream(self, part: Path, cancelled: Callable[[], bool]):
+        stream = self._local(
+            "transfer", lambda: part.open("r+b" if part.exists() else "x+b"), cancelled
+        )
+        try:
+            yield stream
+        finally:
+            preceding_step = self.step
+            self._local("finalize", stream.close, lambda: False)
+            self.step = preceding_step
+
+    def _opener(self):
+        # New opener, connection and original GitHub URL for every attempt/file.
+        return urllib.request.build_opener(
             urllib.request.ProxyHandler({}),
             CheckedRedirect(self.policy),
-            urllib.request.HTTPSHandler(context=context or create_context()),
+            urllib.request.HTTPSHandler(context=self.context),
         )
 
     def verify(self, asset: Asset, destination: Path) -> None:
-        if not matches(destination / asset.file_name, asset):
+        self.local_retry_budget = LocalRetryBudget()
+        if not self._local(
+            "verify", lambda: matches(destination / asset.file_name, asset), lambda: False
+        ):
             raise FetchError(Exit.MISMATCH)
 
     def download(
@@ -211,18 +310,23 @@ class Downloader:
         destination: Path,
         emit: Callable[[dict[str, Any]], None],
         cancelled: Callable[[], bool] = lambda: False,
+        retry_state: Callable[[bool], None] = lambda _: None,
     ) -> None:
+        self.step = "next_file"
+        self.local_retry_budget = LocalRetryBudget()
         self.policy.validate(asset.url)
-        if linked(destination):
+        if self._local("next_file", lambda: linked(destination), cancelled):
             raise FetchError(Exit.IO)
-        destination.mkdir(parents=True, exist_ok=True)
+        self._local("next_file", lambda: destination.mkdir(parents=True, exist_ok=True), cancelled)
         final = destination / asset.file_name
         part = destination / (asset.file_name + ".part")
-        if linked(final) or linked(part):
+        if self._local("next_file", lambda: linked(final) or linked(part), cancelled):
             raise FetchError(Exit.IO)
-        with download_lock(destination / (asset.file_name + ".lock")):
+        with download_lock(
+            destination / (asset.file_name + ".lock"), cancelled, self.local_retry_budget
+        ):
             try:
-                if matches(final, asset):
+                if self._local("next_file", lambda: matches(final, asset), cancelled):
                     emit(
                         {
                             "event": "complete",
@@ -232,24 +336,50 @@ class Downloader:
                         }
                     )
                     return
-                offset = part.stat().st_size if part.exists() else 0
+                offset = self._local(
+                    "next_file", lambda: part.stat().st_size if part.exists() else 0, cancelled
+                )
                 if offset > asset.size:
                     part.unlink()
                     raise FetchError(Exit.MISMATCH)
                 if offset < asset.size:
-                    try:
-                        self._transfer(asset, part, offset, emit, cancelled)
-                    finally:
-                        record_partial(part)
+                    for attempt in range(1, MAX_ATTEMPTS + 1):
+                        offset = self._local(
+                            "finalize",
+                            lambda: part.stat().st_size if part.exists() else 0,
+                            cancelled,
+                        )
+                        if offset == asset.size:
+                            break
+                        try:
+                            self._transfer(asset, part, offset, emit, cancelled)
+                            break
+                        except (OSError, http.client.HTTPException) as exc:
+                            if attempt == MAX_ATTEMPTS or not transient_connection_error(exc):
+                                raise
+                            emit({"event": "retrying", "attempt": attempt + 1})
+                            retry_state(True)
+                            try:
+                                until = time.monotonic() + RETRY_DELAY
+                                while time.monotonic() < until:
+                                    if cancelled():
+                                        raise FetchError(Exit.CANCELLED) from exc
+                                    time.sleep(min(0.05, until - time.monotonic()))
+                            finally:
+                                retry_state(False)
+                        finally:
+                            previous_step = self.step
+                            self._local("finalize", lambda: record_partial(part), cancelled)
+                            self.step = previous_step
                 if cancelled():
                     raise FetchError(Exit.CANCELLED)
                 emit({"event": "verifying", "bytes": asset.size, "total": asset.size})
-                if not matches(part, asset):
+                if not self._local("verify", lambda: matches(part, asset), cancelled):
                     part.unlink(missing_ok=True)
                     raise FetchError(Exit.MISMATCH)
                 if cancelled():
                     raise FetchError(Exit.CANCELLED)
-                os.replace(part, final)
+                self._local("rename", lambda: os.replace(part, final), cancelled)
                 emit(
                     {"event": "complete", "bytes": asset.size, "total": asset.size, "cached": False}
                 )
@@ -280,7 +410,8 @@ class Downloader:
         if offset:
             headers["Range"] = f"bytes={offset}-"
         request = urllib.request.Request(self.policy.validate(asset.url), headers=headers)
-        with self.opener.open(request, timeout=30) as response:
+        self.step = "connect"
+        with self._opener().open(request, timeout=SOCKET_TIMEOUT) as response:
             self.policy.validate(response.url)
             if response.status == 200:
                 if offset:
@@ -296,7 +427,8 @@ class Downloader:
             if length is not None and length != str(asset.size - offset):
                 raise FetchError(Exit.NETWORK)
             emit({"event": "downloading", "bytes": offset, "total": asset.size})
-            with part.open("r+b" if part.exists() else "x+b") as stream:
+            self.step = "transfer"
+            with self._part_stream(part, cancelled) as stream:
                 stream.seek(offset)
                 stream.truncate()
                 while True:
@@ -306,15 +438,17 @@ class Downloader:
                     if not chunk:
                         break
                     if stream.tell() + len(chunk) > asset.size:
-                        stream.close()
+                        self._local("finalize", stream.close, cancelled)
                         part.unlink(missing_ok=True)
                         raise FetchError(Exit.MISMATCH)
                     stream.write(chunk)
                     emit({"event": "downloading", "bytes": stream.tell(), "total": asset.size})
-                stream.flush()
-                os.fsync(stream.fileno())
+                self.step = "finalize"
+                self._local("finalize", stream.flush, cancelled)
+                self._local("finalize", lambda: os.fsync(stream.fileno()), cancelled)
                 if stream.tell() != asset.size:
-                    raise FetchError(Exit.NETWORK)
+                    self.step = "transfer"
+                    raise TransientTransferError("Incomplete response")
 
 
 def io_error(exc: OSError) -> Exit:

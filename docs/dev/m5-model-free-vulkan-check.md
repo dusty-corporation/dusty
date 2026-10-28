@@ -1,10 +1,10 @@
 # M5 Phase 1: model-free Vulkan verification
 
-Verified 2026-10-23 on the Owner desktop, using engine-v2, whisper.cpp v1.9.5
+Verified 2026-10-23 on the maintainer desktop, using engine-v2, whisper.cpp v1.9.5
 commit d1be6fde11ac6e0407606b4e42fe72d34add8037 plus the pinned VAD patch.
 This records the historical Phase 1 investigation. M5 subsequently implemented
 the guarded probe in installer_support.probe and platform/vulkan_probe.py;
-M5-report.md contains its CI and Owner evidence. The proposed next steps below
+M5-report.md contains its CI and maintainer evidence. The proposed next steps below
 describe the state at the time of this investigation.
 
 ## CLI limitation
@@ -66,7 +66,7 @@ No production probe code was added during Phase 1.
 ## Implemented probe evidence (M5 Step B)
 
 The production guarded probe and its standalone diagnostic are now implemented.
-Owner ThinkPad Iris Xe result on 2026-10-23:
+ThinkPad Iris Xe result recorded by the maintainer on 2026-10-23:
 `{"real_gpu_found":true,"model_file_opened":false}`. Desktop diagnostic passed
 with PowerShell 7 and Windows PowerShell 5.1; production entry also returned true.
 This supersedes the Phase 1 pending-device note, not its historical findings.

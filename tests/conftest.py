@@ -48,5 +48,5 @@ def tls_certificate(tmp_path_factory):
 
 @pytest.fixture(autouse=True)
 def isolate_application_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Subprocesses inherit this too; tests must not write the Owner's app data."""
+    """Subprocesses inherit this too; tests must not write the maintainer's app data."""
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "appdata"))

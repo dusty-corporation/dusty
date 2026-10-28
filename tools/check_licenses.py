@@ -257,7 +257,7 @@ def check_microsoft(bundle: Path, inventory: dict, actual: dict[str, Path]) -> l
             findings.append(f"CRT lacks verified importing PEs: {relative}")
         pin = pins["files"].get(path.name.lower(), {})
         if record.get("sha256") != pin.get("sha256") or record.get("version") != pin.get("version"):
-            findings.append(f"CRT differs from Owner's pinned hash/version: {relative}")
+            findings.append(f"CRT differs from the maintainer's pinned hash/version: {relative}")
         with source.open("rb") as stream:
             source_sha = hashlib.file_digest(stream, "sha256").hexdigest()
         with path.open("rb") as stream:

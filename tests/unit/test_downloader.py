@@ -9,6 +9,7 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.error
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from types import SimpleNamespace
@@ -18,16 +19,217 @@ import pytest
 from dusty_fetch.__main__ import main
 from dusty_fetch.downloader import (
     CHUNK,
+    MAX_ATTEMPTS,
+    SOCKET_TIMEOUT,
     Downloader,
     Exit,
     FetchError,
     HostPolicy,
+    LocalRetryBudget,
     download_lock,
     load_asset,
+    matches,
+    retry_local_file,
+    transient_connection_error,
 )
 
 CERTS = Path(__file__).resolve().parents[1] / "fixtures/https"
 DATA = bytes(range(256)) * 2048
+
+
+def test_local_access_retry_is_bounded_and_rejects_other_errors(monkeypatch):
+    from dusty_fetch import downloader
+
+    clock = [0.0]
+    monkeypatch.setattr(downloader.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(
+        downloader.time, "sleep", lambda seconds: clock.__setitem__(0, clock[0] + seconds)
+    )
+    attempts = []
+
+    def busy():
+        attempts.append(clock[0])
+        error = PermissionError(13, "redacted test message")
+        error.winerror = 32
+        raise error
+
+    with pytest.raises(PermissionError):
+        retry_local_file(busy)
+    assert clock[0] == 30.0
+    assert len(attempts) > 1
+    clock[0] = 0
+    attempts.clear()
+
+    def disk_full():
+        attempts.append(clock[0])
+        raise OSError(28, "redacted test message")
+
+    with pytest.raises(OSError):
+        retry_local_file(disk_full)
+    assert attempts == [0]
+
+
+def test_local_retry_window_is_shared_across_operations(monkeypatch):
+    from dusty_fetch import downloader
+
+    clock = [0.0]
+    monkeypatch.setattr(downloader.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(
+        downloader.time, "sleep", lambda seconds: clock.__setitem__(0, clock[0] + seconds)
+    )
+    budget = LocalRetryBudget()
+
+    def access_error():
+        error = PermissionError(13, "redacted test message")
+        error.winerror = 32
+        return error
+
+    def first_operation():
+        if clock[0] < 10:
+            raise access_error()
+        return "complete"
+
+    assert retry_local_file(first_operation, budget=budget) == "complete"
+
+    def second_operation():
+        raise access_error()
+
+    with pytest.raises(PermissionError):
+        retry_local_file(second_operation, budget=budget)
+    assert clock[0] == 30.0
+
+
+def hold_exclusive(path: Path, seconds: float = 1.5) -> subprocess.Popen[str]:
+    """A separate Windows process denies file sharing until its timer expires."""
+    program = """
+import ctypes, sys, time
+kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+kernel.CreateFileW.argtypes = [ctypes.c_wchar_p, ctypes.c_uint32, ctypes.c_uint32,
+                               ctypes.c_void_p, ctypes.c_uint32, ctypes.c_uint32,
+                               ctypes.c_void_p]
+kernel.CreateFileW.restype = ctypes.c_void_p
+handle = kernel.CreateFileW(sys.argv[1], 0x80000000, 0, None, 3, 0, None)
+if handle == ctypes.c_void_p(-1).value:
+    raise OSError(ctypes.get_last_error())
+print('locked', flush=True)
+time.sleep(float(sys.argv[2]))
+kernel.CloseHandle(ctypes.c_void_p(handle))
+"""
+    child = subprocess.Popen(
+        [sys.executable, "-c", program, str(path), str(seconds)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    assert child.stdout is not None
+    assert child.stdout.readline().strip() == "locked"
+    return child
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows sharing semantics")
+def test_completed_part_recovers_when_antivirus_holds_hash_open(tls):
+    tls.dest.mkdir()
+    part = tls.dest / (tls.asset.file_name + ".part")
+    part.write_bytes(DATA)
+    holder = hold_exclusive(part)
+    try:
+        tls.client.download(tls.asset, tls.dest, lambda event: None)
+    finally:
+        assert holder.wait(timeout=5) == 0
+    assert (tls.dest / tls.asset.file_name).read_bytes() == DATA
+    assert tls.requests == []
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows sharing semantics")
+def test_completed_part_recovers_when_antivirus_holds_rename(tls, monkeypatch):
+    tls.dest.mkdir()
+    part = tls.dest / (tls.asset.file_name + ".part")
+    part.write_bytes(DATA)
+    original = os.replace
+    holder = None
+
+    def blocked_rename(source, target):
+        nonlocal holder
+        if Path(source) == part and holder is None:
+            holder = hold_exclusive(part)
+        return original(source, target)
+
+    monkeypatch.setattr("dusty_fetch.downloader.os.replace", blocked_rename)
+    try:
+        tls.client.download(tls.asset, tls.dest, lambda event: None)
+    finally:
+        if holder is not None:
+            assert holder.wait(timeout=5) == 0
+    assert holder is not None
+    assert (tls.dest / tls.asset.file_name).read_bytes() == DATA
+    assert tls.requests == []
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows sharing semantics")
+def test_next_file_start_waits_for_exclusive_lock_file(tls):
+    tls.dest.mkdir()
+    lock = tls.dest / (tls.asset.file_name + ".lock")
+    lock.write_bytes(b"0")
+    holder = hold_exclusive(lock)
+    try:
+        tls.client.download(tls.asset, tls.dest, lambda event: None)
+    finally:
+        assert holder.wait(timeout=5) == 0
+    assert (tls.dest / tls.asset.file_name).read_bytes() == DATA
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows sharing semantics")
+def test_receipt_hash_waits_for_exclusive_completed_part(tls, monkeypatch):
+    from dusty_fetch import downloader
+
+    original = downloader.record_partial
+    holder = None
+
+    def held_receipt(part):
+        nonlocal holder
+        if holder is None:
+            holder = hold_exclusive(part)
+        return original(part)
+
+    monkeypatch.setattr(downloader, "record_partial", held_receipt)
+    try:
+        tls.client.download(tls.asset, tls.dest, lambda event: None)
+    finally:
+        if holder is not None:
+            assert holder.wait(timeout=5) == 0
+    assert holder is not None
+    assert (tls.dest / tls.asset.file_name).read_bytes() == DATA
+
+
+def test_part_close_retries_a_temporary_sharing_error(tls, monkeypatch):
+    original = Path.open
+    errors = []
+
+    class BusyClose:
+        def __init__(self, stream):
+            self.stream = stream
+            self.first = True
+
+        def __getattr__(self, name):
+            return getattr(self.stream, name)
+
+        def close(self):
+            if self.first:
+                self.first = False
+                errors.append("sharing")
+                raise PermissionError(13, "Synthetic sharing violation", None, 32)
+            self.stream.close()
+
+    def open_part(path, mode="r", *args, **kwargs):
+        stream = original(path, mode, *args, **kwargs)
+        if path.name.endswith(".part") and mode in {"x+b", "r+b"}:
+            return BusyClose(stream)
+        return stream
+
+    monkeypatch.setattr(Path, "open", open_part)
+    tls.client.download(tls.asset, tls.dest, lambda event: None)
+    assert errors == ["sharing"]
+    assert (tls.dest / tls.asset.file_name).read_bytes() == DATA
 
 
 def test_tls_identity_is_temporary_and_regenerated(tmp_path, tls_certificate):
@@ -74,6 +276,8 @@ def tls(tmp_path, monkeypatch, tls_certificate):
         waiting=threading.Event(),
         finished=threading.Event(),
         certificate=tls_certificate.cert,
+        paths=[],
+        tokens=0,
     )
 
     class Handler(BaseHTTPRequestHandler):
@@ -82,6 +286,17 @@ def tls(tmp_path, monkeypatch, tls_certificate):
 
         def do_GET(self):
             state.requests.append(self.headers.get("Range"))
+            state.paths.append(self.path)
+            if state.mode == "fresh_redirect" and self.path == "/asset":
+                state.tokens += 1
+                self.send_response(302)
+                self.send_header("Location", f"/signed?token={state.tokens}")
+                self.end_headers()
+                return
+            if state.mode == "fresh_redirect" and self.path.startswith("/signed"):
+                if self.path != f"/signed?token={state.tokens}":
+                    self.send_error(403)
+                    return
             if state.mode == "redirect":
                 self.send_response(302)
                 self.send_header("Location", "https://not-allowed.invalid/file")
@@ -103,7 +318,9 @@ def tls(tmp_path, monkeypatch, tls_certificate):
                 self.send_header("Content-Range", f"bytes {start}-{len(DATA) - 1}/{len(DATA)}")
             self.end_headers()
             content = DATA[offset:]
-            if state.mode == "interrupt" and not state.interrupted:
+            if state.mode == "interrupt_always" or (
+                state.mode in {"interrupt", "drop_once"} and not state.interrupted
+            ):
                 state.interrupted = True
                 content = content[: len(content) // 2]
             try:
@@ -170,15 +387,216 @@ def test_success_verify_json_and_cached_reuse(tls, capsys):
 
 
 def test_resume_after_interrupted_connection(tls):
-    tls.mode = "interrupt"
+    tls.mode = "interrupt_always"
     assert main(args(tls), client=tls.client) == Exit.NETWORK
     part = tls.dest / (tls.asset.file_name + ".part")
     offset = part.stat().st_size
     assert 0 < offset < len(DATA)
     assert not (tls.dest / tls.asset.file_name).exists()
+    assert len(tls.requests) == 2
+    tls.mode = "normal"
     assert main(args(tls), client=tls.client) == Exit.OK
-    assert tls.requests == [None, f"bytes={offset}-"]
+    assert tls.requests == [None, f"bytes={len(DATA) // 2}-", f"bytes={offset}-"]
     assert (tls.dest / tls.asset.file_name).read_bytes() == DATA
+
+
+def test_one_transient_drop_retries_with_range_and_validates_hash(tls, capsys):
+    tls.mode = "drop_once"
+    assert main(args(tls), client=tls.client) == Exit.OK
+    events = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+    assert [event["event"] for event in events].count("retrying") == 1
+    assert tls.requests[0] is None
+    assert tls.requests[1].startswith("bytes=")
+    assert (tls.dest / tls.asset.file_name).read_bytes() == DATA
+
+
+def test_retry_status_file_exists_only_during_backoff(tls, monkeypatch):
+    from dusty_fetch import downloader
+
+    tls.mode = "drop_once"
+    marker = tls.dest.parent / "retry-status"
+    states = []
+    real_sleep = time.sleep
+
+    def observe_sleep(seconds):
+        states.append(marker.read_bytes())
+        real_sleep(seconds)
+
+    monkeypatch.setattr(downloader.time, "sleep", observe_sleep)
+    argv = args(tls) + ["--retry-status", str(marker)]
+    assert main(argv, client=tls.client) == Exit.OK
+    assert states and all(state == b"1" for state in states)
+    assert not marker.exists()
+
+
+def test_transient_classifier_and_socket_timeout():
+    assert transient_connection_error(TimeoutError())
+    assert transient_connection_error(ConnectionResetError())
+    assert transient_connection_error(urllib.error.URLError(socket.gaierror(socket.EAI_AGAIN)))
+    assert not transient_connection_error(urllib.error.URLError(socket.gaierror(socket.EAI_NONAME)))
+    assert not transient_connection_error(ssl.SSLError())
+    assert not transient_connection_error(urllib.error.HTTPError("", 403, "", {}, None))
+    assert SOCKET_TIMEOUT == 30
+    assert MAX_ATTEMPTS == 2
+
+
+@pytest.mark.parametrize("mode", ["normal", "drop_once"])
+def test_steady_transfer_past_old_wall_clock_cap_completes(tls, monkeypatch, mode):
+    from dusty_fetch import downloader
+
+    tls.mode = mode
+    clock = [0.0]
+    events = []
+    monkeypatch.setattr(downloader.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(
+        downloader.time, "sleep", lambda seconds: clock.__setitem__(0, clock[0] + seconds)
+    )
+
+    def progress(event):
+        events.append(event)
+        if event["event"] == "downloading" and event["bytes"]:
+            clock[0] += 3600
+
+    tls.client.download(tls.asset, tls.dest, progress)
+    assert clock[0] > 7200
+    assert (tls.dest / tls.asset.file_name).read_bytes() == DATA
+    assert len(tls.requests) == (2 if mode == "drop_once" else 1)
+    assert sum(event["event"] == "retrying" for event in events) == (mode == "drop_once")
+
+
+def test_matches_propagates_oserror_without_removing_part(tls, monkeypatch):
+    tls.dest.mkdir()
+    part = tls.dest / (tls.asset.file_name + ".part")
+    part.write_bytes(DATA)
+    original = Path.open
+
+    def held(path, *args, **kwargs):
+        if path == part:
+            raise PermissionError(13, "Synthetic access failure")
+        return original(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", held)
+    with pytest.raises(PermissionError):
+        matches(part, tls.asset)
+    assert part.exists()
+
+
+def test_new_file_uses_fresh_connection_after_idle_close(tls):
+    from dataclasses import replace
+
+    events = []
+    tls.client.download(tls.asset, tls.dest, events.append)
+    time.sleep(0.05)
+    second = replace(tls.asset, id="second", file_name="ggml-second.bin")
+    tls.client.download(second, tls.dest, events.append)
+    assert tls.requests == [None, None]
+    assert (tls.dest / second.file_name).read_bytes() == DATA
+
+
+def test_second_file_resolves_a_fresh_signed_redirect(tls):
+    from dataclasses import replace
+
+    tls.mode = "fresh_redirect"
+    tls.client.download(tls.asset, tls.dest, lambda event: None)
+    second = replace(tls.asset, id="second", file_name="ggml-second.bin")
+    tls.client.download(second, tls.dest, lambda event: None)
+    assert tls.tokens == 2
+    assert tls.paths == ["/asset", "/signed?token=1", "/asset", "/signed?token=2"]
+    assert (tls.dest / second.file_name).read_bytes() == DATA
+
+
+def test_hash_mismatch_does_not_retry(tls, capsys):
+    from dataclasses import replace
+
+    wrong = replace(tls.asset, sha256="0" * 64)
+    with pytest.raises(FetchError) as caught:
+        tls.client.download(wrong, tls.dest, lambda event: None)
+    assert caught.value.code == Exit.MISMATCH
+    assert tls.requests == [None]
+    assert not (tls.dest / (wrong.file_name + ".part")).exists()
+
+
+def test_tls_and_disallowed_redirect_do_not_retry(tls, capsys):
+    untrusted = Downloader(policy=tls.client.policy)
+    assert main(args(tls), client=untrusted) == Exit.NETWORK
+    assert tls.requests == []
+    tls.mode = "redirect"
+    assert main(args(tls), client=tls.client) == Exit.BLOCKED
+    assert tls.requests == [None]
+    assert "retrying" not in capsys.readouterr().out
+
+
+def test_failed_download_writes_one_redacted_local_log_line(tls, capsys):
+    manifest = json.loads(tls.manifest.read_text(encoding="utf-8"))
+    manifest["models"][0]["sha256"] = "0" * 64
+    tls.manifest.write_text(json.dumps(manifest), encoding="utf-8")
+    log = tls.dest.parent / "LocalAppData" / "Dusty" / "logs" / "dusty.log"
+    marker = tls.dest.parent / "failure-logged"
+    assert (
+        main(
+            args(tls) + ["--failure-log", str(log), "--failure-marker", str(marker)],
+            client=tls.client,
+        )
+        == Exit.MISMATCH
+    )
+    assert marker.read_bytes() == b"1"
+    lines = log.read_text(encoding="utf-8").splitlines()
+    assert lines == [
+        "download_failure step=verify class=FetchError winerror=0 code=MISMATCH exit_code=4"
+    ]
+    assert str(tls.dest) not in lines[0]
+    assert "https://" not in lines[0]
+    assert "ggml-test.bin" not in lines[0]
+    assert "step" in capsys.readouterr().out
+
+
+def test_local_sharing_failure_log_names_rename_and_winerror(tls, monkeypatch):
+    tls.dest.mkdir()
+    (tls.dest / (tls.asset.file_name + ".part")).write_bytes(DATA)
+    log = tls.dest.parent / "LocalAppData" / "Dusty" / "logs" / "dusty.log"
+    monkeypatch.setattr("dusty_fetch.downloader.LOCAL_RETRY_SECONDS", 0)
+
+    def fail_rename(source, target):
+        raise PermissionError(13, "Synthetic sharing violation", str(source), 32)
+
+    monkeypatch.setattr("dusty_fetch.downloader.os.replace", fail_rename)
+    assert main(args(tls) + ["--failure-log", str(log)], client=tls.client) == Exit.IO
+    assert log.read_text(encoding="utf-8").splitlines() == [
+        "download_failure step=rename class=PermissionError winerror=32 code=IO exit_code=7"
+    ]
+
+
+def test_setup_style_child_failure_reaches_localappdata_log(tls):
+    manifest = json.loads(tls.manifest.read_text(encoding="utf-8"))
+    manifest["models"][0]["sha256"] = "0" * 64
+    tls.manifest.write_text(json.dumps(manifest), encoding="utf-8")
+    local = tls.dest.parent / "LocalAppData"
+    log = local / "Dusty" / "logs" / "dusty.log"
+    marker = tls.dest.parent / "fetch-failure-logged"
+    command = [
+        sys.executable,
+        str(CERTS / "fetch_child.py"),
+        str(tls.port),
+        str(tls.certificate),
+        *args(tls),
+        "--failure-log",
+        str(log),
+        "--failure-marker",
+        str(marker),
+    ]
+    result = subprocess.run(
+        command,
+        env={**os.environ, "LOCALAPPDATA": str(local)},
+        capture_output=True,
+        text=True,
+        timeout=20,
+    )
+    assert result.returncode == Exit.MISMATCH
+    assert log.read_text(encoding="utf-8").splitlines() == [
+        "download_failure step=verify class=FetchError winerror=0 code=MISMATCH exit_code=4"
+    ]
+    assert marker.read_bytes() == b"1"
+    assert json.loads(result.stdout.splitlines()[-1])["logged"] is True
 
 
 @pytest.mark.parametrize("mode", ["ignore_range", "bad_range"])

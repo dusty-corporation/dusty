@@ -2,7 +2,23 @@
 
 All notable changes to Dusty will be documented here. This project follows Keep a Changelog.
 
-## [Unreleased]
+## [1.0.1] - 2026-10-28
+
+### Fixed
+
+- Model downloads recover automatically from brief connection drops and from
+  antivirus software briefly locking a newly downloaded file. If a download
+  still fails, Dusty records a privacy-safe reason in its local log.
+- Improved cleanup of Dusty's temporary work files after a crash or power loss,
+  including files left by Dusty 1.0.0.
+- If uninstall keeps app data because it cannot safely remove it, the message
+  tells you where to find it.
+
+### Changed
+
+- Updated documentation wording and the description of how Dusty was built.
+
+## [1.0.0]
 
 ### Added
 
@@ -65,7 +81,7 @@ All notable changes to Dusty will be documented here. This project follows Keep 
 - Graphics-test failure progress reflects the completed download amount.
 
 - Standard-library DOCX export removes runtime lxml; exact platform PE pins,
-  Owner-sourced Visual C++ runtime copies and license evidence gate the bundle.
+  maintainer-sourced Visual C++ runtime copies and license evidence gate the bundle.
 
 - Portable CPU backend dispatch after the CI-native instruction failure.
 - Distinct public and private benchmark summary names with overwrite checks.
@@ -83,7 +99,7 @@ All notable changes to Dusty will be documented here. This project follows Keep 
 - M4 downloader-only prework: isolated standard-library HTTPS download/verify CLI,
   strict redirect hosts, verified resumable parts, space/cancellation safety and
   local TLS plus explicit CI-only public model integration tests.
-- Owner-reviewed model deletion and empty selection, fresh downloads after cancel,
+- Maintainer-reviewed model deletion and empty selection, fresh downloads after cancel,
   name-first model labels, clearer consent and main prompts, and disabled/selected
   control contrast in both themes.
 - Final Model Manager wording, MB/GB sizing, progress labels and explicit
@@ -91,4 +107,4 @@ All notable changes to Dusty will be documented here. This project follows Keep 
 
 ### Changed
 
-- Dusty code uses Apache-2.0 with an explicit patent grant (Owner decision).
+- Dusty code uses Apache-2.0 with an explicit patent grant (maintainer decision).

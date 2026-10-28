@@ -51,7 +51,7 @@ The Python source static check retains zero exceptions.
 
 ## Microsoft redistribution (ADR 0020)
 
-The Owner holds VS 2022 Community under individual-license section 1.a.
+The maintainer holds VS 2022 Community under individual-license section 1.a.
 Community section 4.a.i plus the Visual C++ Runtime Files redistribution list
 are the redistribution basis, not the runtime end-user EULA alone. Only required
 vcruntime140*.dll/msvcp140*.dll are copied unmodified from release x64
@@ -59,15 +59,15 @@ Microsoft.VC143.CRT inside VC/redist. Debug/onecore and all other Microsoft PEs
 are rejected. CRT provenance records every target/source/hash, and the license
 gate rechecks byte identity against the live source files.
 
-The default source is installed VS 2022, found with vswhere. To use the Owner's
+The default source is installed VS 2022, found with vswhere. To use the maintainer's
 installation, set DUSTY_VC_REDIST to its VC/redist folder. Both local and CI
 builds select only MSVC/14.44.35112/x64/Microsoft.VC143.CRT and require exact
-byte identity with packaging/microsoft-runtime.json (Owner installation).
+byte identity with packaging/microsoft-runtime.json (maintainer installation).
 The v143 alias and spectre copies are never selected. Normal and delayed PE
 imports determine required CRT filenames within each executable family; unused
 CRT names are pruned. Receipts include importing PEs and the collected hash and
 version before replacement, making wheel/runner differences visible.
-The three unchanged Owner PDFs, complete extracted texts, URLs, retrieval date
+The three unchanged maintainer PDFs, complete extracted texts, URLs, retrieval date
 and hashes are in packaging/licenses/microsoft. The future installer MUST
 present the runtime EULA alongside Dusty's Apache-2.0 terms and require agreement
 under section 4.b. The installer acceptance gates check this. Terms are scoped to Microsoft code;

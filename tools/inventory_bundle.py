@@ -349,7 +349,7 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
     lines += [
         "## Microsoft Visual C++ runtime terms",
         "",
-        "Redistribution basis: Owner-held VS 2022 Community individual license, section 4.a.i",
+        "Redistribution basis: maintainer-held VS 2022 Community individual license, section 4.a.i",
         "and the Visual C++ Runtime Files redistribution list. The runtime EULA is protective",
         "end-user terms under section 4.b, not an independent redistribution grant.",
         "Only release VC/redist CRT files are copied unmodified; see crt-provenance.json",

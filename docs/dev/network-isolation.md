@@ -34,3 +34,14 @@ Microsoft references verified for this implementation:
 The Python variant is M2's pre-packaging acceptance. M5 must apply the same
 test to the installed `dusty.exe` bundle. A successful parser test alone is
 not evidence that the dynamic audit passed; record the workflow run ID.
+
+
+## Offline audit failure diagnostics
+
+The disposable Windows runner's test_network_isolation.ps1 reads each child
+stream. An unexpected exit reports its process name, exit code and at most six
+recent lines from stdout and stderr. tools/offline_failure_diagnostics.ps1
+replaces unknown lines and error details with [redacted], so logs cannot expose
+recording names, paths or transcript text. An explicit allowed exit code still
+passes unchanged. tests/unit/test_offline_failure_diagnostics.py uses a real
+failing child to check both tails and privacy redaction without enabling WFP.

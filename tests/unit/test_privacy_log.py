@@ -22,6 +22,16 @@ def test_canary_never_reaches_log(tmp_path: Path) -> None:
     )
 
 
+def test_download_process_fallback_is_redacted(tmp_path: Path) -> None:
+    logger = configure_logger(tmp_path)
+    safe = "download_failure step=next_file class=ProcessError winerror=0 code=PROTOCOL exit_code=7"
+    logger.info(safe)
+    logger.info(safe + " C:\\Users\\Jane\\meeting.wav")
+    for handler in logger.handlers:
+        handler.flush()
+    assert (tmp_path / "logs/dusty.log").read_text(encoding="utf-8").count(safe) == 1
+
+
 def test_local_log_rotation_is_bounded_and_retains_filter(tmp_path: Path) -> None:
     handler = RotatingFileHandler(
         tmp_path / "bounded.log", maxBytes=40, backupCount=2, encoding="utf-8"

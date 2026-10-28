@@ -40,7 +40,7 @@ transcript text or user paths. A redacted progress sample is in
 `tests/fixtures/engine/progress-stderr.txt`.
 
 The first Vulkan CI binary was built with AVX-512 and exited with
-`0xc000001d` on the Owner desktop. ISSUE-003 records that regression.
+`0xc000001d` on the maintainer desktop. ISSUE-003 records that regression.
 The replacement from CI run 39692634372 succeeded locally. Its startup
 lines identifying the desktop GPU and loaded variants were:
 

@@ -20,8 +20,10 @@ legal, or other important decisions.
 - `%LOCALAPPDATA%/Dusty/work/<purpose-random ID>/`: temporary decoded audio and
   native transcription JSON. A local ownership marker records the purpose and
   hashes of the temporary files Dusty created. Cleanup removes only matching
-  owned content. Unknown, changed, linked or protected content is preserved,
-  including after a crash. Graphics-probe and self-test work use separate random
+  owned content. After a crash, it also recognizes known unfinished job files
+  and the narrowly identified zero-filled ownership markers left by v1.0.0.
+  Unknown, changed recorded, linked or protected content is preserved.
+  Graphics-probe and self-test work use separate random
   folders under the same work area. The hashes are not uploaded or logged.
   An OS-held lease prevents another running instance's startup cleanup from
   removing active work. A process exit releases that lease. This does not make
@@ -35,7 +37,9 @@ legal, or other important decisions.
   what they are. Unknown or changed prefixes remain. A lock file coordinates
   downloads and holds the receipt. These are public model data, not recordings.
 - `%LOCALAPPDATA%/Dusty/logs/`: rotating redacted diagnostics with statuses and
-  numeric timings, not recording names/paths, transcript text or vocabulary hints.
+  numeric timings. A failed model download adds a fixed step, error class and
+  numeric Windows and exit codes. Logs do not contain recording names or paths,
+  transcript text, vocabulary hints or download URLs.
 - `%LOCALAPPDATA%/Dusty/logs/native-diagnostic.jsonl`: optional passive capture of one
   exact Windows diagnostic, with module basenames/offsets, native frames, numeric
   thread ID and a fixed app-phase label only. No arguments, Python locals,
@@ -92,7 +96,7 @@ The draft uninstaller offers to keep or remove downloaded models. It removes
 recognized app-owned settings, state, logs and work data while preserving user
 output folders and recordings. It refuses unsafe links, corrupt protection
 metadata or unfamiliar files rather than deleting broadly. A preservation notice
-can mean manual review is needed. Fresh-machine installer acceptance is still pending Owner confirmation.
+can mean manual review is needed. Fresh-machine installer acceptance is still pending confirmation by the maintainer.
 
 ## Sync folders and device security
 

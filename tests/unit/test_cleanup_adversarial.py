@@ -78,7 +78,18 @@ def test_cleanup_reparse_target_survives(tmp_path, kind, link_kind):
     relative = case.file.relative_to(case.folder)
     before = (outside / relative).read_bytes()
     held = case.folder.with_name(case.folder.name + "-held")
-    case.folder.rename(held)
+    deadline = time.monotonic() + 2.0
+    while True:
+        try:
+            case.folder.rename(held)
+            break
+        except OSError as error:
+            # Windows can briefly hold the generated model receipt while the
+            # tracing gate runs. This only prepares the fixture; a persistent
+            # denial still fails before any product assertion is reached.
+            if getattr(error, "winerror", None) not in {5, 32, 33} or time.monotonic() >= deadline:
+                raise
+            time.sleep(0.025)
     if link_kind == "junction":
         subprocess.run(
             ["cmd", "/c", "mklink", "/J", str(case.folder), str(outside)],
@@ -216,8 +227,10 @@ else: cleanup(paths,remove_models=True)
     assert sentinel.read_bytes() == b"synthetic protected transcript"
     if kind == "work":
         assert (case.folder / MARKER).exists()
-        assert not invoke(case)  # Incomplete inventory stays conservative.
-        assert len(list(case.folder.glob("*"))) >= 2
+        # An interrupted first cleanup may leave recorded files absent. The
+        # second attempt removes only the remaining proven work, not output.
+        assert invoke(case)
+        assert not case.folder.exists()
     elif kind == "upgrade":
         assert (case.folder / "licenses/NOTICE").exists()
         # A subsequent attempt must recover its proven cleanup transaction.

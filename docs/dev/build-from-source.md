@@ -48,7 +48,7 @@ try {
 [build-native.md](build-native.md) records pinned APIs, CPU dispatch and the VAD
 patch; [ffmpeg-build.md](ffmpeg-build.md) records the network-disabled decoder.
 The M6 UTF-8 manifest candidate is described in ADR 0024. Native artifacts are
-built by native.yml and checked by hash before use; publishing is Owner-only.
+built by native.yml and checked by hash before use; publishing is maintainer-only.
 
 On a disposable Windows runner, mirror ci.yml exactly:
 

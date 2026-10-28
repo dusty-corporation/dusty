@@ -53,6 +53,15 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
     assert "[LangOptions]\nDialogFontSize=10" in text
     assert "DialogFontSize" not in text.split("[LangOptions]", 1)[0]
     assert "DownloadTemporaryFile(" not in text
+    assert "--retry-status" in text
+    assert "--failure-log" in text
+    assert "{localappdata}\\Dusty\\logs\\dusty.log" in text
+    assert "--failure-marker" in text
+    assert "LogFetchParentFailure(True, 0)" in text
+    assert "LogFetchParentFailure(False, Code)" in text
+    assert "SafeFetchLogPath(Folder + '\\dusty.log')" in text
+    assert "FileExists(ExpandConstant('{tmp}\\fetch-retrying'))" in text
+    assert "Connection lost, retrying..." in text
     assert "UninstallDelete" not in text  # No broad recursive deletion of user data.
     assert "--installer-test --backend " in text
     assert "function TestedDefaultId: String;" in text

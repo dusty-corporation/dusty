@@ -7,9 +7,9 @@ It supports Text, Word, subtitle and JSON exports, Vulkan acceleration with CPU
 fallback, and optional silent-part skipping. Models download only when requested
 in Setup or Model Manager. Recordings and transcripts are not uploaded.
 
-The intended audience is a non-technical adult who records lectures and
-conversations, sometimes in languages other than English, on a typical Windows
-laptop. Review every transcript before relying on it.
+Dusty is for anyone who records lectures or conversations, including in
+languages other than English, on a supported Windows computer. Review every
+transcript before relying on it.
 
 Release installers are built by CI from this public source snapshot. The
 maintainer reviews the final installer before publication. See
@@ -22,7 +22,7 @@ certificate, so Windows may show "Windows protected your PC". First check the
 installer against the SHA256SUMS.txt supplied with the same build:
 
 ```powershell
-Get-FileHash .\Dusty-1.0.0-Setup.exe -Algorithm SHA256
+Get-FileHash .\Dusty-1.0.1-Setup.exe -Algorithm SHA256
 ```
 
 Compare the entire SHA256 with the entry for that exact filename. If it differs,
@@ -49,4 +49,4 @@ and troubleshooting. Read [Privacy and local data](docs/privacy.md) before using
 confidential material. Developers can use [CONTRIBUTING](CONTRIBUTING.md).
 The [source build guide](docs/dev/build-from-source.md) includes the verified
 model-conversion recipe. [Release process](docs/dev/release-process.md) explains
-the license, hash and offline gates. The Owner publishes accepted builds.
+the license, hash and offline gates. The maintainer publishes accepted builds.

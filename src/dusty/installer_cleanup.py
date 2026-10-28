@@ -77,7 +77,7 @@ def _cleanup(paths: RuntimePaths, *, remove_models: bool) -> bool:
         ownership_protection = protected_paths(root)
         for directory in (root / "work").glob("*"):
             if directory.is_dir():
-                cleanup_owned(directory, protected=ownership_protection)
+                cleanup_owned(directory, protected=ownership_protection, work_root=root / "work")
         if remove_models:
             manifest = load_manifest(paths.resources_dir / "models.json")
             names = [m.file_name for m in manifest.models.values()] + [manifest.vad_file_name]

@@ -1,6 +1,7 @@
 """Local model management; networking belongs only to the isolated CLI child."""
 
 import json
+import logging
 import shutil
 import threading
 import time
@@ -117,7 +118,9 @@ class ModelWorker(QThread):
                                 raise ValueError
                             if pid not in self.pids:
                                 self.pids.append(pid)
-                            if name in {"downloading", "verifying", "complete", "verified"}:
+                            if name == "retrying" and event.get("attempt") == 2:
+                                self.progress.emit({"id": key, "event": name})
+                            elif name in {"downloading", "verifying", "complete", "verified"}:
                                 done, total = event["bytes"], event["total"]
                                 if (
                                     type(done) is not int
@@ -143,6 +146,8 @@ class ModelWorker(QThread):
                                 "CANCELLED",
                             }:
                                 self.failure = event["code"]
+                                if name == "error" and event.get("logged") is True:
+                                    events.append("error_logged")
                             else:
                                 raise ValueError
                         except (ValueError, KeyError, TypeError):
@@ -158,6 +163,8 @@ class ModelWorker(QThread):
                             str(self.paths.models_dir),
                             "--manifest",
                             str(self.paths.resources_dir / "models.json"),
+                            "--failure-log",
+                            str(self.paths.user_dir / "logs" / "dusty.log"),
                         ],
                         on_stdout=receive,
                         cancel=self.cancelled,
@@ -175,8 +182,16 @@ class ModelWorker(QThread):
                             part.unlink(missing_ok=True)
                         except OSError:
                             self.failure = "CANCEL_CLEANUP"
-                    elif process.exit_code or "complete" not in events:
+                    elif (
+                        process.exit_code or "complete" not in events or self.failure == "PROTOCOL"
+                    ):
                         self.failure = self.failure or "PROTOCOL"
+                        if "error_logged" not in events:
+                            logging.getLogger("dusty").info(
+                                "download_failure step=next_file class=ProcessError "
+                                "winerror=0 code=PROTOCOL exit_code=%d",
+                                process.exit_code,
+                            )
                     if self.failure:
                         break
                     self.registry.invalidate(file_name=model_files(self.registry)[key][0])
@@ -191,6 +206,11 @@ class ModelWorker(QThread):
                 self.registry.invalidate()
         except (OSError, ValueError):
             self.failure = "DELETE" if self.action == "delete" else "START_FAILED"
+            if self.action == "download":
+                logging.getLogger("dusty").info(
+                    "download_failure step=next_file class=ProcessStartError "
+                    "winerror=0 code=IO exit_code=none"
+                )
         try:
             statuses = inspect_models(self.registry)
         except (OSError, ValueError):
@@ -414,6 +434,10 @@ class ModelManager(TextDialog):
     def _progress(self, event: dict) -> None:
         key = event["id"]
         self.statuses[key] = "downloading"
+        if event["event"] == "retrying":
+            self.message.setText(M.CONNECTION_LOST_RETRYING)
+            self._refresh()
+            return
         percent = int(100 * event["bytes"] / max(1, event["total"]))
         self.progress.setValue(percent)
         self.progress_text.setText(

@@ -105,6 +105,8 @@ function WinTerminateJob(Job: LongWord; Code: LongWord): Boolean;
   external 'TerminateJobObject@kernel32.dll stdcall';
 function WinMemoryStatus(var Info: TMemoryStatus): Boolean;
   external 'GlobalMemoryStatusEx@kernel32.dll stdcall';
+function LogFileAttributes(Name: String): LongWord;
+  external 'GetFileAttributesW@kernel32.dll stdcall';
 
 function CreateChild(App: LongWord; Command: String; A, B: LongWord; Inherit: Boolean;
   Flags, Env: LongWord; Dir: String; var Startup: TStartup; var Process: TProcInfo): Boolean;

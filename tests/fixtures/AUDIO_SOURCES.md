@@ -58,7 +58,7 @@ provenance and expected text below.
   the source-text scoring boundaries stored beside the fixture. No human listening pass is required
   for this source-text-only score under the PM's Phase B decision.
 
-No Owner recording is stored here.
+No private recording is stored here.
 
 ## Persian translation smoke fixture
 
@@ -74,7 +74,7 @@ No Owner recording is stored here.
 - Excerpt: source interval [107, 122) seconds, Persian quatrain 2, excluding
   the following English reading. Transcribe with Medium recognizes Persian
   script; Translate produces English instead.
-- Owner-verified by listening on 2026-10-22: [107, 122) seconds contains a
+- maintainer-verified by listening on 2026-10-22: [107, 122) seconds contains a
   complete spoken Farsi quatrain.
 - Independent reference: Edward Henry Whinfield's 1883 bilingual edition,
   [quatrain 2](https://archive.org/details/quatrains1883omaruoft), says

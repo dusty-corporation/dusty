@@ -8,10 +8,11 @@ import stat
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from dusty.platform.work_lease import acquire, available
+from dusty.platform.work_lease import acquire
 from dusty.runtime_paths import RuntimePaths
 
 MARKER = ".dusty-owned.json"
+MARKER_TEMP = ".dusty-owned.json.tmp"
 LEASE = ".dusty-active.lock"
 _LOG = logging.getLogger("dusty")
 
@@ -114,8 +115,28 @@ def _fingerprint(path: Path) -> str:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-def cleanup_owned(directory: Path, *, protected: set[Path] | None) -> bool:
-    """Delete only a fully matching inventory, never recurse or follow a link."""
+def _durable_marker(path: Path, data: bytes) -> None:
+    """Flush a complete marker before an atomic replacement becomes visible."""
+    temporary = path.with_name(MARKER_TEMP)
+    with temporary.open("xb") as stream:
+        stream.write(data)
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(temporary, path)
+
+
+def _sync_and_fingerprint(path: Path) -> str:
+    """Persist a generated file before persisting its hash in the marker."""
+    with path.open("r+b") as stream:
+        os.fsync(stream.fileno())
+    return _fingerprint(path)
+
+
+def cleanup_owned(
+    directory: Path, *, protected: set[Path] | None, work_root: Path | None = None
+) -> bool:
+    """Remove proven disposable work while holding its exclusive OS lease."""
+    held_lease = None
     try:
         if (
             protected is None
@@ -127,41 +148,115 @@ def cleanup_owned(directory: Path, *, protected: set[Path] | None) -> bool:
         if linked(marker):
             raise ValueError
         lease = directory / LEASE
-        if lease.exists() and (linked(lease) or not available(lease)):
+        lease_missing = not lease.exists()
+        if not lease_missing and (not lease.is_file() or linked(lease)):
             raise ValueError
-        data = json.loads(marker.read_text(encoding="utf-8"))
-        if (
-            data.get("schema") != 1
-            or data.get("directory") != directory.name
-            or data.get("purpose") not in {"job", "probe", "selftest", "device-probe"}
-            or not isinstance(data.get("files"), dict)
+        if not lease_missing:
+            held_lease = acquire(lease)
+        marker_bytes = marker.read_bytes()
+        zeroed = (
+            len(marker_bytes) in {189, 270, 350}
+            and not any(marker_bytes)
+            and not lease_missing
+            and work_root is not None
+            and canonical(directory.parent) == canonical(work_root)
+        )
+        if zeroed:
+            # v1.0.0 could leave an allocated, all-zero marker after a host
+            # crash. Confine this exception to the exact managed work root.
+            purpose = "job"
+            inventory: dict[str, str] = {}
+        else:
+            data = json.loads(marker_bytes)
+            if (
+                data.get("schema") != 1
+                or data.get("directory") != directory.name
+                or data.get("purpose") not in {"job", "probe", "selftest", "device-probe"}
+                or not isinstance(data.get("files"), dict)
+            ):
+                raise ValueError
+            purpose = data["purpose"]
+            inventory = data["files"]
+        suffix = directory.name.removeprefix(purpose + "-")
+        if directory.name != f"{purpose}-{UUID(suffix)}":
+            raise ValueError
+        if not zeroed and (
+            LEASE not in inventory
+            or not all(
+                isinstance(name, str)
+                and Path(name).name == name
+                and isinstance(digest, str)
+                and len(digest) == 64
+                for name, digest in inventory.items()
+            )
         ):
             raise ValueError
-        suffix = directory.name.removeprefix(data["purpose"] + "-")
-        if directory.name != f"{data['purpose']}-{UUID(suffix)}":
+        if lease_missing:
+            # v1.0.0 removed the lock before its marker. Recreate it only when
+            # the marker proves this exact directory and expects our one byte.
+            if inventory[LEASE] != hashlib.sha256(b"0").hexdigest():
+                raise ValueError
+            with lease.open("xb") as stream:
+                stream.write(b"0")
+                stream.flush()
+                os.fsync(stream.fileno())
+            held_lease = acquire(lease)
+            if marker.read_bytes() != marker_bytes:
+                raise ValueError
+        if held_lease is None:
             raise ValueError
+        # Keep the exclusive lease through validation and removal. A brief
+        # availability probe would leave a race before deletion.
         entries = list(directory.iterdir())
-        inventory = data["files"]
-        if {p.name for p in entries} != {MARKER, *inventory}:
+        present = {p.name for p in entries}
+        if MARKER not in present or LEASE not in present:
+            raise ValueError
+        # A crash can occur after a known generated file was created but before
+        # record() writes its hash, or halfway through an earlier cleanup.
+        # Only job outputs with fixed names may be unrecorded, and a recorded
+        # file that still exists must retain its exact hash.
+        pending = {"audio.wav", "raw.json"} if purpose == "job" else set()
+        allowed = {MARKER, LEASE, *inventory, *pending}
+        if not zeroed:
+            allowed.add(MARKER_TEMP)
+        if present - allowed:
             raise ValueError
         for entry in entries:
             if linked(entry) or not entry.is_file():
                 raise ValueError
-            if entry.name != MARKER and _fingerprint(entry) != inventory[entry.name]:
+            if entry.name == LEASE:
+                held_lease.seek(0)
+                content = held_lease.read()
+                if zeroed:
+                    if content not in {b"0", b"\0"}:
+                        raise ValueError
+                elif hashlib.sha256(content).hexdigest() != inventory[LEASE] and not (
+                    content == b"\0" and inventory[LEASE] == hashlib.sha256(b"0").hexdigest()
+                ):
+                    raise ValueError
+            elif entry.name in inventory and _fingerprint(entry) != inventory[entry.name]:
                 raise ValueError
         # Recheck the whole inventory before the first removal. Never rmtree.
         for entry in entries:
             if linked(entry):
                 raise ValueError
         for entry in entries:
-            if entry.name != MARKER:
+            if entry.name not in {MARKER, LEASE}:
                 entry.unlink()
+        # A second cleanup cannot claim the folder after this point. The
+        # marker is removed while our lease is still held, then the lease file.
         marker.unlink()
+        held_lease.close()
+        held_lease = None
+        lease.unlink()
         directory.rmdir()
         return True
     except (OSError, ValueError, TypeError, AttributeError):
         _LOG.info("work_cleanup=preserved")
         return False
+    finally:
+        if held_lease is not None:
+            held_lease.close()
 
 
 class OwnedWork:
@@ -177,12 +272,13 @@ class OwnedWork:
         lease = self.path / LEASE
         with lease.open("xb") as stream:
             stream.write(b"0")
+            stream.flush()
+            os.fsync(stream.fileno())
         self._lease = acquire(lease)
         self.files: dict[str, str] = {LEASE: hashlib.sha256(b"0").hexdigest()}
         self.valid = True
         self._marker_bytes = self._data()
-        with (self.path / MARKER).open("xb") as stream:
-            stream.write(self._marker_bytes)
+        _durable_marker(self.path / MARKER, self._marker_bytes)
 
     def _data(self) -> bytes:
         return json.dumps(
@@ -205,13 +301,12 @@ class OwnedWork:
                     raise ValueError("Work inventory must be flat")
                 file = self.path / name
                 if file.exists() and not linked(file) and file.is_file():
-                    digest = _fingerprint(file)
+                    digest = _sync_and_fingerprint(file)
                     if name in self.files and self.files[name] != digest:
                         raise ValueError("Previously recorded work changed")
                     self.files[name] = digest
             data = self._data()
-            with marker.open("wb") as stream:
-                stream.write(data)
+            _durable_marker(marker, data)
             self._marker_bytes = data
         except (OSError, ValueError):
             self.valid = False
@@ -227,7 +322,9 @@ class OwnedWork:
         if not self.valid or not current:
             _LOG.info("work_cleanup=preserved")
             return False
-        return cleanup_owned(self.path, protected=protected_paths(user_dir))
+        return cleanup_owned(
+            self.path, protected=protected_paths(user_dir), work_root=user_dir / "work"
+        )
 
 
 def sanitize_output(paths: RuntimePaths) -> bool:

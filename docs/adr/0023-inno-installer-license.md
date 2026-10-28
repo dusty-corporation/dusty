@@ -20,7 +20,7 @@ this decision does not grant blanket approval to compiler-bundled third parties.
 PM approved exactly SPDX InnoSetup for the installer wrapper only on 2026-10-23.
 Since 6.5 the author requests a paid license from commercial users with annual
 revenue over USD 5000, including donations. Dusty is free with no revenue, so
-none is needed. If Dusty ever exceeds that threshold, the Owner buys a license.
+none is needed. If Dusty ever exceeds that threshold, the maintainer buys a license.
 Sources checked 2026-10-23: https://jrsoftware.org/isorder.php and
 https://github.com/jrsoftware/issrc/blob/is-6_7_3/license.txt .
 The upstream purchase page describes this as a request, not a strict condition
@@ -67,7 +67,7 @@ this exception. Compiler-only tools may exist in CI and are not distributed.
 
 MPL source is included on the same media, with exact upstream bytes and its
 full license. Separate app/Microsoft terms do not restrict rights in that source.
-The runtime is used as received from the pinned Inno distribution; the Owner
+The runtime is used as received from the pinned Inno distribution; the maintainer
 does not need a Delphi development license to run Inno's distributed compiler.
 Rebuilding Inno itself is outside this approval.
 

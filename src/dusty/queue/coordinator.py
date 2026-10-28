@@ -38,7 +38,7 @@ def cleanup_orphaned_work(work_root: Path) -> None:
     protected = protected_paths(work_root.parent)
     for candidate in work_root.iterdir():
         if candidate.is_dir():
-            cleanup_owned(candidate, protected=protected)
+            cleanup_owned(candidate, protected=protected, work_root=work_root)
 
 
 class Coordinator:

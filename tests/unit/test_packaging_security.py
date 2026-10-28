@@ -159,5 +159,5 @@ def test_crt_staging_prunes_unused_and_records_replacement(tmp_path: Path, monke
     assert record["imported_by"] == ["dusty/app.exe"]
     assert record["collected_sha256"] == record["sha256"]
     source.write_bytes(source.read_bytes() + b"changed")
-    with pytest.raises(ValueError, match="Owner's pinned copy"):
+    with pytest.raises(ValueError, match="the maintainer's pinned copy"):
         stage_microsoft_runtime.stage(bundle, redist, receipt)

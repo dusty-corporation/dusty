@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dusty"
-version = "1.0.0"
+version = "1.0.1"
 description = "Offline Windows transcription application"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
@@ -19,7 +19,7 @@ dusty-fetch = "dusty_fetch.__main__:cli_entry"
 [dependency-groups]
 dev = [
   "python-docx==1.2.0",
-  "pytest==8.4.2",
+  "pytest==9.0.3",
   "pytest-qt==4.5.0",
   "ruff==0.13.1",
   "mypy==1.18.2",

@@ -5,7 +5,7 @@
 ## Context
 The first Windows CI build used whisper.cpp v1.9.5's default
 `GGML_NATIVE=ON`. The CI runner detected AVX-512 and built its only CPU
-backend with `/arch:AVX512`. The Owner's AVX2 desktop exited with
+backend with `/arch:AVX512`. The maintainer's AVX2 desktop exited with
 `0xc000001d`, recorded in ISSUE-003. Both the desktop and Surface must run
 the same distributed binaries.
 
@@ -40,7 +40,7 @@ The packaged import check passed for both executables and every DLL.
 On the desktop, the new CPU binary loaded `ggml-cpu-haswell.dll`; the
 new Vulkan binary loaded both `ggml-vulkan.dll` and
 `ggml-cpu-haswell.dll`, selected the RTX 3080 Ti Vulkan backend, and
-transcribed the public-domain JFK fixture with exit code 0. The Owner's
+transcribed the public-domain JFK fixture with exit code 0. The maintainer's
 independent rerun succeeded: the replacement CI Vulkan artifact loaded
 the Vulkan and Haswell CPU DLLs, selected Vulkan0, transcribed the
 public-domain JFK clip, and exited 0. ISSUE-003 is resolved.

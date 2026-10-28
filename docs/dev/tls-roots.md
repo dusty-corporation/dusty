@@ -28,14 +28,16 @@ four exact pinned PEM paths/bytes, never code under a broad data exception.
 ## Acquisition
 
 Sectigo's published crt.sectigo.com HTTPS endpoint rejected its handshake.
-During initial acquisition, automatic approval review rejected HTTP retrieval
-and a crt.sh retrieval; those requests did not run. Authenticated support.sectigo.com attachments were inspected, including a
+HTTP and crt.sh retrieval were considered but not used because they did not
+provide the chosen verified acquisition path. Authenticated
+support.sectigo.com attachments were inspected, including a
 USERTrust RSA root matching the selected fingerprint. The bundled USERTrust roots
 were instead copied exactly from pre-existing trusted Windows ROOT entries,
 with their official CA reference URLs recorded, without altering that store.
 ISRG roots were downloaded from its official HTTPS URLs with certificate checks.
 No claim is made that USERTrust bytes were downloaded from the reference URL.
-Automatic approval review accepted this safer local-store/HTTPS acquisition. No rejected acquisition transport was worked around.
+The acquisition used the local trusted store and official HTTPS sources. No
+unverified transport was used.
 
 ## Runtime and canary
 
@@ -79,7 +81,7 @@ ISRG CP/CPS v6.2 section 1.1 explicitly lists both self-signed root fingerprints
 For USERTrust, Sectigo's canonical records 2841410 and 1199354 explicitly show
 Certificate Fingerprints / SHA-256, independently of a hash-search query.
 [Sectigo's official terms](https://www.sectigo.com/terms-of-use) identify crt.sh
-as a website it operates. The Owner's later explicit official-CA cross-check
+as a website it operates. The maintainer's later explicit official-CA cross-check
 request and that ownership evidence supported this read-only HTTPS verification;
 it is separate from the initially rejected acquisition requests above.
 No certificate was replaced or installed into Windows, no insecure transport

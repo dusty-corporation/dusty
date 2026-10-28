@@ -29,7 +29,7 @@ Six standard areas (user/machine ReportQueue, ReportArchive, Temp) are checked.
 Unreadable/enumeration failures fail the check. A final 30-second observation
 bounds the no-new-report result; it does not prove custom stores, future delayed
 reports, administrator collectors or all Windows policies. Only the explicitly
-enabled disposable hosted CI step can run it. Never run it on an Owner machine.
+enabled disposable hosted CI step can run it. Never run it on a maintainer machine.
 
 run_job_process allows only sys.executable, resolved dusty-fetch, or binaries
 under the app bin root. It refuses linked executable paths and foreign cwd.

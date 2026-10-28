@@ -20,9 +20,43 @@ from dusty.app.model_manager import VOICE_ID, DownloadDialog, ModelManager, Mode
 from dusty.app.window import MainWindow
 from dusty.app.workers import Prepared
 from dusty.models import ModelRegistry, load_manifest
+from dusty.privacy.logging import configure_logger
 from dusty.runtime_paths import RuntimePaths, resolve_fetch_command, resolve_paths
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+@pytest.mark.parametrize(
+    ("mode", "detail"),
+    [
+        ("exit", "class=ProcessError winerror=0 code=PROTOCOL exit_code=7"),
+        ("malformed", "class=ProcessError winerror=0 code=PROTOCOL exit_code=0"),
+        ("start", "class=ProcessStartError winerror=0 code=IO exit_code=none"),
+    ],
+)
+def test_fetch_child_missing_error_event_logs_one_redacted_fallback(
+    models, monkeypatch, mode, detail
+):
+    logger = configure_logger(models.paths.user_dir)
+
+    def fail_child(*args, **kwargs):
+        if mode == "start":
+            raise OSError("CANARY private path and transcript must not be logged")
+        if mode == "malformed":
+            kwargs["on_stdout"](json.dumps({"event": "unknown", "pid": 123}))
+        return SimpleNamespace(cancelled=False, exit_code=0 if mode == "malformed" else 7)
+
+    monkeypatch.setattr("dusty.app.model_manager.run_job_process", fail_child)
+    worker = ModelWorker(
+        models.registry, models.paths, action="download", ids=("tiny",), command=models.command
+    )
+    worker.run()
+    for handler in logger.handlers:
+        handler.flush()
+    log = (models.paths.user_dir / "logs" / "dusty.log").read_text(encoding="utf-8")
+    assert log.count("download_failure step=next_file " + detail) == 1
+    assert str(models.paths.models_dir) not in log
+    assert "CANARY" not in log
 
 
 def test_cancel_reports_partial_retention_when_removal_fails(models, qtbot, monkeypatch):
@@ -67,7 +101,9 @@ def models(tmp_path, qtbot, monkeypatch, request):
             )
     (resources / "models.json").write_text(json.dumps(data), encoding="utf-8")
     dev = resolve_paths(repo_root=ROOT, frozen=False)
-    paths = RuntimePaths(dev.bin_dir, tmp_path / "models", resources, tmp_path / "user")
+    paths = RuntimePaths(
+        dev.bin_dir, tmp_path / "models", resources, tmp_path / "LocalAppData" / "Dusty"
+    )
     paths.models_dir.mkdir()
     registry = ModelRegistry(load_manifest(resources / "models.json"), paths.models_dir)
     command = [
@@ -181,6 +217,10 @@ def test_hash_mismatch_is_damaged_and_never_installed(models, qtbot):
     assert dialog.download_button.text() == M.DOWNLOAD_AGAIN
     assert dialog.message.text() == M.FETCH_ERRORS["MISMATCH"]
     assert not models.file.exists() and not list(models.paths.models_dir.glob("*.part"))
+    lines = (models.paths.user_dir / "logs" / "dusty.log").read_text(encoding="utf-8")
+    assert lines.splitlines() == [
+        "download_failure step=verify class=FetchError winerror=0 code=MISMATCH exit_code=4"
+    ]
 
 
 def test_verify_all_rehashes_and_delete_requires_confirmation_and_safe_choice(
@@ -631,6 +671,28 @@ def test_progress_names_active_download_and_does_not_repeat_percent(models, qtbo
     assert dialog.progress.value() == 33
     assert dialog.progress_text.text() == "291.4\u00a0MB of 874.2\u00a0MB"
     assert "%" not in dialog.progress_text.text()
+    dialog._progress({"id": "large-v3-turbo-q8_0", "event": "retrying"})
+    assert dialog.message.text() == "Connection lost, retrying..."
+    assert dialog.progress.value() == 33
+
+
+def test_model_worker_accepts_retry_event_from_isolated_fetch_child(models, qtbot):
+    models.tls.mode = "drop_once"
+    worker = ModelWorker(
+        models.registry,
+        models.paths,
+        action="download",
+        ids=("tiny",),
+        command=models.command,
+    )
+    events = []
+    worker.progress.connect(events.append)
+    with qtbot.waitSignal(worker.result, timeout=15000) as result:
+        worker.start()
+    qtbot.waitUntil(lambda: not worker.isRunning())
+    assert result.args[0]["error"] is None
+    assert any(event["event"] == "retrying" for event in events)
+    assert models.file.read_bytes() == DATA
 
 
 @pytest.mark.parametrize(

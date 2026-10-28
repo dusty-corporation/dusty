@@ -14,7 +14,7 @@ the checked-out commit, installed SDK, or toolchain differs from these values.
 https://github.com/ggml-org/whisper.cpp/releases/tag/v1.9.5
 
 The first CPU and Vulkan static-library builds passed CI import checks but
-used `GGML_NATIVE=ON`. The runner selected AVX-512, and the Owner desktop
+used `GGML_NATIVE=ON`. The runner selected AVX-512, and the maintainer desktop
 raised `0xc000001d`. ISSUE-003 records the regression. ADR 0015 switches
 both packages to runtime CPU backend dispatch with `GGML_NATIVE=OFF`,
 `GGML_BACKEND_DL=ON`, and `GGML_CPU_ALL_VARIANTS=ON`. CI must prove that
@@ -41,7 +41,7 @@ The CPU native job runs JFK and the ten-minute fixture with segment and word
 timestamps checked against known speech windows within 0.5 s. The Windows
 build still prints every GGML cache setting, rejects GGML_NATIVE=ON, and checks
 all nine CPU dispatch DLLs. Vulkan runtime tests and startup measurements run
-on the Owner desktop because hosted runners do not provide its Vulkan GPU.
+on the maintainer desktop because hosted runners do not provide its Vulkan GPU.
 
 Native run 39804070663 passed both corrected builds. Desktop JFK, segment/word
 regressions on both backends, and the startup probe also passed; see
