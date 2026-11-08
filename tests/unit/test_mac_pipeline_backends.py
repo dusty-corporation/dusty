@@ -712,3 +712,129 @@ def test_mac_selftest_reports_metal_failure_by_name(tmp_path, platform, native, 
         "SELFTEST_FAILED_METAL"
     )
     assert list((paths.user_dir / "work").iterdir()) == []
+
+
+# Inside a virtual Mac (GitHub's runners) the Metal engine never starts. On the
+# M1 runners it stalled while compiling its shaders, before it reported anything.
+
+
+@pytest.fixture
+def virtual_host(monkeypatch):
+    monkeypatch.setattr("dusty.platform.virtual_mac.is_virtual_mac", lambda: True)
+
+
+@pytest.mark.usefixtures("virtual_host")
+@pytest.mark.parametrize(
+    ("requested", "vulkan_ok", "fallback"),
+    [("metal", False, True), ("metal", True, True), ("auto", True, True), ("auto", False, False)],
+)
+def test_virtual_mac_runs_jobs_on_the_cpu_without_starting_metal(
+    tmp_path, platform, native, requested, vulkan_ok, fallback
+):
+    platform("darwin")
+    fake = native()
+    paths, job = _run(tmp_path, requested, vulkan_ok=vulkan_ok)
+    assert fake.whisper_programs == [(paths.bin_dir / "cpu/whisper-cli").resolve()]
+    assert "-ng" in fake.whisper_calls[0]
+    assert job.status == JobStatus.DONE and job.failure is None
+    assert job.backend_used == "cpu" and job.gpu_fallback is fallback
+    assert _exported_backend(tmp_path) == "cpu"
+    assert list((paths.user_dir / "work").iterdir()) == []
+
+
+def _metal_run(tmp_path: Path, fake: FakeNative, monkeypatch, cancel=None):
+    monkeypatch.setattr(whisper, "run_job_process", fake.run_whisper)
+    return whisper.run_whisper(
+        tmp_path / "metal/whisper-cli",
+        tmp_path / "model.bin",
+        tmp_path / "audio.wav",
+        tmp_path / "raw",
+        model_id="tiny",
+        task="transcribe",
+        language="en",
+        threads=4,
+        duration_sec=11.0,
+        backend="metal",
+        vad_model=None,
+        prompt="",
+        cancel=cancel,
+    )
+
+
+@pytest.mark.usefixtures("virtual_host")
+def test_virtual_mac_metal_request_fails_on_the_gpu_without_a_process(tmp_path, monkeypatch):
+    fake = FakeNative()
+    with pytest.raises(EngineError, match="does not use the GPU inside a virtual Mac") as raised:
+        _metal_run(tmp_path, fake, monkeypatch)
+    error = raised.value
+    assert error.gpu_error and error.unsupported_gpu and error.virtual_mac
+    assert not error.cancelled and error.device_name is None
+    assert fake.whisper_calls == []
+
+
+@pytest.mark.usefixtures("virtual_host")
+def test_virtual_mac_cancel_before_a_metal_run_is_a_cancel(tmp_path, monkeypatch):
+    cancel = threading.Event()
+    cancel.set()
+    fake = FakeNative()
+    with pytest.raises(EngineError) as raised:
+        _metal_run(tmp_path, fake, monkeypatch, cancel)
+    assert raised.value.cancelled and not raised.value.gpu_error
+    assert fake.whisper_calls == []
+
+
+@pytest.mark.parametrize(("backend", "lines"), [("cpu", MAC_CPU_LINES), ("vulkan", VULKAN_LINES)])
+def test_cpu_and_windows_runs_never_ask_whether_this_is_a_virtual_mac(
+    tmp_path, monkeypatch, backend, lines
+):
+    def asked() -> bool:
+        raise AssertionError("only a Metal run asks whether this is a virtual Mac")
+
+    monkeypatch.setattr("dusty.platform.virtual_mac.is_virtual_mac", asked)
+    assert _whisper(tmp_path, backend, lines, monkeypatch=monkeypatch).transcript.backend == backend
+
+
+@pytest.mark.usefixtures("virtual_host")
+def test_mac_probe_records_a_virtual_mac_without_starting_metal(
+    tmp_path, platform, native, monkeypatch
+):
+    from dusty.engine import backend
+    from dusty.queue.storage import load_settings
+
+    platform("darwin")
+    fake = native()
+    monkeypatch.setattr(backend, "display_driver_signature", lambda: "mac-signature")
+    paths = _probe_paths(tmp_path, "metal/whisper-cli")
+    registry = StubRegistry(paths.models_dir)
+    assert backend.probe_gpu(paths, registry) is False
+    assert fake.whisper_calls == []
+    cached = load_settings(paths.user_dir / "settings.json")["backend_probe"]
+    assert cached == {
+        "engine": hashlib.sha256(b"pinned engine v1").hexdigest(),
+        "driver": "mac-signature",
+        "ok": False,
+        "device_name": None,
+        "unsupported": True,
+        "virtual_mac": True,
+    }
+    assert backend.probe_gpu(paths, registry) is False
+    assert list((paths.user_dir / "work").iterdir()) == []
+
+
+@pytest.mark.usefixtures("virtual_host")
+def test_virtual_mac_selftest_reports_a_gpu_error_and_auto_uses_the_cpu(
+    tmp_path, platform, native, monkeypatch
+):
+    from dusty import selftest
+    from dusty.engine import backend
+
+    platform("darwin")
+    fake = native()
+    monkeypatch.setattr(selftest, "ModelRegistry", lambda *_args: StubRegistry(tmp_path))
+    monkeypatch.setattr(backend, "display_driver_signature", lambda: "mac-signature")
+    paths = _probe_paths(tmp_path, "metal/whisper-cli")
+    assert selftest.run_selftest(paths, "tiny", backend="metal") == "GPU_ERROR"
+    assert fake.whisper_calls == []
+    assert selftest.run_selftest(paths, "tiny", backend="auto", once=True) == "OK_CPU"
+    assert fake.whisper_programs == [(paths.bin_dir / "cpu/whisper-cli").resolve()]
+    assert list((paths.user_dir / "work").iterdir()) == []

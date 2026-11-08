@@ -48,8 +48,9 @@ WHISPER_LIMIT_SEC = 12 * 3600
 class EngineError(RuntimeError):
     """The native transcription process failed without exposing raw stderr.
 
-    ``unsupported_gpu`` means the Metal engine reported a GPU it cannot use, and
-    ``device_name`` is the recognized GPU description it reported, if any.
+    ``unsupported_gpu`` means the Metal engine cannot use this GPU: the engine
+    reported so, or this is a virtual Mac (``virtual_mac``), where it never
+    starts. ``device_name`` is the recognized GPU description it reported, if any.
     """
 
     def __init__(
@@ -60,12 +61,14 @@ class EngineError(RuntimeError):
         cancelled: bool = False,
         unsupported_gpu: bool = False,
         device_name: str | None = None,
+        virtual_mac: bool = False,
     ):
         super().__init__(message)
         self.gpu_error = gpu_error
         self.cancelled = cancelled
         self.unsupported_gpu = unsupported_gpu
         self.device_name = device_name
+        self.virtual_mac = virtual_mac
 
 
 @dataclass(frozen=True)
@@ -145,6 +148,21 @@ def run_whisper(
     timeout_sec: float = WHISPER_LIMIT_SEC,
 ) -> EngineRun:
     """Pass prompts as one argument and never retain raw native stderr."""
+    if backend == "metal":
+        from dusty.platform import virtual_mac
+
+        # Inside a virtual Mac the Metal engine can stall while it compiles its
+        # shaders, before it reports anything, so it never starts there and the
+        # caller may run the CPU engine instead.
+        if virtual_mac.is_virtual_mac():
+            if cancel is not None and cancel.is_set():
+                raise EngineError("Transcription cancelled", cancelled=True)
+            raise EngineError(
+                "Dusty does not use the GPU inside a virtual Mac",
+                gpu_error=True,
+                unsupported_gpu=True,
+                virtual_mac=True,
+            )
     args = [
         str(executable.resolve()),
         "-m",

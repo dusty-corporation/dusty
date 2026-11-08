@@ -61,6 +61,7 @@ def probe_gpu(
     work = owned.path
     ok = False
     unsupported = False
+    virtual = False
     device_name = None
     try:
         fixture = paths.resources_dir / "selftest.wav"
@@ -87,6 +88,7 @@ def probe_gpu(
     except EngineError as exc:
         ok = False
         unsupported = exc.unsupported_gpu
+        virtual = exc.virtual_mac
         device_name = exc.device_name
     except (OSError, ValueError, ModelMissing, ModelCorrupt):
         ok = False
@@ -95,8 +97,11 @@ def probe_gpu(
         owned.cleanup(paths.user_dir)
     settings["backend_probe"] = {**identity, "ok": ok, "device_name": device_name}
     if unsupported:
-        # The engine itself reported a GPU it cannot use, not a failed run.
+        # The engine itself reported a GPU it cannot use, or this is a virtual
+        # Mac where it never starts: not a failed run.
         settings["backend_probe"]["unsupported"] = True
+    if virtual:
+        settings["backend_probe"]["virtual_mac"] = True
     save_settings(settings_path, settings)
     return ok
 

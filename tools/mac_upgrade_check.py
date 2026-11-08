@@ -41,8 +41,6 @@ MODELS = ("ggml-tiny.bin", "ggml-silero-vad.bin")
 CATALOG = ("large-v3-turbo-q8_0", "small", "medium", "small.en", "tiny")
 PREFERENCES = {"welcome_seen": True, "formats": ["txt", "srt"], "language": "en"}
 QUARANTINE = "0081;{:x};Safari;"
-# The GPU a virtual Mac reports, as the Metal engine names it.
-VIRTUAL_GPU = "Apple Paravirtual device"
 
 
 @dataclass
@@ -247,18 +245,18 @@ class Harness:
         )
         self.expect(scenario, "--self-test (Auto)", app, home, ["--self-test"], 0, "OK")
         probe = self.settings(home).get("backend_probe") or {}
-        virtual = engine_cannot_use_virtual_gpu(probe)
+        virtual = virtual_mac(probe)
         self.record(
             scenario,
             "GPU path this run verifies",
-            "Metal, or the CPU where the engine reports a GPU it cannot use",
-            f"CPU, the engine cannot use {VIRTUAL_GPU}" if virtual else "Metal",
+            "Metal, or the CPU inside a virtual Mac",
+            "CPU, Dusty does not use the GPU inside a virtual Mac" if virtual else "Metal",
             None,
         )
         self.record(
             scenario,
             "probe cached in settings.json backend_probe",
-            "ok false and unsupported, engine and driver signatures"
+            "ok false, unsupported and virtual Mac, engine and driver signatures"
             if virtual
             else "ok true, engine and driver signatures, device named",
             f"ok {probe.get('ok')}, device {probe.get('device_name')}, keys {sorted(probe)}",
@@ -648,14 +646,13 @@ def version(app: Path) -> str:
     return str(info["CFBundleShortVersionString"])
 
 
-def engine_cannot_use_virtual_gpu(probe: dict) -> bool:
-    """Whether the GPU check found Apple's paravirtual GPU, which the engine cannot use.
+def virtual_mac(probe: dict) -> bool:
+    """Whether the app's GPU check found a virtual Mac, where it never starts the Metal engine.
 
-    GitHub's Mac runners have that GPU without the features the Metal engine
-    needs. Only there, positively named by the engine, are the truthful CPU
-    results expected; any other GPU, Apple Silicon included, must pass as Metal.
+    GitHub's Mac runners are virtual Macs. Only there, as recorded by the app
+    itself, are the truthful CPU results expected; any real Mac must pass as Metal.
     """
-    return probe.get("unsupported") is True and probe.get("device_name") == VIRTUAL_GPU
+    return probe.get("unsupported") is True and probe.get("virtual_mac") is True
 
 
 def codesign_verify(app: Path) -> str:

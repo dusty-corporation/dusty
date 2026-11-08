@@ -34,8 +34,10 @@ A pushed snapshot is tagged only after its public CI passes in full. If it
 fails, that snapshot is never tagged or released. The exporter allows one
 snapshot per version and never rewrites public history, so the fix ships as
 the next patch version, exported on top, and the changelog marks the skipped
-version as not released. 1.1.0 was skipped this way, so the first release with
-Windows and Mac is 1.1.1, and its upgrade gate still starts from 1.0.1.
+version as not released. 1.1.0 and 1.1.1 were skipped this way, so the first
+release with Windows and Mac is 1.1.2, and its upgrade gate still starts from
+1.0.1. To avoid skipping versions, run the candidate's CI on the same kind of
+runner before the push whenever that is possible.
 
 The gated release contains:
 

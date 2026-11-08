@@ -5,8 +5,8 @@ DUSTY_BIN_DIR at it and DUSTY_MODELS_DIR at hash verified catalog models.
 Tests that need a model other than Tiny skip when that model is absent.
 
 Rows that ask for Metal expect the backend Dusty uses on this Mac (the mac_gpu
-fixture): Metal on Apple Silicon, or the CPU after the engine reports that a
-virtual Mac's GPU cannot run it. Rows about the Metal engine itself skip there.
+fixture): Metal on a real Mac, or the CPU inside a virtual Mac, where Dusty never
+starts the Metal engine. Rows about the Metal engine itself skip there.
 """
 
 import io
@@ -30,11 +30,14 @@ import pytest
 
 from dusty.core import BatchOptions, FailureCode, Job, JobStatus
 from dusty.core.types import CollisionPolicy
+from dusty.engine.backend import probe_gpu
 from dusty.engine.binaries import lifeline_path, whisper_path
 from dusty.models import ModelRegistry, load_manifest
+from dusty.platform import virtual_mac
 from dusty.privacy.logging import configure_logger
 from dusty.queue import Coordinator
 from dusty.queue.scanning import scan_inputs
+from dusty.queue.storage import load_settings
 from dusty.runtime_paths import RuntimePaths, resolve_paths
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -232,38 +235,37 @@ def test_backend_selection_is_truthful_with_vad_and_threads(
     assert _work_empty(paths)
 
 
-def test_gpu_the_engine_cannot_use_falls_back_to_the_cpu_at_once(
+def test_virtual_mac_uses_the_cpu_without_starting_the_metal_engine(
     paths: RuntimePaths,
     registry: ModelRegistry,
     engine_calls: EngineCalls,
-    mac_gpu: SimpleNamespace,
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """On a virtual Mac's GPU the engine is stopped at its report and the job runs on the CPU.
+    """Inside a virtual Mac the Metal engine never starts and jobs run on the CPU at once.
 
-    GitHub's M1 runners stalled for over an hour in the Metal engine on that GPU.
+    On GitHub's M1 runners the Metal engine stalled for over an hour before it
+    reported anything. On a real Mac this test makes Dusty see a virtual Mac.
     """
-    if not mac_gpu.reason:
-        pytest.skip("This Mac's GPU runs the Metal engine; unit tests replay a virtual GPU")
-    assert mac_gpu.probe["ok"] is False and mac_gpu.probe["unsupported"] is True
+    monkeypatch.setattr(virtual_mac, "is_virtual_mac", lambda: True)
+    started = time.monotonic()
+    assert probe_gpu(paths, registry, refresh=True) is False
+    probe = load_settings(paths.user_dir / "settings.json")["backend_probe"]
+    assert probe["ok"] is False and probe["unsupported"] is True and probe["virtual_mac"] is True
+    assert probe["device_name"] is None
+    assert engine_calls.args == []
     (source,) = _inputs(tmp_path, "formats/jfk.wav")
     options = BatchOptions(
         "tiny", tmp_path / "out", formats=("json",), backend="metal", language="en"
     )
-    started = time.monotonic()
     (job,) = _run(paths, registry, [Job(source)], options, vulkan_ok=False)
     assert time.monotonic() - started < 120
     assert job.status == JobStatus.DONE, job.failure
     assert job.backend_used == "cpu" and job.gpu_fallback
     assert _json(tmp_path / "out/jfk.json")["backend"] == "cpu"
-    metal_args, cpu_args = engine_calls.args
-    assert Path(metal_args[0]) == whisper_path(paths.bin_dir, "metal").resolve()
+    (cpu_args,) = engine_calls.args
     assert Path(cpu_args[0]) == whisper_path(paths.bin_dir, "cpu").resolve()
-    assert "-ng" in cpu_args and "-ng" not in metal_args
-    assert any(
-        line.startswith("ggml_metal_device_init: simdgroup") and line.endswith("= false")
-        for line in engine_calls.stderr[0]
-    )
+    assert "-ng" in cpu_args
     assert "backend=cpu" in _log(paths)
     assert _native_children(paths.bin_dir) == []
     assert _work_empty(paths)
@@ -287,11 +289,11 @@ def test_vad_default_off_and_hints_are_one_argument_not_logged(
     assert options.vad is False
     (job,) = _run(paths, registry, [Job(source)], options)
     assert job.status == JobStatus.DONE, job.failure
-    # One Metal run, or on a GPU the engine cannot use, the stopped one and the CPU retry.
-    assert len(engine_calls.args) == (1 if mac_gpu.backend == "metal" else 2)
-    for args in engine_calls.args:
-        assert "--vad" not in args and "-vm" not in args
-        assert args.count(hints) == 1 and args[args.index("--prompt") + 1] == hints
+    # One run: on Metal, or inside a virtual Mac on the CPU without starting Metal.
+    (args,) = engine_calls.args
+    assert ("-ng" in args) == (mac_gpu.backend == "cpu")
+    assert "--vad" not in args and "-vm" not in args
+    assert args.count(hints) == 1 and args[args.index("--prompt") + 1] == hints
     assert _jfk_words((tmp_path / "out/jfk.txt").read_text(encoding="utf-8"))
     log = _log(paths)
     assert "CANARYHINT" not in log and "Stardust" not in log and "/Users/" not in log

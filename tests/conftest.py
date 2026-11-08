@@ -113,11 +113,11 @@ def tls_certificate(tmp_path_factory):
 def mac_gpu(tmp_path_factory) -> SimpleNamespace:
     """What Dusty's own GPU check finds on this Mac, run once with the staged engine.
 
-    On Apple's paravirtual GPU without the simdgroup features (GitHub's Mac
-    runners), the engine reports that it cannot work and Dusty uses the CPU:
-    ``backend`` is then "cpu" and ``reason`` says why tests of the Metal engine
-    itself skip. Every other result expects Metal, including a failed check on
-    an Apple Silicon GPU, so a broken Metal engine fails the tests instead.
+    Inside a virtual Mac (GitHub's Mac runners) Dusty never starts the Metal
+    engine and uses the CPU: ``backend`` is then "cpu" and ``reason`` says why
+    tests of the Metal engine itself skip. Every other result expects Metal,
+    including a failed check on a real Mac, so a broken Metal engine fails the
+    tests instead.
     """
     from dusty.engine.backend import probe_gpu
     from dusty.models import ModelRegistry, load_manifest
@@ -131,10 +131,10 @@ def mac_gpu(tmp_path_factory) -> SimpleNamespace:
     registry = ModelRegistry(load_manifest(paths.resources_dir / "models.json"), paths.models_dir)
     probe_gpu(paths, registry, refresh=True)
     probe = load_settings(user / "settings.json").get("backend_probe") or {}
-    if probe.get("unsupported") is True and probe.get("device_name") == "Apple Paravirtual device":
+    if probe.get("unsupported") is True and probe.get("virtual_mac") is True:
         reason = (
-            "The Metal engine reports that this Mac's GPU, Apple's paravirtual GPU as on "
-            "GitHub's Mac runners, lacks the simdgroup features it needs, so Dusty uses the CPU"
+            "Dusty does not use the GPU inside a virtual Mac, such as GitHub's Mac runners, "
+            "where the Metal engine stalls or reports missing features"
         )
         return SimpleNamespace(backend="cpu", reason=reason, probe=probe)
     return SimpleNamespace(backend="metal", reason=None, probe=probe)
@@ -142,7 +142,7 @@ def mac_gpu(tmp_path_factory) -> SimpleNamespace:
 
 @pytest.fixture
 def metal_gpu(mac_gpu: SimpleNamespace) -> None:
-    """Skip a test of the Metal engine itself on a GPU the engine reports it cannot use."""
+    """Skip a test of the Metal engine itself inside a virtual Mac, where it never starts."""
     if mac_gpu.reason:
         pytest.skip(mac_gpu.reason)
 

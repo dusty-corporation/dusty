@@ -48,15 +48,33 @@ true. Without them ggml moves matrix multiplication, softmax and normalization
 to the CPU and still sends the rest to the GPU. On M2 Pro hosts that works
 slowly. On an M1 host the public CI run of the 1.1.0 snapshot stalled inside
 the Metal engine until the 90 minute job limit, and another project saw a
-GPU hang error on the same runners. That snapshot was never tagged, and the
-fix ships in 1.1.1.
+GPU hang error on the same runners. That snapshot was never released.
 
 Dusty therefore does not use a GPU without both features. A Metal run is
 stopped as soon as its stderr reports either feature false, before any GPU
 work, or a known Metal command failure, and the existing CPU retry runs the
 job. The GPU check records such a GPU as unsupported with its device name, so
 Automatic uses the CPU, and the Mac GPU check now stops after 120 seconds.
-Windows is unchanged. Tests of the Metal engine itself skip only when the
-engine names Apple's paravirtual GPU and reports the missing features; an
-Apple Silicon GPU must always pass them, so CI on virtual Macs verifies the CPU
-fallback and real Macs verify Metal.
+Windows is unchanged. The next amendment replaces how tests choose the Metal
+rows.
+
+## Amendment 2026-11-08: no Metal engine inside a virtual Mac (MAC11-VM)
+
+The stderr check above was not enough. On GitHub's M1 runners (3 cores) a
+Metal run then went for over 20 minutes without the report that would stop it.
+The pinned engine prints the GPU name and features only after it compiles its
+35 Metal shader libraries. That takes 0.2 seconds on an M2 Mac, and the whole
+GPU check took about 12 seconds on GitHub's M2 Pro runners, which suggests the
+compile stalls on the M1 runners.
+
+Dusty therefore never starts the Metal engine inside a virtual Mac. It
+recognizes one from two sysctls, without starting a process: macOS sets
+kern.hv_vmm_present to 1 inside a virtual machine, and GitHub's runners name
+their processor "Apple M1 (Virtual)" or "Apple M2 Pro (Virtual)". There, a
+Metal request fails on the GPU at once and the existing CPU retry runs the job,
+and the GPU check records an unsupported GPU in a virtual Mac, so Automatic
+uses the CPU. A virtual Mac on Apple Silicon only has Apple's paravirtual GPU,
+so no working GPU is lost. The stderr check stays for any other GPU the engine
+reports it cannot use. Tests of the Metal engine itself skip only where Dusty's
+own GPU check recorded a virtual Mac; on a real Mac they must pass, and a test
+makes Dusty see a virtual Mac on every Mac to check that no Metal engine starts.

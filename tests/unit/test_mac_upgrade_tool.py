@@ -65,16 +65,17 @@ def test_redact_removes_run_and_home_paths(tmp_path):
     assert check.redact(text, tmp_path) == "<out>/p25/home and <home>/x"
 
 
-def test_cpu_results_are_expected_only_on_the_reported_virtual_gpu():
-    virtual = {"ok": False, "unsupported": True, "device_name": "Apple Paravirtual device"}
-    assert check.engine_cannot_use_virtual_gpu(virtual)
-    # An Apple Silicon GPU, an unnamed GPU or a failed check without the
-    # engine's report must still pass the Metal rows.
+def test_cpu_results_are_expected_only_inside_a_virtual_mac():
+    virtual = {"ok": False, "unsupported": True, "virtual_mac": True, "device_name": None}
+    assert check.virtual_mac(virtual)
+    # A real Mac, a GPU the engine itself reported unusable, or a failed check
+    # must still pass the Metal rows.
     for probe in (
-        {**virtual, "device_name": "Apple M2"},
-        {**virtual, "device_name": None},
-        {"ok": False, "device_name": "Apple Paravirtual device"},
+        {**virtual, "virtual_mac": False},
+        {key: value for key, value in virtual.items() if key != "virtual_mac"},
+        {**virtual, "unsupported": False},
+        {"ok": False, "unsupported": True, "device_name": "Apple Paravirtual device"},
         {"ok": True, "device_name": "Apple M1"},
         {},
     ):
-        assert not check.engine_cannot_use_virtual_gpu(probe)
+        assert not check.virtual_mac(probe)
