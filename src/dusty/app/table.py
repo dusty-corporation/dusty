@@ -1,5 +1,6 @@
 """Qt queue model; local file names are displayed, never sent to diagnostics."""
 
+import sys
 from typing import Any
 
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
@@ -52,7 +53,7 @@ class QueueModel(QAbstractTableModel):
                 return font
         if role == Qt.ItemDataRole.DisplayRole:
             status = (
-                M.GPU_FALLBACK
+                M.gpu_fallback(sys.platform)
                 if job.gpu_fallback and job.status == JobStatus.DONE
                 else M.phase_text(job.status.value, job.progress)
             )
@@ -67,7 +68,7 @@ class QueueModel(QAbstractTableModel):
                 M.OPEN_RESULT if job.outputs else M.EMPTY_CELL,
             )[column]
         if role == Qt.ItemDataRole.ToolTipRole and job.failure:
-            error = M.FAILURE_MESSAGES[job.failure]
+            error = M.failure_messages(sys.platform)[job.failure]
             return error.message + " " + error.action
         return None
 

@@ -25,6 +25,7 @@ from pathlib import Path
 from dusty.core import BatchOptions, Job, JobStatus
 from dusty.models import ModelRegistry, load_manifest
 from dusty.queue import Coordinator
+from dusty.platform.cpu_topology import default_threads
 from dusty.runtime_paths import RuntimePaths, resolve_paths
 root, temporary = map(Path, sys.argv[1:])
 (temporary / 'parent-pid').write_text(str(os.getpid()), encoding='ascii')
@@ -34,7 +35,7 @@ registry = ModelRegistry(load_manifest(paths.resources_dir / 'models.json'), pat
 jobs = [Job(root / 'tests/fixtures/audio/formats/jfk.wav'),
         Job(root / 'tests/fixtures/audio/vad/mostly-silence-10min.m4a')]
 options = BatchOptions('tiny', temporary / 'out', formats=('txt',),
-                       backend='cpu', threads=4, vad=False)
+                       backend='cpu', threads=min(4, default_threads()), vad=False)
 def changed(job):
     if job is jobs[1] and job.status == JobStatus.TRANSCRIBING:
         (temporary / 'ready').touch()

@@ -1,6 +1,7 @@
 """Readable light/dark Qt palettes without an external styling dependency."""
 
 import os
+import sys
 from pathlib import Path
 
 from PySide6.QtCore import QPointF, QRectF, Qt
@@ -120,7 +121,11 @@ def apply_theme(app: QApplication, mode: str = "system") -> None:
             if (fonts / name).is_file():
                 QFontDatabase.addApplicationFont(str(fonts / name))
     app.setStyle(ControlStyle("Fusion"))
-    app.setFont(QFont("Segoe UI", 10))
+    if sys.platform == "darwin":
+        # Segoe UI is a Windows font; the Mac system font avoids a Qt alias search.
+        app.setFont(QFontDatabase.systemFont(QFontDatabase.SystemFont.GeneralFont))
+    else:
+        app.setFont(QFont("Segoe UI", 10))
     if mode == "system":
         mode = "dark" if app.styleHints().colorScheme() == Qt.ColorScheme.Dark else "light"
     dark = mode == "dark"

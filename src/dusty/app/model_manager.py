@@ -3,6 +3,7 @@
 import json
 import logging
 import shutil
+import sys
 import threading
 import time
 from collections.abc import Callable
@@ -22,7 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from dusty.models import ModelCorrupt, ModelMissing, ModelRegistry
-from dusty.platform.win_process import run_job_process
+from dusty.platform.process import run_job_process
 from dusty.runtime_paths import RuntimePaths, resolve_fetch_command
 from dusty.work_area import linked
 
@@ -170,8 +171,9 @@ class ModelWorker(QThread):
                         cancel=self.cancelled,
                     )
                     if process.cancelled or self.cancelled.is_set():
-                        # The Windows job terminates the child. Clean only its
-                        # manifest-owned partial after all child handles close.
+                        # The platform runner ends the child (Windows Job Object,
+                        # Mac lifeline process group). Clean only its manifest-owned
+                        # partial after the child has exited.
                         part = self.paths.models_dir / (
                             model_files(self.registry)[key][0] + ".part"
                         )
@@ -269,6 +271,8 @@ class ModelManager(TextDialog):
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.setTabKeyNavigation(False)
+        if sys.platform == "darwin":
+            self.table.setAccessibleName(M.MODEL_MANAGER)
         self.table.setWordWrap(True)
         self.table.setTextElideMode(Qt.TextElideMode.ElideNone)
         self.table.verticalHeader().hide()
@@ -284,13 +288,20 @@ class ModelManager(TextDialog):
                 label = M.RECOMMENDED.format(name=label)
             title = QTableWidgetItem()
             title.setData(Qt.ItemDataRole.UserRole, key)
+            note = M.model_note(sys.platform)[key]
+            if sys.platform == "darwin":
+                # The visible lines are a cell widget; VoiceOver reads the item text.
+                title.setData(
+                    Qt.ItemDataRole.AccessibleTextRole,
+                    f"{label}. {M.MODEL_QUALITY[key]}. {note}",
+                )
             self.table.setItem(row, 0, title)
             cell = QWidget()
             cell.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
             layout = QVBoxLayout(cell)
             layout.setContentsMargins(8, 4, 8, 4)
             layout.setSpacing(1)
-            for index, text in enumerate((label, M.MODEL_QUALITY[key], M.MODEL_NOTE[key])):
+            for index, text in enumerate((label, M.MODEL_QUALITY[key], note)):
                 line = QLabel(text)
                 line.setTextFormat(Qt.TextFormat.PlainText)
                 font = line.font()

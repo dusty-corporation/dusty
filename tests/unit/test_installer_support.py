@@ -86,6 +86,7 @@ def test_real_entry_point_model_free_probe_is_bounded(tmp_path):
     assert isinstance(json.loads(output.read_text())["real_gpu_found"], bool)
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only: Job Object deadline")
 def test_hanging_probe_child_is_terminated_by_real_job_deadline(tmp_path, monkeypatch):
     import time
 
@@ -136,6 +137,8 @@ def test_installer_selftest_runs_selected_backend_exactly_once(
     paths = resolve_paths()
     calls = []
     monkeypatch.setattr(installer_support, "probe", lambda *_: gpu)
+    # macOS probes Metal in process through the shared engine probe instead.
+    monkeypatch.setattr("dusty.engine.backend.probe_gpu", lambda *_, **__: gpu)
     monkeypatch.setattr(selftest, "load_manifest", lambda *_: None)
     monkeypatch.setattr(
         selftest,
@@ -158,7 +161,9 @@ def test_installer_selftest_runs_selected_backend_exactly_once(
         )
 
     monkeypatch.setattr(selftest, "run_whisper", whisper)
-    expected = "vulkan" if gpu and backend == "auto" else "cpu"
+    from dusty.engine.binaries import gpu_backend
+
+    expected = gpu_backend() if gpu and backend == "auto" else "cpu"  # "vulkan" on Windows.
     assert (
         selftest.run_selftest(paths, "tiny", backend=backend, once=True)
         == ("TEXT_MISMATCH_" if failed else "OK_") + expected.upper()

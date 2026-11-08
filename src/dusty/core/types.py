@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Literal, Protocol
 from uuid import UUID, uuid4
 
-Backend = Literal["auto", "cpu", "vulkan"]
+Backend = Literal["auto", "cpu", "vulkan", "metal"]
+EngineBackend = Literal["cpu", "vulkan", "metal"]
 Task = Literal["transcribe", "translate"]
 OutputFormat = Literal["txt", "srt", "vtt", "json", "docx"]
 CollisionPolicy = Literal["ask", "skip", "overwrite", "keep_both"]
@@ -63,7 +64,7 @@ class Transcript:
     language: str
     task: Task
     model_id: str
-    backend: Literal["cpu", "vulkan"]
+    backend: EngineBackend
     duration_sec: float
 
 
@@ -76,10 +77,21 @@ class Job:
     failure: FailureCode | None = None
     progress: float = 0.0
     outputs: list[Path] = field(default_factory=list)
-    backend_used: Literal["cpu", "vulkan"] | None = None
+    backend_used: EngineBackend | None = None
     gpu_fallback: bool = False
     duration_sec: float = 0.0
     elapsed_sec: float = 0.0
+
+
+def default_batch_threads() -> int:
+    """The default whisper.cpp thread count: the computer's default, at most four.
+
+    More threads than cores make whisper.cpp spin instead of work, so a fixed four
+    did not finish on a two-thread computer.
+    """
+    from dusty.platform.cpu_topology import default_threads
+
+    return min(4, default_threads())
 
 
 @dataclass(frozen=True)
@@ -90,7 +102,7 @@ class BatchOptions:
     language: str = "auto"
     task: Task = "transcribe"
     backend: Backend = "auto"
-    threads: int = 4
+    threads: int = field(default_factory=lambda: default_batch_threads())
     vad: bool = False
     prompt: str = ""
     collision: CollisionPolicy = "ask"
@@ -113,7 +125,7 @@ class BatchOptions:
             raise ValueError("Invalid output formats")
         if self.task not in ("transcribe", "translate"):
             raise ValueError("Invalid task")
-        if self.backend not in ("auto", "cpu", "vulkan"):
+        if self.backend not in ("auto", "cpu", "vulkan", "metal"):
             raise ValueError("Invalid backend")
         if self.collision not in ("ask", "skip", "keep_both", "overwrite"):
             raise ValueError("Invalid collision policy")

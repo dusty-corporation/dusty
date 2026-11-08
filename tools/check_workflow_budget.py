@@ -40,11 +40,13 @@ def check(root: Path = ROOT) -> list[str]:
         "ci.yml": {
             "source": CHEAP,
             **dict.fromkeys(
-                ("checks", "offline", "installer-upload-regression", "packaging-spike"), FULL
+                ("checks", "offline", "installer-upload-regression", "macos", "packaging-spike"),
+                FULL,
             ),
         },
         "release.yml": dict.fromkeys(("validate", "gates", "draft"), PUBLIC_ONLY),
         "native.yml": {"whisper": FULL},
+        "native-macos.yml": {"engine": FULL},
         "ffmpeg.yml": {"ffmpeg": FULL},
         "models.yml": dict.fromkeys(("prepare", "convert", "manifest"), FULL),
     }

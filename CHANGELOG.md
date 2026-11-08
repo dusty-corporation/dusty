@@ -2,6 +2,32 @@
 
 All notable changes to Dusty will be documented here. This project follows Keep a Changelog.
 
+## [1.1.0] - 2026-11-08
+
+### Added
+
+- Dusty for Mac: a native app for Macs with Apple silicon (M1 or later) on
+  macOS 13.3 or later, with the same features, models and privacy promises as
+  on Windows. It uses the Mac's GPU (Metal) and falls back to the processor.
+  Install it by dragging Dusty from the disk image to Applications. See
+  [Dusty on a Mac](docs/user/mac.md).
+
+### Fixed
+
+- Setup's model test and the GPU check no longer stall on computers with fewer
+  than four processor cores. They now use the computer's own thread count, at
+  most four, so faster computers are unchanged.
+- An English-only model now refuses another spoken language before any work
+  starts, with a clear message.
+- A recording that is removed or becomes unreadable while Dusty is reading it
+  now fails with a plain "not found" or "unreadable" message.
+- A GPU check made before any model is installed is no longer remembered as a
+  GPU failure.
+
+### Changed
+
+- One README for Windows and Mac, with both downloads and first-open steps.
+
 ## [1.0.1] - 2026-10-28
 
 ### Fixed
@@ -21,6 +47,9 @@ All notable changes to Dusty will be documented here. This project follows Keep 
 ## [1.0.0]
 
 ### Added
+
+- macOS approved-source native trust, asynchronous descriptor ownership and
+  bounded private-pipe protocol; processing remains disabled pending supervision.
 
 - Pinned public TLS roots for fresh Windows downloads, with integrity checks and
   a CI canary for both approved hosts; no automatic root retrieval.

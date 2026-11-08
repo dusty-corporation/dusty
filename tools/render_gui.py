@@ -8,6 +8,13 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+MAC = sys.platform == "darwin"
+# Synthetic review paths: Windows keeps its drive paths, the Mac uses a shared folder.
+SAMPLE_ROOT = Path("/Users/Shared") if MAC else Path("C:/")
+
+
+def sample(*parts: str) -> Path:
+    return SAMPLE_ROOT.joinpath(*parts)
 
 
 def render(
@@ -27,7 +34,6 @@ def render(
         CollisionDialog,
         ErrorDialog,
         FolderDialog,
-        GreetingDialog,
         ResumeDialog,
         SummaryDialog,
         SyncDialog,
@@ -42,7 +48,8 @@ def render(
 
     app = QApplication([])
     apply_theme(app, theme)
-    if not QRawFont.fromFont(QFont("Segoe UI", 10)).supportsCharacter("A"):
+    # Windows reviews use Segoe UI; the Mac theme uses the system font.
+    if not QRawFont.fromFont(app.font() if MAC else QFont("Segoe UI", 10)).supportsCharacter("A"):
         raise RuntimeError("Required screenshot font glyphs are unavailable")
     output.mkdir(parents=True, exist_ok=True)
     paths = RuntimePaths(
@@ -67,13 +74,13 @@ def render(
     if m7_only:
         from dusty.queue.scanning import ScanResult
 
-        window.output_dir = Path("C:/Transcripts")
+        window.output_dir = sample("Transcripts")
         window.vad_installed = True
-        job = Job(Path("C:/Recordings/Lecture.wav"), status=JobStatus.DONE, elapsed_sec=99)
+        job = Job(sample("Recordings", "Lecture.wav"), status=JobStatus.DONE, elapsed_sec=99)
         window.model.set_jobs([job])
         window._scanned(ScanResult((), 0, 1, (job.source,)))
         capture(window, "01-readded-waiting-silences-off")
-        second = Job(Path("C:/Recordings/Second lecture.wav"), status=JobStatus.DONE)
+        second = Job(sample("Recordings", "Second lecture.wav"), status=JobStatus.DONE)
         job.status = JobStatus.DONE
         window.model.set_jobs([job, second])
         window._scanned(ScanResult((), 0, 2, (job.source, second.source)))
@@ -95,11 +102,16 @@ def render(
         window.options_dialog.hide()
         window._refresh()
         capture(window, "04-silences-on-summary")
-        for review_dialog, name in (
-            (GreetingDialog(window), "05-greeting"),
+        reviews = [
             (AboutDialog(__version__, lambda: None, window), "06-about-version"),
             (CollisionDialog("Lecture.txt", window), "07-collision-before-processing"),
-        ):
+        ]
+        if sys.platform == "win32":
+            # The hidden greeting exists only on Windows (PARITY P34).
+            from dusty.app.dialogs import GreetingDialog
+
+            reviews.insert(0, (GreetingDialog(window), "05-greeting"))
+        for review_dialog, name in reviews:
             capture(review_dialog, name)
             review_dialog.hide()
         window.ready = False
@@ -109,13 +121,13 @@ def render(
     if output_row_only:
         for name, path, same in (
             ("no-folder", None, False),
-            ("short-path", Path("C:/Transcripts"), False),
+            ("short-path", sample("Transcripts"), False),
             (
                 "long-path",
-                Path("C:/Transcripts") / ("Long folder name " * 9) / "saved transcripts",
+                sample("Transcripts") / ("Long folder name " * 9) / "saved transcripts",
                 False,
             ),
-            ("next-to-recording", Path("C:/Transcripts"), True),
+            ("next-to-recording", sample("Transcripts"), True),
         ):
             window.output_dir = path
             window.same_folder.setChecked(same)
@@ -130,12 +142,12 @@ def render(
         )
         return
     capture(window, "01-empty")
-    window.output_dir = Path("C:/Transcripts")
+    window.output_dir = sample("Transcripts")
     window._refresh()
     capture(window, "01b-output-chosen")
     jobs = [
-        Job(Path("C:/Recordings/Lecture 01.wav"), duration_sec=1200),
-        Job(Path("C:/Recordings/Lecture 02.mp3"), duration_sec=900),
+        Job(sample("Recordings", "Lecture 01.wav"), duration_sec=1200),
+        Job(sample("Recordings", "Lecture 02.mp3"), duration_sec=900),
     ]
     window.model.set_jobs(jobs)
     window._refresh()
@@ -146,7 +158,7 @@ def render(
     window.output_dir = None
     window._refresh()
     capture(window, "02c-choose-output")
-    window.output_dir = Path("C:/Transcripts")
+    window.output_dir = sample("Transcripts")
     window.status.setText(M.READY)
     window._refresh()
     window.options_dialog.show()
@@ -240,6 +252,8 @@ def render(
         dialog.adjustSize()
         capture(dialog, name)
         dialog.hide()
+    if MAC:
+        render_model_manager(window, capture)
     window.ready = False
     window.close()
     app.processEvents()
@@ -248,9 +262,44 @@ def render(
     print(f"Rendered {count} screens; ratio={ratio:g}")
 
 
+def render_model_manager(window, capture) -> None:
+    """Mac review of the model manager: idle, focused on Tiny, and mid-download."""
+    from PySide6.QtWidgets import QApplication
+
+    from dusty.app.model_manager import ModelManager
+
+    manager = ModelManager(
+        window.registry,
+        window.paths,
+        window,
+        recommended=window._recommendation,
+        focus_id="large-v3-turbo-q8_0",
+    )
+    deadline = time.monotonic() + 30
+    while (manager.busy or not manager.workers) and time.monotonic() < deadline:
+        QApplication.processEvents()
+        time.sleep(0.01)
+    if manager.busy:
+        raise RuntimeError("Model scan did not finish")
+    capture(manager, "16-model-manager")
+    manager.table.selectRow(manager.ids.index("tiny"))
+    capture(manager, "16b-model-manager-tiny")
+    total = manager.registry.manifest.models["tiny"].size_bytes
+    manager.progress.show()
+    manager._progress(
+        {"id": "tiny", "event": "downloading", "bytes": total * 2 // 5, "total": total}
+    )
+    capture(manager, "16c-model-manager-downloading")
+    manager.done(0)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, default=ROOT / "build/m3-screenshots")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=ROOT / ("build/screens" if MAC else "build/m3-screenshots"),
+    )
     parser.add_argument("--child", action="store_true")
     parser.add_argument("--output-row", action="store_true")
     parser.add_argument("--m7-polish", action="store_true")
@@ -262,8 +311,10 @@ def main() -> None:
     if args.child:
         render(output, args.theme, output_row_only=args.output_row, m7_only=args.m7_polish)
         return
+    # Mac displays are Retina (2x); Windows reviews 100% and 150%.
+    scales = ("2",) if MAC else ("1", "1.5")
     for theme in ("light", "dark"):
-        for scale in ("1", "1.5"):
+        for scale in scales:
             env = dict(
                 os.environ,
                 QT_QPA_PLATFORM="offscreen",
@@ -291,7 +342,11 @@ def main() -> None:
         ("# M7 polish review\n\n" if args.m7_polish else "# Dusty UI review\n\n")
         + "Synthetic recordings and paths only; no user content.\n"
         "All screens are rendered with pinned PySide6 6.9.2 via Qt's offscreen platform.\n"
-        "Each light/dark folder uses QT_SCALE_FACTOR 1 or 1.5 (100% or 150%).\n"
+        + (
+            "Each light/dark folder uses QT_SCALE_FACTOR 2 (Retina) with the Mac system font.\n"
+            if MAC
+            else "Each light/dark folder uses QT_SCALE_FACTOR 1 or 1.5 (100% or 150%).\n"
+        )
         + (
             "Four output-row states at a narrow 800 x 680 logical window size.\n"
             if args.output_row

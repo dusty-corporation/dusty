@@ -4,7 +4,7 @@ import json
 import sys
 from pathlib import Path
 
-from dusty.platform.win_process import run_job_process
+from dusty.platform.process import run_job_process
 from dusty.runtime_paths import RuntimePaths
 from dusty.work_area import OwnedWork, canonical, linked, protected_paths
 

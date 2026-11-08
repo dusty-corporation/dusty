@@ -8,6 +8,7 @@ import pytest
 
 from dusty.engine import run_whisper
 from dusty.models import ModelRegistry, load_manifest
+from dusty.platform.cpu_topology import default_threads
 from dusty.runtime_paths import resolve_paths
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -27,7 +28,7 @@ def test_persian_translation_is_english(tmp_path: Path) -> None:
             model_id="medium",
             task=task,
             language="fa",
-            threads=4,
+            threads=min(4, default_threads()),
             duration_sec=15,
             backend="cpu",
             vad_model=registry.vad_path(),

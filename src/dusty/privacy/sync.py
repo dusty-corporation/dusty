@@ -2,12 +2,15 @@
 
 import json
 import os
+import sys
 from pathlib import Path
 
-from dusty.platform.sync_locations import google_drive_roots
+from dusty.platform.sync_locations import google_drive_roots, mac_sync_roots
 
 
-def sync_roots(environment: dict[str, str] | None = None) -> tuple[Path, ...]:
+def sync_roots(
+    environment: dict[str, str] | None = None, *, platform: str | None = None
+) -> tuple[Path, ...]:
     """Discover local OneDrive, Dropbox and Google Drive roots without network access."""
     env = os.environ if environment is None else environment
     roots = [
@@ -34,7 +37,17 @@ def sync_roots(environment: dict[str, str] | None = None) -> tuple[Path, ...]:
             if candidate.exists():
                 roots.append(candidate)
     roots.extend(google_drive_roots(env))
-    return tuple(root.resolve() for root in roots)
+    if (sys.platform if platform is None else platform) == "darwin":
+        roots.extend(mac_sync_roots(env))
+    resolved = []
+    for root in roots:
+        try:
+            normalized = root.resolve()
+        except (OSError, RuntimeError, ValueError):
+            continue
+        if normalized not in resolved:
+            resolved.append(normalized)
+    return tuple(resolved)
 
 
 def is_synced(path: Path, roots: tuple[Path, ...] | None = None) -> bool:

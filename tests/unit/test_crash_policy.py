@@ -10,7 +10,13 @@ from pathlib import Path
 
 import pytest
 
-from dusty.platform.win_process import run_job_process
+if sys.platform != "win32":
+    pytest.skip(
+        "Windows-only: SetErrorMode crash policy, WER stores and the Job Object runner",
+        allow_module_level=True,
+    )
+
+from dusty.platform.win_process import run_job_process  # noqa: E402
 
 
 def test_entrypoints_request_error_mode_before_main():

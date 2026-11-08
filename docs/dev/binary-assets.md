@@ -32,3 +32,32 @@ manifest before use. Existing files are reused only if their hashes match.
 CI runs the same script and caches `build/downloads`, `build/bin`, and
 `build/models` under a key derived from the pinned versions file. Native
 and FFmpeg build workflows remain available only by manual dispatch.
+
+## The Mac engine
+
+On a Mac the same command fetches the engine-macos-v1 prerelease instead of
+the three Windows archives: `whisper-cpu-macos-arm64.zip`,
+`whisper-metal-macos-arm64.zip` and `ffmpeg-macos-arm64.zip`, each checked
+against its hash in the `[engine_release_macos]` section of
+`native/versions.toml`. They are the unchanged output of the manual
+native-macos.yml workflow (run 42451307858 at
+4ad90615bde74557539f68ce46d930fa5033c0a4), which builds whisper.cpp CPU and
+Metal and FFmpeg with `native/macos/build_whisper.sh` and `build_ffmpeg.sh` on
+a macos-15 runner and checks the architecture, minimum macOS and package hashes.
+
+| Asset | Bytes | SHA-256 |
+|---|---:|---|
+| whisper-cpu-macos-arm64.zip | 2885717 | b384b21d068441e4095d035d4420077585a5e1a177723332d4e4fc6ccb6d2ebb |
+| whisper-metal-macos-arm64.zip | 5951376 | aa27cfeb79144de33d01a5fd0374a283466de880a45c85469355eb30d3c33a31 |
+| ffmpeg-macos-arm64.zip | 3693531 | 0f436373ca3f2de9c35dbe0b1b84fd2bdef1aa01ab165eff38bd7254f194c636 |
+
+Each archive holds one component folder: its `SHA256SUMS.txt`, build facts
+such as `minimum-os.txt`, and `package/` with the programs, libraries and
+license. The fetch accepts nothing else (no links, no other folders), checks
+every package file against that `SHA256SUMS.txt`, and unpacks into
+`build/engine-macos/macos-arm64/native-v3`, never over a local engine build in
+`build/macos-arm64`. It then runs `tools/stage_macos_dev_bin.py --no-models`
+to lay out `build/bin/cpu`, `build/bin/metal`, `build/bin/ffmpeg` and
+`build/bin/lifeline` from those packages; `build/bin` must be new or empty.
+The CI macos job builds Dusty.app from the same folder with
+`tools.build_macos_app --native-root build/engine-macos/macos-arm64`.

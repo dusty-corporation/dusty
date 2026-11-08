@@ -10,6 +10,14 @@ import pytest
 
 from dusty.privacy import native_diagnostics as N
 
+# The capture is a Windows vectored exception handler for one COM HRESULT.
+# On macOS it is never installed; test_capture_is_never_installed_off_windows
+# and the opt-in entry test below cover that.
+WINDOWS_VEH = pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="Windows-only: kernel32 vectored exception handler (ctypes.WinDLL)",
+)
+
 
 def raise_event(code=N.EVENT, secret="CANARY_PATIENT_JANE_DOE private transcript C:\\secret"):
     kernel = C.WinDLL("kernel32")
@@ -20,6 +28,7 @@ def raise_event(code=N.EVENT, secret="CANARY_PATIENT_JANE_DOE private transcript
         kernel.RaiseException(code, 0, 1, info)
 
 
+@WINDOWS_VEH
 def test_real_native_capture_is_bounded_redacted_and_preserves_dispatch(tmp_path):
     try:
         assert N.install_capture(tmp_path)
@@ -95,6 +104,7 @@ def test_capture_preserves_unsafe_or_unavailable_storage(tmp_path, monkeypatch, 
     assert not N.is_installed()
 
 
+@WINDOWS_VEH
 def test_capture_failure_does_not_handle_exception_or_replace_faulthandler(tmp_path):
     assert N.install_capture(tmp_path)
     active = N._active
@@ -116,6 +126,7 @@ def test_capture_failure_does_not_handle_exception_or_replace_faulthandler(tmp_p
         N.close_capture()
 
 
+@WINDOWS_VEH
 def test_registration_failure_closes_its_file(tmp_path, monkeypatch):
     fake = MagicMock()
     fake.AddVectoredExceptionHandler.return_value = None
@@ -124,6 +135,13 @@ def test_registration_failure_closes_its_file(tmp_path, monkeypatch):
     with pytest.raises(OSError):
         N.Capture(path)
     path.unlink()  # Windows denies this if failed registration left an open handle.
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="The macOS and other non-Windows twin")
+def test_capture_is_never_installed_off_windows(tmp_path):
+    assert not N.install_capture(tmp_path)
+    assert not N.is_installed()
+    assert list(tmp_path.iterdir()) == []
 
 
 @pytest.mark.parametrize("opt_in", [False, True])
@@ -144,7 +162,8 @@ runpy.run_module('dusty',run_name='__main__')
 """
     import os
 
-    script = script.replace("EXPECT_CAPTURE", str(opt_in))
+    # Opting in installs the capture only on Windows; the guard precedes Qt everywhere.
+    script = script.replace("EXPECT_CAPTURE", str(opt_in and sys.platform == "win32"))
     result = subprocess.run(
         [sys.executable, "-c", script],
         env={

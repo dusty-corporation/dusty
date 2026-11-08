@@ -15,7 +15,6 @@ import tomllib
 import uuid
 from pathlib import Path
 
-import pefile  # type: ignore[import-untyped]
 from cyclonedx.schema import SchemaVersion
 from cyclonedx.validation.json import JsonStrictValidator
 
@@ -34,8 +33,14 @@ def component(name: str, version: str, license_text: str, source: str, **extra) 
     return {"name": name, "version": version, "license": license_text, "source": source, **extra}
 
 
+def _pe_reader():
+    import pefile  # type: ignore[import-untyped]
+
+    return pefile.PE
+
+
 def copyright_from_pe(path: Path) -> str:
-    with pefile.PE(str(path)) as executable:
+    with _pe_reader()(str(path)) as executable:
         for group in getattr(executable, "FileInfo", []):
             for info in group:
                 for table in getattr(info, "StringTable", []):
@@ -55,6 +60,7 @@ def clean_buildconf(text: str) -> str:
 
 
 def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
+    _pe_reader()  # Require PE inspection before any bundle or output mutation.
     analysis = json.loads(analysis_path.read_text(encoding="utf-8"))
     pins = tomllib.loads((ROOT / "native/versions.toml").read_text(encoding="utf-8"))
     crt_records = json.loads((output / "crt-provenance.json").read_text(encoding="utf-8"))["files"]

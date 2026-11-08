@@ -3,6 +3,7 @@
 import errno
 import hashlib
 import shutil
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -88,14 +89,16 @@ def test_disk_exhaustion_fails_plainly_and_removes_partial_outputs(tmp_path, mon
 
         monkeypatch.setattr(dusty.engine, "transcode_audio", full_decode)
     else:
-        rename = outputs.os.rename
+        # The no-clobber publish step: rename on Windows, a hard link elsewhere.
+        primitive = "rename" if outputs.os.name == "nt" else "link"
+        publish = getattr(outputs.os, primitive)
 
         def full_export(source, target):
             if str(target).endswith(".docx"):
                 raise OSError(errno.ENOSPC, "Synthetic exhausted disk")
-            return rename(source, target)
+            return publish(source, target)
 
-        monkeypatch.setattr(outputs.os, "rename", full_export)
+        monkeypatch.setattr(outputs.os, primitive, full_export)
     Coordinator(paths, registry).run_batch(
         [job], BatchOptions("tiny", tmp_path / "out", backend="cpu"), vulkan_ok=False
     )
@@ -106,6 +109,7 @@ def test_disk_exhaustion_fails_plainly_and_removes_partial_outputs(tmp_path, mon
     assert source.read_bytes() == before
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only: \\\\?\\ extended-length paths")
 def test_real_native_decode_and_all_exports_with_extended_unicode_paths(tmp_path):
     folder = tmp_path
     while len(str(folder)) < 310:

@@ -6,7 +6,9 @@ import re
 from pathlib import Path
 
 from dusty.engine import probe_audio, run_whisper, transcode_audio
+from dusty.engine.binaries import ffmpeg_path, ffprobe_path, gpu_backend, whisper_path
 from dusty.models import ModelRegistry, load_manifest
+from dusty.platform.cpu_topology import default_threads
 from dusty.runtime_paths import resolve_paths
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -55,23 +57,24 @@ def test_vad_limits_hallucination_in_ten_minutes_of_silence(tmp_path: Path) -> N
     paths = resolve_paths(repo_root=ROOT, frozen=False)
     registry = ModelRegistry(load_manifest(paths.resources_dir / "models.json"), paths.models_dir)
     source = ROOT / "tests/fixtures/audio/vad/mostly-silence-10min.m4a"
-    probe = probe_audio(paths.bin_dir / "ffmpeg/ffprobe.exe", source)
+    probe = probe_audio(ffprobe_path(paths.bin_dir), source)
     assert 599 <= probe.duration_sec <= 601
     wav = tmp_path / "audio.wav"
-    transcode_audio(paths.bin_dir / "ffmpeg/ffmpeg.exe", source, wav)
+    transcode_audio(ffmpeg_path(paths.bin_dir), source, wav)
     results = {}
     backend = os.environ.get("DUSTY_TEST_BACKEND", "cpu")
-    assert backend in {"cpu", "vulkan"}
+    # Windows ships vulkan and macOS ships metal as the single GPU backend.
+    assert backend in {"cpu", gpu_backend()}
     for mode in ("on", "off"):
         run = run_whisper(
-            paths.bin_dir / backend / "whisper-cli.exe",
+            whisper_path(paths.bin_dir, backend),
             registry.model_path("tiny"),
             wav,
             tmp_path / f"raw-{mode}",
             model_id="tiny",
             task="transcribe",
             language="en",
-            threads=4,
+            threads=min(4, default_threads()),
             duration_sec=probe.duration_sec,
             backend=backend,
             vad_model=registry.vad_path() if mode == "on" else None,

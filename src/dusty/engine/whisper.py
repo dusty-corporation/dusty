@@ -1,17 +1,44 @@
 """Invoke pinned whisper-cli and parse its JSON into platform-neutral types."""
 
 import json
+import sys
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from dusty.core import Segment, Transcript
-from dusty.core.types import Cancellation
-from dusty.platform.win_process import run_job_process
+from dusty.core.types import Cancellation, EngineBackend
 
 from .progress import ProgressState
+
+if TYPE_CHECKING:
+    from dusty.platform.process import ProcessResult
+
+
+def run_job_process(
+    args: list[str],
+    *,
+    cwd: Path | None = None,
+    on_stderr: Callable[[str], None] | None = None,
+    on_stdout: Callable[[str], None] | None = None,
+    cancel: Cancellation | None = None,
+    timeout_sec: float | None = None,
+    on_poll: Callable[[], None] | None = None,
+) -> "ProcessResult":
+    """Load the platform runner (Windows Job Object or macOS lifeline) only when called."""
+    from dusty.platform.process import platform_runner
+
+    return platform_runner(sys.platform)(
+        args,
+        cwd=cwd,
+        on_stderr=on_stderr,
+        on_stdout=on_stdout,
+        cancel=cancel,
+        timeout_sec=timeout_sec,
+        on_poll=on_poll,
+    )
 
 
 class EngineError(RuntimeError):
@@ -38,7 +65,7 @@ def parse_whisper_json(
     *,
     model_id: str,
     task: Literal["transcribe", "translate"],
-    backend: Literal["cpu", "vulkan"],
+    backend: EngineBackend,
     duration_sec: float,
 ) -> Transcript:
     """Read only the segment text needed for output; ignore engine metadata paths."""
@@ -73,7 +100,7 @@ def run_whisper(
     language: str,
     threads: int,
     duration_sec: float,
-    backend: Literal["cpu", "vulkan"],
+    backend: EngineBackend,
     vad_model: Path | None,
     prompt: str,
     cancel: Cancellation | None = None,
@@ -123,13 +150,17 @@ def run_whisper(
         raise EngineError("Transcription cancelled", cancelled=True)
     if result.exit_code:
         raise EngineError("Transcription engine failed", gpu_error=state.gpu_error)
-    # The CPU-only package with -ng omits the backend banner. It cannot load Vulkan.
-    if (
-        backend == "vulkan"
-        and state.backend != "vulkan"
-        or (backend == "cpu" and state.backend == "vulkan")
+    # The Windows CPU-only package with -ng omits the backend banner and cannot
+    # load a GPU backend; the Mac CPU package prints "no GPU found". A GPU request
+    # is accepted only when stderr shows that exact backend was selected.
+    if (backend != "cpu" and state.backend != backend) or (
+        backend == "cpu" and state.backend not in (None, "cpu")
     ):
-        raise EngineError("Requested backend was not selected", gpu_error=backend == "vulkan")
+        raise EngineError("Requested backend was not selected", gpu_error=backend != "cpu")
+    # Metal failure lines are anchored to known ggml messages, so a reported
+    # command buffer failure fails the GPU run even when the exit code is zero.
+    if backend == "metal" and state.gpu_error:
+        raise EngineError("Transcription engine failed", gpu_error=True)
     output = Path(str(output_stem) + ".json")
     if not output.is_file():
         raise EngineError("Transcription output missing")

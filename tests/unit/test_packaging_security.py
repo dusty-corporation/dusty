@@ -9,7 +9,13 @@ from pathlib import Path
 
 import pytest
 
-from tools import check_licenses, check_pe_imports, stage_microsoft_runtime
+if sys.platform != "win32":
+    pytest.skip(
+        "Windows-only: PE import pins and Microsoft runtime staging (pefile is win32-only)",
+        allow_module_level=True,
+    )
+
+from tools import check_licenses, check_pe_imports, stage_microsoft_runtime  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 

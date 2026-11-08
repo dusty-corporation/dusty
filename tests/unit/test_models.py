@@ -115,3 +115,12 @@ def test_explicit_registry_invalidation_rehashes_even_unchanged_metadata(tmp_pat
         registry.model_path("tiny")
     with pytest.raises(ValueError, match="Unknown catalog file"):
         registry.invalidate(file_name="not-a-model")
+
+
+def test_gpu_presumed_only_on_apple_silicon_mac():
+    from dusty.models.catalog import gpu_presumed
+
+    assert gpu_presumed(platform="darwin", machine="arm64") is True
+    assert gpu_presumed(platform="darwin", machine="x86_64") is False
+    assert gpu_presumed(platform="win32", machine="AMD64") is False
+    assert gpu_presumed(platform="win32", machine="arm64") is False

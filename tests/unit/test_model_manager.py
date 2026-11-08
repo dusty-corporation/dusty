@@ -5,12 +5,13 @@ import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QDialog, QLabel
+from PySide6.QtWidgets import QApplication, QDialog, QLabel
 from test_downloader import CERTS, DATA
 from test_downloader import tls as tls
 
@@ -83,6 +84,37 @@ def test_cancel_reports_partial_retention_when_removal_fails(models, qtbot, monk
     dialog._result(result.args[0])
     assert dialog.message.text() == M.FETCH_ERRORS["CANCEL_CLEANUP"]
     assert part.read_bytes() == b"public partial"
+
+
+@pytest.fixture
+def modal_watchdog():
+    """Reject a modal dialog that stays open past its limit, then fail the test.
+
+    A dialog's exec() runs a nested event loop, so a qtbot.waitUntil that opened
+    it cannot reach its own timeout while the dialog stays open, and the run
+    hangs. The watchdog's timer runs inside that nested loop. ModelManager
+    cancels a running download child before it closes, so nothing is orphaned.
+    """
+    limit = [15.0]
+    opened: dict[int, float] = {}
+    stuck: list[str] = []
+
+    def check() -> None:
+        modal = QApplication.activeModalWidget()
+        if not isinstance(modal, QDialog):
+            return
+        first = opened.setdefault(id(modal), time.monotonic())
+        if time.monotonic() - first >= limit[0]:
+            stuck.append(type(modal).__name__)
+            opened.pop(id(modal))
+            modal.done(QDialog.DialogCode.Rejected)
+
+    timer = QTimer()
+    timer.timeout.connect(check)
+    timer.start(50)
+    yield limit
+    timer.stop()
+    assert not stuck, f"Modal dialogs were left open and closed by the watchdog: {stuck}"
 
 
 @pytest.fixture
@@ -270,6 +302,8 @@ def test_no_download_without_consent_and_worker_allows_selected_last_delete(
 
 
 def test_main_prompts_live_update_and_preserves_explicit_choice(models, qtbot, monkeypatch):
+    # Windows rule: no GPU is presumed before a probe (the Mac rule is tested below).
+    monkeypatch.setattr("dusty.app.window.gpu_presumed", lambda: False)
     view = MainWindow(models.paths, interactive=False)
     qtbot.addWidget(view)
     view.show()
@@ -310,14 +344,15 @@ def test_main_prompts_live_update_and_preserves_explicit_choice(models, qtbot, m
 
 
 def test_fetch_command_separates_source_and_split_packaged_runtime(tmp_path):
+    # Windows layout stated explicitly; the Mac bundle layout is in test_runtime_paths.py.
     source = tmp_path / "venv/Scripts/python.exe"
-    assert resolve_fetch_command(frozen=False, executable=source) == [
+    assert resolve_fetch_command(frozen=False, executable=source, platform="win32") == [
         str(source.resolve()),
         "-m",
         "dusty_fetch",
     ]
     app = tmp_path / "install/dusty/dusty.exe"
-    assert resolve_fetch_command(frozen=True, executable=app) == [
+    assert resolve_fetch_command(frozen=True, executable=app, platform="win32") == [
         str((tmp_path / "install/dusty-fetch/dusty-fetch.exe").resolve())
     ]
 
@@ -335,7 +370,9 @@ def test_closing_manager_cancels_child_and_removes_part(models, qtbot):
 
 
 @pytest.mark.parametrize("entry", ["tools", "options"])
-def test_model_manager_is_reachable_from_tools_and_options(models, qtbot, monkeypatch, entry):
+def test_model_manager_is_reachable_from_tools_and_options(
+    models, qtbot, monkeypatch, entry, modal_watchdog
+):
     view = MainWindow(models.paths, interactive=False)
     qtbot.addWidget(view)
     view.apply_prepared(
@@ -363,7 +400,9 @@ def test_model_manager_is_reachable_from_tools_and_options(models, qtbot, monkey
     assert seen and view.model_manager is not None
 
 
-def test_main_window_close_cancels_model_child_without_orphan(models, qtbot, monkeypatch):
+def test_main_window_close_cancels_model_child_without_orphan(
+    models, qtbot, monkeypatch, modal_watchdog
+):
     models.tls.mode = "slow"
     monkeypatch.setattr("dusty.app.model_manager.resolve_fetch_command", lambda: models.command)
     view = MainWindow(models.paths, interactive=False)
@@ -373,28 +412,38 @@ def test_main_window_close_cancels_model_child_without_orphan(models, qtbot, mon
     )
     view.show()
     started = []
+    child_failed = []
     part = models.file.with_suffix(".bin.part")
 
     def drive():
         dialog = view.model_manager
-        if dialog is None or view.closing:
+        if dialog is None or view.closing or child_failed:
             return
         try:
             partial_bytes = part.stat().st_size
         except FileNotFoundError:
             partial_bytes = 0  # The cancelled child may remove it between timer ticks.
+        download = next((w for w in dialog.workers if w.action == "download"), None)
         if not started and not dialog.busy and bool(dialog.workers):
             started.append(True)
             QTimer.singleShot(0, dialog.download_button.click)
         elif partial_bytes > 0:
             view.close()
+        elif download is not None and not download.isRunning() and download.failure:
+            # The child ended before writing a partial. Close the modal manager so
+            # the outer wait can return and report it instead of hanging.
+            child_failed.append(download.failure)
+            dialog.done(QDialog.DialogCode.Rejected)
 
     timer = QTimer()
     timer.timeout.connect(drive)
     timer.start(20)
     QTimer.singleShot(0, lambda: view.open_model_manager(focus_id="tiny"))
-    qtbot.waitUntil(lambda: bool(started) and not view.isVisible(), timeout=15000)
+    qtbot.waitUntil(
+        lambda: bool(child_failed) or (bool(started) and not view.isVisible()), timeout=15000
+    )
     timer.stop()
+    assert not child_failed, f"The download child did not run: {child_failed}"
     assert not part.exists() and not models.file.exists()
     assert not any(worker.isRunning() for worker in view._tasks)
 
@@ -530,7 +579,7 @@ def test_manager_name_quality_note_and_best_for_are_distinct(models, qtbot):
         assert labels[0].text() == (M.RECOMMENDED.format(name=name) if key == "small" else name)
         assert labels[0].font().bold()
         assert labels[1].text() == M.MODEL_QUALITY[key]
-        assert labels[2].text() == M.MODEL_NOTE[key]
+        assert labels[2].text() == M.model_note(sys.platform)[key]
         assert labels[2].font().pointSizeF() < labels[1].font().pointSizeF()
         assert dialog.table.item(row, 1).text() == M.MODEL_BEST_FOR[key]
     assert dialog.review_notice.text() == M.MODEL_REVIEW
@@ -742,11 +791,25 @@ def test_delete_confirmation_names_file_and_explains_recovery(
 
 
 @pytest.mark.parametrize(("vulkan", "name"), [(False, "Small"), (True, "Large v3 Turbo")])
-def test_empty_model_recommendation_uses_only_short_model_name(models, qtbot, vulkan, name):
+def test_empty_model_recommendation_uses_only_short_model_name(
+    models, qtbot, monkeypatch, vulkan, name
+):
+    # Windows rule: no GPU is presumed before a probe (the Mac rule is tested below).
+    monkeypatch.setattr("dusty.app.window.gpu_presumed", lambda: False)
     view = MainWindow(models.paths, interactive=False)
     qtbot.addWidget(view)
     view.apply_prepared(Prepared((), vulkan, {}, vad_installed=False))
     assert view.warning.text() == f"The recommended model, {name}, is not installed yet."
+
+
+def test_apple_silicon_recommends_gpu_model_before_any_probe(models, qtbot, monkeypatch):
+    """D-MAC-022: with no model installed, Apple silicon presumes Metal for advice only."""
+    monkeypatch.setattr("dusty.app.window.gpu_presumed", lambda: True)
+    view = MainWindow(models.paths, interactive=False)
+    qtbot.addWidget(view)
+    view.apply_prepared(Prepared((), False, {}, vad_installed=False))
+    assert view.warning.text() == "The recommended model, Large v3 Turbo, is not installed yet."
+    assert view.vulkan_ok is False  # the presumption never selects the GPU backend
 
 
 def test_verify_all_enabled_for_voice_only_but_not_an_empty_catalog(models, qtbot, monkeypatch):
@@ -803,7 +866,11 @@ def test_best_for_wraps_within_two_lines_and_turbo_note_matches_pm(models, qtbot
     labels = dialog.table.cellWidget(dialog.ids.index("large-v3-turbo-q8_0"), 0).findChildren(
         QLabel
     )
-    assert labels[2].text() == "Fast on newer computers. Slow on older ones."
+    assert labels[2].text() == (
+        "Fast with Metal graphics. Slower on the processor only."
+        if sys.platform == "darwin"
+        else "Fast on newer computers. Slow on older ones."
+    )
 
 
 def test_gui_startup_removes_stale_partial_and_keeps_recent_prefix(models, qtbot):
@@ -831,15 +898,15 @@ def test_gui_startup_removes_stale_partial_and_keeps_recent_prefix(models, qtbot
     assert not recent.exists() and models.file.read_bytes() == DATA
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="Windows TerminateProcess and Job Objects")
+@pytest.mark.skipif(
+    sys.platform not in {"win32", "darwin"},
+    reason="Needs Windows Job Objects or the macOS lifeline helper",
+)
 def test_forced_gui_death_kills_fetch_job_and_recent_partial_resumes(models, qtbot):
     _force_gui_death_and_resume(models, qtbot)
 
 
 def _force_gui_death_and_resume(models, qtbot):
-    import ctypes
-    from ctypes import wintypes
-
     models.tls.mode = "hold"
     evidence = models.paths.user_dir / "crash-evidence"
     evidence.mkdir(parents=True)
@@ -858,6 +925,19 @@ def _force_gui_death_and_resume(models, qtbot):
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
     )
+    part = models.file.with_suffix(".bin.part")
+    if sys.platform == "win32":
+        offset = _terminate_gui_on_windows(models, qtbot, process, evidence, part)
+    else:
+        offset = _kill_gui_on_mac(models, qtbot, process, evidence, part)
+    return _resume_after_forced_death(models, qtbot, part, offset)
+
+
+def _terminate_gui_on_windows(models, qtbot, process, evidence, part):
+    """TerminateProcess the GUI; its Job Object must take the downloader with it."""
+    import ctypes
+    from ctypes import wintypes
+
     kernel = ctypes.WinDLL("kernel32", use_last_error=True)
     kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
     kernel.OpenProcess.restype = wintypes.HANDLE
@@ -867,7 +947,6 @@ def _force_gui_death_and_resume(models, qtbot):
     kernel.WaitForSingleObject.restype = wintypes.DWORD
     kernel.CloseHandle.argtypes = [wintypes.HANDLE]
     gui_handle = child_handle = None
-    part = models.file.with_suffix(".bin.part")
     try:
         qtbot.waitUntil(lambda: (evidence / "gui-ready").exists(), timeout=15000)
         assert models.tls.waiting.wait(5) and not models.tls.release.is_set()
@@ -912,6 +991,71 @@ def _force_gui_death_and_resume(models, qtbot):
         if process.poll() is None:
             process.kill()
         process.communicate(timeout=10)
+    return offset
+
+
+def _alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _gone_within(pid: int, seconds: float) -> bool:
+    deadline = time.monotonic() + seconds
+    while _alive(pid):
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.02)
+    return True
+
+
+def _kill_gui_on_mac(models, qtbot, process, evidence, part):
+    """SIGKILL the GUI; its dusty-lifeline helper must kill and reap the downloader.
+
+    SIGKILL, like TerminateProcess, runs no handlers or atexit code in either
+    process, so only the lifeline can end the still-blocked downloader.
+    """
+    import signal
+
+    child_pid = None
+    try:
+        qtbot.waitUntil(lambda: (evidence / "gui-ready").exists(), timeout=15000)
+        assert models.tls.waiting.wait(5) and not models.tls.release.is_set()
+        gui_pid = int((evidence / "gui-pid").read_text(encoding="ascii"))
+        child_pid = json.loads((evidence / "fetch-ready.json").read_text())["pid"]
+        assert gui_pid == process.pid and gui_pid != child_pid
+        assert process.poll() is None and _alive(child_pid)
+        os.kill(gui_pid, signal.SIGKILL)
+        assert process.wait(timeout=5) == -signal.SIGKILL
+        # Response is still gated, so closed stdout cannot explain child death.
+        assert not models.tls.release.is_set()
+        assert _gone_within(child_pid, 5)
+        assert not (evidence / "gui-cleanup-ran").exists()
+        assert not (evidence / "fetch-cleanup-ran").exists()
+        offset = part.stat().st_size
+        assert offset == 2 * 65536 and not models.file.exists()
+        models.tls.release.set()
+        assert models.tls.finished.wait(5)
+        assert part.stat().st_size == offset
+    finally:
+        # Only clean up these test-owned processes if a regression made them survive.
+        if child_pid is None and (evidence / "fetch-ready.json").exists():
+            child_pid = json.loads((evidence / "fetch-ready.json").read_text())["pid"]
+        models.tls.release.set()
+        if process.poll() is None:
+            process.kill()
+        process.communicate(timeout=10)
+        if child_pid is not None and _alive(child_pid):
+            os.kill(child_pid, signal.SIGKILL)
+            _gone_within(child_pid, 5)
+    return offset
+
+
+def _resume_after_forced_death(models, qtbot, part, offset):
     # Restart through real GUI preparation, then resume the retained exact prefix.
     models.tls.mode = "normal"
     view = MainWindow(models.paths, interactive=False)
@@ -929,6 +1073,10 @@ def _force_gui_death_and_resume(models, qtbot):
     return view
 
 
+@pytest.mark.skipif(
+    sys.platform not in {"win32", "darwin"},
+    reason="Needs Windows Job Objects or the macOS lifeline helper",
+)
 def test_output_folder_survives_owner_model_recovery_and_setup_sequence(models, qtbot, monkeypatch):
     from PySide6.QtWidgets import QFileDialog
 
@@ -969,7 +1117,8 @@ def test_output_folder_survives_owner_model_recovery_and_setup_sequence(models, 
     dialog.close()
     unchanged(view)
 
-    # Same actual TerminateProcess/Job Object helper as the standalone regression.
+    # Same forced GUI death step as the standalone regression: TerminateProcess
+    # and a Job Object on Windows, SIGKILL and the lifeline helper on macOS.
     models.file.unlink()
     models.tls.requests.clear()
     restarted = _force_gui_death_and_resume(models, qtbot)

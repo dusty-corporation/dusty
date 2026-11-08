@@ -8,13 +8,20 @@ from typing import cast
 from dusty.core import BatchOptions, JobStatus
 from dusty.core.types import Backend, CollisionPolicy, OutputFormat, Task
 from dusty.engine.backend import probe_vulkan
+from dusty.engine.binaries import gpu_backend
 from dusty.models import ModelRegistry, load_manifest
 from dusty.platform.cpu_topology import default_threads
 from dusty.privacy.logging import configure_logger
 from dusty.privacy.sync import is_synced
 from dusty.queue import Coordinator, cleanup_orphaned_work
+from dusty.queue.coordinator import UnsupportedOptions, check_model_options
 from dusty.queue.scanning import scan_inputs
 from dusty.runtime_paths import resolve_paths
+
+
+def backend_supported(backend: str) -> bool:
+    """Accept auto, cpu and only this platform's GPU backend name."""
+    return backend in {"auto", "cpu", gpu_backend()}
 
 
 def transcribe(
@@ -33,6 +40,9 @@ def transcribe(
     recursive: bool = False,
     keep_structure: bool = False,
 ) -> int:
+    if not backend_supported(backend):
+        print("BACKEND_UNSUPPORTED")
+        return 2
     paths = resolve_paths()
     configure_logger(paths.user_dir)
     cleanup_orphaned_work(paths.user_dir / "work")
@@ -47,7 +57,6 @@ def transcribe(
         print("Warning: this output folder may sync files to a cloud service.")
     if len(prompt) / 4 > 200:
         print("Warning: vocabulary hints may exceed the engine prompt window.")
-    vulkan_ok = probe_vulkan(paths, registry) if backend in {"auto", "vulkan"} else False
     options = BatchOptions(
         model_id=model,
         output_dir=out,
@@ -61,6 +70,13 @@ def transcribe(
         collision=collision,
         keep_structure=keep_structure,
     )
+    try:
+        # Refuse before the GPU probe or any job, with a code instead of a traceback.
+        check_model_options(registry.manifest.models[model], options)
+    except UnsupportedOptions as refusal:
+        print(refusal.code)
+        return 2
+    vulkan_ok = probe_vulkan(paths, registry) if backend in {"auto", gpu_backend()} else False
     scanned = scan_inputs(files, recursive=recursive)
     jobs = list(scanned.jobs)
     print(f"added={len(jobs)} unsupported={scanned.unsupported} duplicates={scanned.duplicates}")
@@ -78,7 +94,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("files", nargs="+", type=Path)
     parser.add_argument("--model", default="tiny")
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--backend", choices=("auto", "cpu", "vulkan"), default="auto")
+    parser.add_argument("--backend", choices=("auto", "cpu", "vulkan", "metal"), default="auto")
     parser.add_argument("--format", action="append", choices=("txt", "srt", "vtt", "json", "docx"))
     parser.add_argument("--language", default="auto")
     parser.add_argument("--task", choices=("transcribe", "translate"), default="transcribe")
@@ -91,6 +107,9 @@ def main(argv: list[str] | None = None) -> int:
         "--collision", choices=("ask", "skip", "overwrite", "keep_both"), default="ask"
     )
     args = parser.parse_args(argv)
+    if not backend_supported(args.backend):
+        print("BACKEND_UNSUPPORTED")
+        return 2
     return transcribe(
         args.files,
         args.out,

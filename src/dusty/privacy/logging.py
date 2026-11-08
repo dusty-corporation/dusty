@@ -8,14 +8,15 @@ _PATH = re.compile(r"(?i)(?:[a-z]:\\|/users/|/home/|\\users\\|\\onedrive\\)")
 _FIELDS = re.compile(
     r"^(?:job_id=[0-9a-f-]{36}|status=(?:queued|preflight|decoding|transcribing|"
     r"exporting|done|failed|cancelled|skipped)|model=(?:tiny|small|small\.en|medium|"
-    r"large-v3-turbo-q8_0)|backend=(?:cpu|vulkan)|(?:decode_sec|process_sec|"
+    r"large-v3-turbo-q8_0)|backend=(?:cpu|vulkan|metal)|(?:decode_sec|process_sec|"
     r"first_progress_sec|timing_[a-z]+_ms)=[0-9.]+|"
     r"network_blocked event=socket\.[a-z_]+|work_cleanup=preserved|"
+    r"POWER_ACQUIRE_FAILED|POWER_RELEASE_FAILED|"
     r"download_failure step=next_file class=(?:ProcessError|ProcessStartError) "
     r"winerror=0 code=(?:IO|PROTOCOL) exit_code=(?:none|-?[0-9]+))"
     r"(?: (?:job_id=[0-9a-f-]{36}|status=(?:queued|preflight|decoding|transcribing|"
     r"exporting|done|failed|cancelled|skipped)|model=(?:tiny|small|small\.en|medium|"
-    r"large-v3-turbo-q8_0)|backend=(?:cpu|vulkan)|(?:decode_sec|process_sec|"
+    r"large-v3-turbo-q8_0)|backend=(?:cpu|vulkan|metal)|(?:decode_sec|process_sec|"
     r"first_progress_sec|timing_[a-z]+_ms)=[0-9.]+))*$"
 )
 

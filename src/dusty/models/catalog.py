@@ -90,11 +90,48 @@ def can_translate(model: Model) -> bool:
     return model.supports_translate and not model.english_only
 
 
-def recommend_model(*, vulkan_ok: bool, task: Task) -> str:
-    """Select the approved default, without inferring capability from a filename."""
+def recommend_model(
+    *, task: Task, gpu_ok: bool | None = None, vulkan_ok: bool | None = None
+) -> str:
+    """Select the approved default, without inferring capability from a filename.
+
+    gpu_ok means the platform GPU probe passed and the GPU is not switched off:
+    Vulkan on Windows, Metal on Mac. vulkan_ok is the older name for the same fact.
+    The rule is the same on both platforms. With a working GPU, Large v3 Turbo
+    transcribes with the best catalog quality; measured with Metal on an M2 it took
+    8.4 s for a 120 s clip (Small 5.0 s, Medium 12.4 s). Without a GPU, Small is
+    the faster processor choice (11.5 s against 32 s for Turbo on that M2 when
+    idle). Turbo cannot translate, so Medium is the translation choice everywhere.
+    Every catalog model lists the same 8 GB memory minimum, which supported Apple
+    silicon Macs meet, so memory does not change the choice; the Windows installer
+    only shows a low-memory notice.
+    """
+    if (gpu_ok is None) == (vulkan_ok is None):
+        raise TypeError("Pass exactly one of gpu_ok or vulkan_ok")
+    working_gpu = bool(gpu_ok if gpu_ok is not None else vulkan_ok)
     if task == "translate":
         return "medium"
-    return "large-v3-turbo-q8_0" if vulkan_ok else "small"
+    return "large-v3-turbo-q8_0" if working_gpu else "small"
+
+
+def gpu_presumed(platform: str | None = None, machine: str | None = None) -> bool:
+    """Whether a working GPU may be assumed before any model allows a real probe.
+
+    Dusty for Mac supports only Apple silicon, and every Apple silicon Mac has a
+    Metal GPU, so a new Mac user is recommended the GPU model before the first
+    download. The real probe result replaces this as soon as a model exists.
+    Windows never presumes a GPU.
+    """
+    import os
+    import sys
+
+    selected = sys.platform if platform is None else platform
+    arch = machine
+    # os.uname exists only on POSIX hosts. The host check comes first so that
+    # type checkers on Windows treat this branch as macOS only.
+    if sys.platform != "win32" and arch is None and selected == "darwin":
+        arch = os.uname().machine
+    return selected == "darwin" and arch == "arm64"
 
 
 def slow_warning(model: Model, backend: Backend) -> str | None:

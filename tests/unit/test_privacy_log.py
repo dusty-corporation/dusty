@@ -84,3 +84,18 @@ def test_sync_root_discovery(tmp_path: Path) -> None:
     assert dropbox.resolve() in sync_roots(env)
     local_info.write_text('["malformed"]', encoding="utf-8")
     assert dropbox.resolve() not in sync_roots(env)
+
+
+def test_fixed_power_warnings_are_retained_and_tainted_variants_rejected(tmp_path):
+    logger = configure_logger(tmp_path)
+    for message in ("POWER_ACQUIRE_FAILED", "POWER_RELEASE_FAILED"):
+        logger.warning(message)
+        logger.warning(message + " /Users/private/recording.wav")
+        logger.warning(message + " CANARYMEDTERM")
+    for handler in logger.handlers:
+        handler.flush()
+    content = (tmp_path / "logs/dusty.log").read_text(encoding="utf-8")
+    assert content.count("POWER_ACQUIRE_FAILED") == 1
+    assert content.count("POWER_RELEASE_FAILED") == 1
+    assert "recording.wav" not in content
+    assert "CANARYMEDTERM" not in content

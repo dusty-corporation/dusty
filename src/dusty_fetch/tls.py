@@ -1,4 +1,4 @@
-"""Windows system trust plus exact bundled public CA roots, never online repair."""
+"""System trust plus exact bundled public CA roots, never online repair."""
 
 import hashlib
 import ssl
@@ -25,10 +25,32 @@ ROOTS = {
 }
 
 
-def resource_dir() -> Path:
-    if getattr(sys, "frozen", False):
-        return Path(sys.executable).parent.parent / "resources/tls"
-    return Path(__file__).resolve().parents[2] / "resources/tls"
+def resource_dir(
+    *,
+    frozen: bool | None = None,
+    executable: Path | None = None,
+    platform: str | None = None,
+) -> Path:
+    """Locate the bundled roots; arguments are for library tests only."""
+    installed = bool(getattr(sys, "frozen", False)) if frozen is None else frozen
+    if not installed:
+        return Path(__file__).resolve().parents[2] / "resources/tls"
+    helper = Path(sys.executable) if executable is None else executable
+    if (sys.platform if platform is None else platform) == "darwin":
+        # Dusty.app/Contents/Helpers/dusty-fetch/dusty-fetch reads the app's
+        # Contents/Resources/tls. The shape is checked without following links.
+        contents = helper.parent.parent.parent
+        if (
+            not helper.is_absolute()
+            or ".." in helper.parts
+            or helper.parent.name != "dusty-fetch"
+            or helper.parent.parent.name != "Helpers"
+            or contents.name != "Contents"
+            or contents.parent.suffix.casefold() != ".app"
+        ):
+            raise ssl.SSLError("Downloader helper is outside the expected app bundle")
+        return contents / "Resources/tls"
+    return helper.parent.parent / "resources/tls"
 
 
 def bundled_pem(directory: Path | None = None, *, pins=ROOTS) -> str:
@@ -55,7 +77,12 @@ def create_context(
     *, system: bool = True, directory: Path | None = None, pins=ROOTS
 ) -> ssl.SSLContext:
     # CPython/OpenSSL enumerates present Windows roots. No Crypt32 chain builder,
-    # AIA/OCSP/CRL download, or Windows automatic root update is invoked.
+    # AIA/OCSP/CRL download, or Windows automatic root update is invoked. On
+    # macOS OpenSSL never reads the Keychain: the default context holds only
+    # whatever its compiled-in cert.pem provides, which may be nothing in a
+    # frozen helper. The pinned bundled roots below are always added, so they
+    # alone are enough for the allowlisted GitHub hosts. The helper's
+    # environment carries no SSL_CERT_FILE or SSL_CERT_DIR to change this.
     context = ssl.create_default_context() if system else ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     context.minimum_version = ssl.TLSVersion.TLSv1_2
     context.load_verify_locations(cadata=bundled_pem(directory, pins=pins))

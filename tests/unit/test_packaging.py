@@ -3,11 +3,20 @@
 import hashlib
 import json
 import struct
+import sys
 from pathlib import Path
 
 import pytest
 
 from tools import check_bundle, check_licenses
+
+# check_licenses.check_bundle always audits the Windows bundle's PE files for
+# Microsoft runtime provenance. The macOS bundle has no inventory gate yet;
+# tools/check_macos_bundle.py checks its required license texts.
+WINDOWS_PE_LICENSE_GATE = pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="Windows-only: bundle license gate parses PE files with pefile",
+)
 
 
 @pytest.mark.parametrize("name", ["Qt6Network.dll", "qt6network.DLL", "Qt6WebEngineCore.dll"])
@@ -54,11 +63,13 @@ def inventory(tmp_path: Path) -> tuple[Path, Path, dict]:
     return bundle, path, data
 
 
+@WINDOWS_PE_LICENSE_GATE
 def test_bundle_license_gate_accepts_verified_allowed_file(inventory) -> None:
     bundle, path, _ = inventory
     assert check_licenses.check_bundle(bundle, path) == []
 
 
+@WINDOWS_PE_LICENSE_GATE
 @pytest.mark.parametrize("mutation", ["extra", "missing", "hash", "unmapped", "unknown", "static"])
 def test_bundle_license_gate_fails_closed(inventory, mutation: str) -> None:
     bundle, path, data = inventory

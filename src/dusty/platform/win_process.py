@@ -4,15 +4,14 @@ import ctypes
 import msvcrt
 import os
 import subprocess
-import sys
 import threading
 import time
 from collections.abc import Callable
 from ctypes import wintypes
-from dataclasses import dataclass
 from pathlib import Path
 
 from dusty.core.types import Cancellation
+from dusty.platform.process import ProcessResult, _read_lines, approved_executable
 
 CREATE_SUSPENDED = 0x00000004
 CREATE_NO_WINDOW = 0x08000000
@@ -95,13 +94,6 @@ class ProcessInformation(ctypes.Structure):
     ]
 
 
-@dataclass(frozen=True)
-class ProcessResult:
-    exit_code: int
-    elapsed_sec: float
-    cancelled: bool
-
-
 _kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 _kernel32.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
 _kernel32.CreateJobObjectW.restype = wintypes.HANDLE
@@ -143,26 +135,6 @@ def _check(value: int, operation: str) -> None:
     if not value:
         code = ctypes.get_last_error()
         raise OSError(code, f"Windows process operation failed: {operation}")
-
-
-def _read_lines(fd: int, callback: Callable[[str], None] | None) -> None:
-    """Parse lines in memory and discard raw native output immediately."""
-    buffer = b""
-    with os.fdopen(fd, "rb", closefd=True) as stream:
-        while chunk := os.read(stream.fileno(), 4096):
-            buffer += chunk
-            while b"\n" in buffer or b"\r" in buffer:
-                newline = buffer.find(b"\n")
-                carriage = buffer.find(b"\r")
-                indices = [index for index in (newline, carriage) if index >= 0]
-                split_at = min(indices)
-                line, buffer = buffer[:split_at], buffer[split_at + 1 :]
-                if callback and line:
-                    callback(line.decode("utf-8", errors="replace"))
-            if len(buffer) > 65536:
-                buffer = buffer[-65536:]
-        if callback and buffer:
-            callback(buffer.decode("utf-8", errors="replace"))
 
 
 def run_job_process(
@@ -311,20 +283,3 @@ def run_job_process(
         if process.hProcess:
             _kernel32.CloseHandle(process.hProcess)
         _kernel32.CloseHandle(job)
-
-
-def approved_executable(path: Path) -> Path:
-    """One launch boundary for processing binaries and the isolated downloader."""
-    from dusty.runtime_paths import resolve_fetch_command, resolve_paths
-    from dusty.work_area import canonical, linked
-
-    executable = canonical(path)
-    allowed = {
-        canonical(Path(sys.executable)),
-        canonical(Path(resolve_fetch_command()[0])),
-    }
-    if linked(path) or not (
-        executable in allowed or executable.is_relative_to(canonical(resolve_paths().bin_dir))
-    ):
-        raise ValueError("Executable is not approved")
-    return executable

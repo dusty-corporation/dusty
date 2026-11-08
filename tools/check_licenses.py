@@ -9,8 +9,6 @@ import sys
 import tomllib
 from pathlib import Path
 
-import pefile  # type: ignore[import-untyped]
-
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -215,6 +213,8 @@ def check_bundle(bundle: Path, inventory_path: Path) -> list[str]:
 
 def check_microsoft(bundle: Path, inventory: dict, actual: dict[str, Path]) -> list[str]:
     """ADR 0020: file-scoped exception, live release provenance and protective terms."""
+    import pefile  # type: ignore[import-untyped]
+
     findings = []
     receipts = {item["path"]: item for item in inventory.get("microsoft_runtime", [])}
     expected = set()
@@ -287,14 +287,121 @@ def check_microsoft(bundle: Path, inventory: dict, actual: dict[str, Path]) -> l
     return findings
 
 
+# macOS bundle gate (MAC10-PRIVACY). Mac-specific additions only; the Windows
+# paths above are unchanged. The inventory is written by tools/macos_notices.py
+# into the build's audit folder.
+MAC_LIBPYTHON_STATIC = {  # python-build-standalone libraries linked into libpython
+    "Apache-2.0",
+    "MIT",
+    "BSD-2-Clause",
+    "bzip2-1.0.6",
+    "blessing (public domain)",
+    "LicenseRef-Public-Domain",
+}
+MAC_REQUIRED_TEXTS = (
+    "ffmpeg-LGPL-2.1.txt",
+    "qt-LGPL-3.0.txt",
+    "qt-GPL-3.0-reference.txt",
+    "libffi-MIT.txt",
+    "openssl-Apache-2.0.txt",
+)
+MAC_LGPL_PROVIDER = {"qt": "pyside6-essentials", "pyside6": "pyside6", "shiboken6": "shiboken6"}
+
+
+def check_macos_bundle(app: Path, inventory_path: Path) -> list[str]:
+    """License gate for Dusty.app: every component approved, texts retained, no open items."""
+    inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
+    findings: list[str] = []
+    resources = app / "Contents/Resources"
+    actual = {
+        path.relative_to(app).as_posix()
+        for path in app.rglob("*")
+        if path.is_file()
+        and not path.is_symlink()
+        and "_CodeSignature" not in path.parts
+        and path.name != "THIRD_PARTY_NOTICES.md"
+    }
+    if actual != set(inventory["files"]):
+        findings.append("Dusty.app files differ from the notices inventory")
+    for name, entry in sorted(inventory["components"].items()):
+        expression, linkage = entry["license"], entry.get("linkage", "")
+        if name == "dusty":
+            approved = expression == "Apache-2.0"
+        elif name == "pyinstaller-bootloader":
+            approved = expression.startswith(PYINSTALLER_BOOTLOADER)
+        elif name in MAC_LGPL_PROVIDER:
+            approved = "static" not in linkage and allowed_license(
+                MAC_LGPL_PROVIDER[name], expression
+            )
+        elif name == "ffmpeg":
+            approved = expression == "LGPL-2.1-or-later" and linkage == "executable"
+        elif name == "jfk-fixture":
+            approved = expression == "LicenseRef-Public-Domain" and linkage == "data"
+        elif name == "public-ca-certificates":
+            approved = expression == "LicenseRef-Public-CA-Certificate" and linkage == "data"
+            try:
+                from dusty_fetch.tls import bundled_pem
+
+                bundled_pem(resources / "tls")
+            except (ImportError, OSError, ValueError):
+                approved = False
+        elif name == "cpython-static-libraries":
+            approved = all(
+                item["license"] in MAC_LIBPYTHON_STATIC
+                for item in inventory["libpython_static_libraries"]
+            )
+        else:
+            approved = allowed_license(name, expression)
+        if not approved:
+            findings.append(f"{name}: unapproved or unknown bundled license: {expression}")
+        for text in entry.get("texts", []):
+            if not (resources / "licenses" / text).is_file():
+                findings.append(f"{name}: license text missing: {text}")
+    texts = json.loads(
+        (Path(__file__).resolve().parents[1] / "packaging/licenses/sources.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    for name in MAC_REQUIRED_TEXTS:
+        path = resources / "licenses" / name
+        if (
+            not path.is_file()
+            or hashlib.sha256(path.read_bytes()).hexdigest() != texts[name]["sha256"]
+        ):
+            findings.append(f"Missing or changed required license text: {name}")
+    # Pinned upstream texts for the Mac bundle (packaging/macos/licenses, D-MAC-020).
+    mac_texts = Path(__file__).resolve().parents[1] / "packaging/macos/licenses"
+    retained = json.loads((mac_texts / "sources.json").read_text(encoding="utf-8"))
+    for name, record in sorted(retained.items()):
+        path = resources / "licenses/macos" / name
+        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != record["sha256"]:
+            findings.append(f"Missing or changed retained Mac license text: {name}")
+    findings.extend(f"Open license item: {item}" for item in inventory.get("open_items", []))
+    return findings
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("root", nargs="?", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--bundle", type=Path)
     parser.add_argument("--inventory", type=Path)
+    parser.add_argument("--macos-app", type=Path, help="Dusty.app to audit (macOS gate)")
+    parser.add_argument("--macos-inventory", type=Path, help="audit/notices-inventory.json")
     args = parser.parse_args()
     if bool(args.bundle) != bool(args.inventory):
         parser.error("--bundle and --inventory are required together")
+    if bool(args.macos_app) != bool(args.macos_inventory):
+        parser.error("--macos-app and --macos-inventory are required together")
+    if args.macos_app:
+        try:
+            findings = check_macos_bundle(args.macos_app, args.macos_inventory)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            findings = [str(exc)]
+        if findings:
+            print("\n".join(findings), file=sys.stderr)
+            return 1
+        print("macOS bundle license check passed")
+        return 0
     try:
         findings = check_bundle(args.bundle, args.inventory) if args.bundle else check(args.root)
     except (OSError, ValueError, KeyError, TypeError, tomllib.TOMLDecodeError) as exc:

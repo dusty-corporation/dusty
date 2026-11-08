@@ -6,7 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from dusty.platform.win_process import run_job_process
+if sys.platform != "win32":
+    pytest.skip(
+        "Windows-only: CreateProcessW and Job Object runner (win_process needs msvcrt)",
+        allow_module_level=True,
+    )
+
+from dusty.platform.win_process import run_job_process  # noqa: E402
 
 
 def test_child_uses_executable_folder_even_with_untrusted_parent_cwd(tmp_path, monkeypatch):

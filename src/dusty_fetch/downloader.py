@@ -193,7 +193,8 @@ def linked(path: Path) -> bool:
         except FileNotFoundError:
             continue
         if stat.S_ISLNK(info.st_mode) or (
-            getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+            # The Windows attribute constant is defined on every platform at runtime.
+            getattr(info, "st_file_attributes", 0) & cast(Any, stat).FILE_ATTRIBUTE_REPARSE_POINT
         ):
             return True
     return False
@@ -246,7 +247,7 @@ def download_lock(
             if os.name == "nt":
                 import msvcrt
 
-                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+                cast(Any, msvcrt).locking(handle.fileno(), cast(Any, msvcrt).LK_NBLCK, 1)
             else:
                 import fcntl
 
@@ -260,7 +261,7 @@ def download_lock(
         finally:
             handle.seek(0)
             if os.name == "nt":
-                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+                cast(Any, msvcrt).locking(handle.fileno(), cast(Any, msvcrt).LK_UNLCK, 1)
             else:
                 cast(Any, fcntl).flock(handle.fileno(), cast(Any, fcntl).LOCK_UN)
 

@@ -1,6 +1,7 @@
 """Audit actual Unicode shell links, retaining the two-shortcut/bare-route gates."""
 
 import ctypes as C
+import sys
 from pathlib import Path
 
 import pytest
@@ -15,6 +16,10 @@ def write_link(file: Path, target: Path, arguments=""):
         checked(method(persist, 6, C.c_wchar_p, C.c_int)(persist, str(file), 1))
 
 
+# The macOS app has no Start Menu shortcuts or uninstaller to audit.
+@pytest.mark.skipif(
+    sys.platform != "win32", reason="Windows-only: .lnk shell links written through COM"
+)
 @pytest.mark.parametrize("uninstaller_name", ["unins000.exe", "UNINS000.EXE"])
 def test_unicode_shortcuts_are_read_without_resolution_or_target_execution(
     tmp_path, uninstaller_name

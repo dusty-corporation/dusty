@@ -1,6 +1,7 @@
 """Exercise simple-mode controls, safe dialogs, queue editing and recovery."""
 
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -588,7 +589,9 @@ def test_all_dialogs_have_one_title_and_errors_only_name_reason(window, qtbot) -
         dialog = ErrorDialog(code, filename="corrupt.mp3", parent=window)
         qtbot.addWidget(dialog)
         assert [label.text() for label in dialog.findChildren(QLabel)] == [
-            M.NAMED_FAILURE.format(name="corrupt.mp3", reason=M.FAILURE_MESSAGES[code].message)
+            M.NAMED_FAILURE.format(
+                name="corrupt.mp3", reason=M.failure_messages(sys.platform)[code].message
+            )
         ]
     generic = ErrorDialog(text=M.SCAN_ERROR, parent=window)
     qtbot.addWidget(generic)
@@ -808,6 +811,9 @@ def test_readding_done_resets_only_that_recording(window, tmp_path):
     )
 
 
+@pytest.mark.skipif(
+    sys.platform != "win32", reason="Windows-only: the greeting is absent on Mac (test_mac_gui.py)"
+)
 @pytest.mark.parametrize("theme", ["light", "dark"])
 def test_seven_title_clicks_greeting_is_memory_only(window, qtbot, monkeypatch, caplog, theme):
     from dusty.app import window as module

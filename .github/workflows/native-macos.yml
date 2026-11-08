@@ -1,0 +1,86 @@
+name: Native macOS engine build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  engine:
+    if: github.event.repository.private == false || github.event_name == 'workflow_dispatch'
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Record runner and toolchain
+        run: |
+          sw_vers
+          uname -m
+          test "$(uname -m)" = arm64
+          xcodebuild -version
+          xcrun --show-sdk-version
+          xcrun clang --version | head -1
+          cmake --version | head -1
+      - name: Get pinned whisper.cpp and FFmpeg sources
+        run: |
+          pin() { awk -v section="[$1]" -v key="$2" '
+            $0 == section { inside = 1; next }
+            /^\[/ { inside = 0 }
+            inside && $1 == key { gsub(/"/, "", $3); print $3 }
+          ' native/versions.toml; }
+          whisper_commit="$(pin whisper_cpp commit)"
+          ffmpeg_commit="$(pin ffmpeg commit)"
+          ffmpeg_tag="$(pin ffmpeg tag)"
+          [[ "$whisper_commit" =~ ^[0-9a-f]{40}$ && "$ffmpeg_commit" =~ ^[0-9a-f]{40}$ ]]
+          git clone https://github.com/ggml-org/whisper.cpp.git build/upstream-whisper
+          git -C build/upstream-whisper checkout --detach "$whisper_commit"
+          test "$(git -C build/upstream-whisper rev-parse HEAD)" = "$whisper_commit"
+          git clone --depth 1 --branch "$ffmpeg_tag" https://github.com/FFmpeg/FFmpeg.git build/upstream-ffmpeg
+          test "$(git -C build/upstream-ffmpeg rev-parse HEAD)" = "$ffmpeg_commit"
+      - name: Build whisper.cpp CPU and Metal and FFmpeg
+        run: |
+          mkdir -p build/macos-arm64/native-v3
+          bash native/macos/build_whisper.sh build/upstream-whisper build/macos-arm64/native-v3/whisper-cpu cpu 13.3
+          bash native/macos/build_whisper.sh build/upstream-whisper build/macos-arm64/native-v3/whisper-metal metal 13.3
+          bash native/macos/build_ffmpeg.sh build/upstream-ffmpeg build/macos-arm64/native-v3/ffmpeg 13.0
+      - name: Check architecture, minimum macOS and package checksums
+        run: |
+          cd build/macos-arm64/native-v3
+          for component in whisper-cpu whisper-metal ffmpeg; do
+            echo "== $component"
+            (cd "$component/package" && shasum -a 256 -c ../SHA256SUMS.txt)
+            for file in "$component"/package/*; do
+              case "$file" in *.txt) continue ;; esac
+              lipo -archs "$file" | grep -qx arm64
+            done
+            cat "$component/minimum-os.txt" 2>/dev/null || true
+          done
+      - name: Smoke test the programs
+        run: |
+          root=build/macos-arm64/native-v3
+          "$root/whisper-cpu/package/whisper-cli" --help > /dev/null
+          "$root/whisper-metal/package/whisper-cli" --help > /dev/null
+          for file in tests/fixtures/audio/formats/*; do
+            case "$file" in *.txt|*.md) continue ;; esac
+            "$root/ffmpeg/package/ffmpeg" -nostdin -hide_banner -loglevel error -protocol_whitelist file,pipe \
+              -i "$file" -vn -map 0:a:0 -ac 1 -ar 16000 -c:a pcm_s16le -f wav "$RUNNER_TEMP/decoded.wav" -y
+          done
+          "$root/ffmpeg/package/ffprobe" -hide_banner -loglevel error -show_format "tests/fixtures/audio/formats/jfk.wav" > /dev/null
+      - name: Package each component
+        run: |
+          mkdir -p build/engine-macos
+          cd build/macos-arm64/native-v3
+          for component in whisper-cpu whisper-metal ffmpeg; do
+            files=("$component/SHA256SUMS.txt" "$component/package")
+            for extra in minimum-os.txt dependencies.txt architecture.txt architectures.txt provenance.txt buildconf.txt; do
+              [[ -f "$component/$extra" ]] && files+=("$component/$extra")
+            done
+            zip -q -r -X "$GITHUB_WORKSPACE/build/engine-macos/$component-macos-arm64.zip" "${files[@]}"
+          done
+          cd "$GITHUB_WORKSPACE/build/engine-macos"
+          shasum -a 256 *.zip | tee SHA256SUMS.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: engine-macos-arm64
+          path: build/engine-macos/

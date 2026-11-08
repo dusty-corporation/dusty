@@ -22,6 +22,64 @@ from dusty_fetch.downloader import download_lock, record_partial
 
 ROOT = Path(__file__).resolve().parents[2]
 KINDS = ("work", "upgrade", "partial", "uninstall")
+# The symlink cases cover the same link refusal on macOS.
+LINK_KINDS = [
+    pytest.param(
+        "junction",
+        marks=pytest.mark.skipif(
+            sys.platform != "win32", reason="Windows-only: NTFS junction made with cmd mklink /J"
+        ),
+    ),
+    "symlink",
+]
+# macOS has no mandatory share-mode lock. Its advisory lock twins are
+# test_stale_partial_cleanup_respects_downloader_lock_in_another_process here
+# and test_startup_and_uninstall_keep_a_live_job_lock in test_stale_work_cleanup.
+OBSTACLES = [
+    "read-only",
+    pytest.param(
+        "other-process-lock",
+        marks=pytest.mark.skipif(
+            sys.platform != "win32",
+            reason="Windows-only: CreateFileW share-mode lock that denies delete and replace",
+        ),
+    ),
+]
+
+
+def long_path(path: Path) -> Path:
+    """Windows reaches a path over 300 characters through the \\\\?\\ namespace.
+
+    macOS has no such prefix, so it uses the same long absolute path directly.
+    """
+    if sys.platform == "win32":
+        return Path("\\\\?\\" + str(path.resolve()))
+    return path.resolve()
+
+
+@contextmanager
+def read_only(path: Path):
+    """Make the OS refuse to change, replace or remove one file.
+
+    Windows uses the read-only attribute. On macOS mode bits do not stop removal
+    or replacement (the folder decides), so this uses the user immutable flag,
+    which is what the Finder Locked checkbox sets.
+    """
+    if sys.platform == "win32":
+        path.chmod(stat.S_IREAD)
+        try:
+            yield
+        finally:
+            path.chmod(stat.S_IWRITE | stat.S_IREAD)
+        return
+    if not hasattr(os, "chflags"):
+        pytest.skip("Needs Windows read-only or macOS immutable file flags")
+    flags = path.lstat().st_flags
+    os.chflags(path, flags | stat.UF_IMMUTABLE)
+    try:
+        yield
+    finally:
+        os.chflags(path, flags)
 
 
 def scenario(base: Path, kind: str, *, replacement: Path):
@@ -70,7 +128,7 @@ def invoke(case):
 
 
 @pytest.mark.parametrize("kind", KINDS)
-@pytest.mark.parametrize("link_kind", ["junction", "symlink"])
+@pytest.mark.parametrize("link_kind", LINK_KINDS)
 def test_cleanup_reparse_target_survives(tmp_path, kind, link_kind):
     case = scenario(tmp_path, kind, replacement=tmp_path / "replacement")
     outside = tmp_path / "external-target"
@@ -132,7 +190,7 @@ k.CloseHandle(h)
 
 
 @pytest.mark.parametrize("kind", KINDS)
-@pytest.mark.parametrize("obstacle", ["read-only", "other-process-lock"])
+@pytest.mark.parametrize("obstacle", OBSTACLES)
 def test_cleanup_preserves_os_inaccessible_file(tmp_path, kind, obstacle):
     case = scenario(tmp_path, kind, replacement=tmp_path / "replacement")
     before = case.file.read_bytes()
@@ -146,11 +204,8 @@ def test_cleanup_preserves_os_inaccessible_file(tmp_path, kind, obstacle):
         assert case.file.exists()
 
     if obstacle == "read-only":
-        case.file.chmod(stat.S_IREAD)
-        try:
+        with read_only(case.file):
             attempt()
-        finally:
-            case.file.chmod(stat.S_IWRITE | stat.S_IREAD)
     else:
         with exclusive_file(case.file):
             attempt()
@@ -162,8 +217,7 @@ def test_cleanup_preserves_os_inaccessible_file(tmp_path, kind, obstacle):
 def test_cleanup_handles_paths_and_preserves_synced_output(tmp_path, monkeypatch, kind, path_kind):
     base = tmp_path / "گفتگو_日本語"
     if path_kind == "long":
-        base = tmp_path.joinpath(*(["long-path-segment-1234567890"] * 10))
-        base = Path("\\\\?\\" + str(base.resolve()))
+        base = long_path(tmp_path.joinpath(*(["long-path-segment-1234567890"] * 10)))
         assert len(str(base)) > 300
     case = scenario(base, kind, replacement=tmp_path / "replacement")
     output = tmp_path / "OneDrive/Transcripts"
@@ -254,6 +308,39 @@ def test_stale_partial_cleanup_respects_active_downloader_lock(tmp_path):
     assert cleanup_stale_partials(models) == 1
 
 
+def test_stale_partial_cleanup_respects_downloader_lock_in_another_process(tmp_path):
+    """Portable twin of other-process-lock-partial: a separate downloader holds the lock."""
+    models = tmp_path / "user/models"
+    models.mkdir(parents=True)
+    part = models / "ggml-test.bin.part"
+    part.write_bytes(b"old resumable bytes")
+    record_partial(part)
+    old = time.time() - 9 * 24 * 60 * 60
+    os.utime(part, (old, old))
+    code = (
+        "import sys; from pathlib import Path; from dusty_fetch.downloader import download_lock\n"
+        "with download_lock(Path(sys.argv[1])):\n"
+        "    print('locked', flush=True)\n"
+        "    sys.stdin.readline()\n"
+    )
+    child = subprocess.Popen(
+        [sys.executable, "-c", code, str(models / "ggml-test.bin.lock")],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env={**os.environ, "PYTHONPATH": str(ROOT / "src")},
+    )
+    try:
+        assert child.stdout.readline().strip() == "locked"
+        assert cleanup_stale_partials(models) == 0
+        assert part.read_bytes() == b"old resumable bytes"
+    finally:
+        child.communicate("release\n", timeout=10)
+    assert child.returncode == 0
+    assert cleanup_stale_partials(models) == 1
+
+
 def atomic_writer(folder, kind):
     from dusty.core import BatchOptions, Job, Segment, Transcript
     from dusty.queue.outputs import write_outputs
@@ -270,17 +357,13 @@ def atomic_writer(folder, kind):
 
 
 @pytest.mark.parametrize("kind", ["state", "export"])
-@pytest.mark.parametrize("obstacle", ["read-only", "other-process-lock"])
+@pytest.mark.parametrize("obstacle", OBSTACLES)
 def test_atomic_overwrite_retains_inaccessible_original(tmp_path, kind, obstacle):
     target, write = atomic_writer(tmp_path / "OneDrive/Transcripts", kind)
     target.write_bytes(b'{"original":"keep"}')
     if obstacle == "read-only":
-        target.chmod(stat.S_IREAD)
-        try:
-            with pytest.raises(OSError):
-                write()
-        finally:
-            target.chmod(stat.S_IWRITE | stat.S_IREAD)
+        with read_only(target), pytest.raises(OSError):
+            write()
     else:
         with exclusive_file(target), pytest.raises(OSError):
             write()
@@ -289,7 +372,7 @@ def test_atomic_overwrite_retains_inaccessible_original(tmp_path, kind, obstacle
 
 
 @pytest.mark.parametrize("kind", ["state", "export"])
-@pytest.mark.parametrize("alias", ["junction", "symlink"])
+@pytest.mark.parametrize("alias", LINK_KINDS)
 def test_atomic_write_refuses_linked_output_parent(tmp_path, kind, alias):
     outside = tmp_path / "outside"
     target, _ = atomic_writer(outside, kind)
@@ -312,7 +395,7 @@ def test_atomic_write_refuses_linked_output_parent(tmp_path, kind, alias):
 def test_atomic_write_handles_unicode_and_extended_long_path(tmp_path, kind, long):
     folder = tmp_path / "گفتگو_日本語"
     if long:
-        folder = Path("\\\\?\\" + str(folder.joinpath(*(["length-1234567890"] * 16)).resolve()))
+        folder = long_path(folder.joinpath(*(["length-1234567890"] * 16)))
         assert len(str(folder)) > 300
     target, write = atomic_writer(folder, kind)
     write()

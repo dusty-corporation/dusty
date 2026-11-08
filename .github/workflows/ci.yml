@@ -174,6 +174,77 @@ jobs:
           if ('${{ steps.installer_licenses.outcome }}' -ne 'failure') { throw 'Synthetic negative gate did not fail' }
           if ('${{ steps.installer_upload.outcome }}' -ne 'skipped') { throw 'Upload was not skipped after gate failure' }
 
+  macos:
+    if: github.event.repository.private == false || github.event_name == 'workflow_dispatch'
+    runs-on: macos-15
+    timeout-minutes: 90
+    env:
+      QT_QPA_PLATFORM: offscreen
+      UV_PYTHON_PREFERENCE: only-managed
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Apply approved release version
+        if: inputs.release_tag != ''
+        run: python tools/release_version.py '${{ inputs.release_tag }}' --apply
+      - name: Install the pinned Python and locked dependencies
+        # The app bundles this interpreter: python-build-standalone 3.12.11, whose
+        # libraries match the license texts in packaging/macos/licenses.
+        run: |
+          python -m pip install uv==0.8.18
+          uv python install 3.12.11
+          uv sync --locked --python 3.12.11
+          uv run python -c "import decimal, sys; print(sys.version, decimal.__libmpdec_version__)"
+      - name: Record the runner
+        run: |
+          sw_vers
+          uname -m
+          sysctl -n machdep.cpu.brand_string hw.physicalcpu hw.logicalcpu hw.memsize
+      - name: Fetch the pinned Mac engine and verified development models
+        run: uv run python tools/fetch_dev_binaries.py
+      - name: Mac source policies
+        run: |
+          for tool in check_docs.py check_no_network.py check_no_huggingface.py check_licenses.py check_workflow_budget.py; do
+            uv run python "tools/$tool"
+          done
+      - name: Tests, with the pinned Mac engine and models for the Mac integration tests
+        run: |
+          export DUSTY_BIN_DIR="$PWD/build/bin" DUSTY_MODELS_DIR="$PWD/build/models"
+          uv run pytest -q --durations=20
+      - name: Build Dusty.app from the pinned Mac engine
+        run: uv run python -m tools.build_macos_app build/mac-app --native-root build/engine-macos/macos-arm64
+      - name: Built app tests
+        run: |
+          export DUSTY_MAC_APP="$PWD/build/mac-app/Dusty.app" DUSTY_MODELS_DIR="$PWD/build/models"
+          uv run pytest -q tests/integration/test_mac_upgrade.py
+      - name: Audit the app bundle, signatures and notices
+        run: uv run python -m tools.check_macos_bundle build/mac-app/Dusty.app --json build/mac-app/bundle-check.json
+      - name: Build and verify the disk image
+        run: uv run python -m tools.build_macos_dmg build/mac-app/Dusty.app build/mac-dmg
+      - name: Headless self-test, upgrade, removal and moved app scenarios
+        run: uv run python -m tools.mac_upgrade_check --new build/mac-app/Dusty.app --models build/models --out build/mac-upgrade
+      - name: Software bill of materials and release inputs
+        run: |
+          uv run python -m tools.macos_sbom build/mac-app/Dusty.app build/mac-app/audit/notices-inventory.json build/mac-release/sbom.cdx.json
+          cp build/mac-dmg/* build/mac-release/
+          cp build/mac-app/bundle-check.json build/mac-upgrade/results.json build/mac-release/
+          cp build/mac-app/Dusty.app/Contents/Resources/THIRD_PARTY_NOTICES.md build/mac-release/
+          cp native/macos/build_ffmpeg.sh build/mac-release/build_ffmpeg-macos.sh
+          ls -l build/mac-release
+      - name: Preserve the unsigned disk image as a CI artifact only
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: mac-dmg-draft-unsigned
+          path: build/mac-release
+          if-no-files-found: error
+
   packaging-spike:
     if: github.event.repository.private == false || github.event_name == 'workflow_dispatch'
     needs: [checks, offline, installer-upload-regression]

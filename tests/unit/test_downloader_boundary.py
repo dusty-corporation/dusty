@@ -17,9 +17,32 @@ class RejectDownloader(importlib.abc.MetaPathFinder):
         if fullname == 'dusty_fetch' or fullname.startswith('dusty_fetch.'):
             raise AssertionError('Offline package imported downloader')
 sys.meta_path.insert(0, RejectDownloader())
+import ctypes
 import dusty
+# A module may stop only because it needs a standard module or ctypes loader
+# that exists on the other platform. The hook above still raises for any
+# downloader import reached before that point, and every other error fails.
+WINDOWS = sys.platform == 'win32'
+OTHER_PLATFORM_MODULES = (
+    {'fcntl', 'termios', 'resource', 'pwd', 'grp'}
+    if WINDOWS
+    else {'msvcrt', 'winreg', '_winapi', 'winsound'}
+)
+WINDOWS_ONLY_CTYPES = {'WinDLL', 'windll', 'WINFUNCTYPE', 'WinError', 'get_last_error'}
+other_platform = []
 for module in pkgutil.walk_packages(dusty.__path__, dusty.__name__ + '.'):
-    importlib.import_module(module.name)
+    try:
+        importlib.import_module(module.name)
+    except ImportError as exc:
+        if exc.name not in OTHER_PLATFORM_MODULES:
+            raise
+        other_platform.append(module.name)
+    except AttributeError as exc:
+        if WINDOWS or exc.obj is not ctypes or exc.name not in WINDOWS_ONLY_CTYPES:
+            raise
+        other_platform.append(module.name)
+own_runner = 'dusty.platform.' + ('win_process' if WINDOWS else 'mac_process')
+assert own_runner not in other_platform and 'dusty.platform.process' not in other_platform
 assert not any(name == 'dusty_fetch' or name.startswith('dusty_fetch.') for name in sys.modules)
 print('offline_import_boundary=passed')
 """

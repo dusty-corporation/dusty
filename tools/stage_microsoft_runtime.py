@@ -6,11 +6,8 @@ import json
 import os
 import shutil
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
-
-import pefile  # type: ignore[import-untyped]
-
-from tools.check_pe_imports import imports
 
 PINS = Path(__file__).resolve().parents[1] / "packaging/microsoft-runtime.json"
 
@@ -20,6 +17,8 @@ def runtime_pins() -> dict:
 
 
 def file_version(path: Path) -> str:
+    import pefile  # type: ignore[import-untyped]
+
     with pefile.PE(str(path)) as executable:
         fixed = executable.VS_FIXEDFILEINFO[0]
         return ".".join(
@@ -33,8 +32,21 @@ def file_version(path: Path) -> str:
         )
 
 
+def _pe_imports() -> Callable[[Path], dict[str, list[str]]]:
+    from tools.check_pe_imports import imports as inspect_imports
+
+    return inspect_imports
+
+
+def imports(path: Path) -> dict[str, list[str]]:
+    """Preserve the existing inspection hook without eager parser loading."""
+    return _pe_imports()(path)
+
+
 def crt_importers(bundle: Path) -> dict[str, list[str]]:
     """Normal and delayed imports, scoped to each executable family."""
+    _pe_imports()  # An explicitly requested PE audit requires its parser, even when empty.
+
     result: dict[str, list[str]] = {}
     for path in sorted(bundle.rglob("*")):
         if not path.is_file():
@@ -65,6 +77,8 @@ def microsoft_vendor(path: Path) -> bool:
     with path.open("rb") as stream:
         if stream.read(2) != b"MZ":
             return False
+    import pefile  # type: ignore[import-untyped]
+
     with pefile.PE(str(path)) as executable:
         for group in getattr(executable, "FileInfo", []):
             for info in group:

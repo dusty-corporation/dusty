@@ -1,6 +1,7 @@
 """Dusty's simple-mode desktop window, bound to the shared offline workers."""
 
 import os
+import sys
 import time
 from dataclasses import replace
 from pathlib import Path
@@ -13,6 +14,7 @@ from PySide6.QtGui import (
     QCloseEvent,
     QDesktopServices,
     QKeyEvent,
+    QKeySequence,
     QResizeEvent,
     QStandardItemModel,
 )
@@ -45,7 +47,9 @@ from PySide6.QtWidgets import (
 from dusty import __version__
 from dusty.core import BatchOptions, FailureCode, Job, JobStatus
 from dusty.core.types import Backend, CollisionPolicy, OutputFormat, Task
+from dusty.engine.binaries import gpu_backend
 from dusty.models import ModelRegistry, can_translate, load_manifest, recommend_model
+from dusty.models.catalog import gpu_presumed
 from dusty.platform.cpu_topology import default_threads
 from dusty.privacy.logging import configure_logger
 from dusty.privacy.sync import is_synced
@@ -62,8 +66,8 @@ from .dialogs import (
     CollisionDialog,
     ErrorDialog,
     FolderDialog,
-    GreetingDialog,
     NoticesDialog,
+    RemoveDataDialog,
     ResumeDialog,
     SummaryDialog,
     SyncDialog,
@@ -74,7 +78,24 @@ from .model_manager import VOICE_ID, ModelManager
 from .presentation import TERMINAL, counts, eta_seconds, overall_progress
 from .table import ProgressDelegate, QueueModel
 from .theme import application_icon, apply_theme
-from .workers import BatchWorker, Prepared, PrepareWorker, ScanWorker, SelfTestWorker
+from .workers import (
+    BatchWorker,
+    GpuProbeWorker,
+    Prepared,
+    PrepareWorker,
+    ScanWorker,
+    SelfTestWorker,
+)
+
+_MAC_LAUNCHABLE_FOLDERS = frozenset(
+    {".app", ".pkg", ".mpkg", ".workflow", ".action", ".prefpane", ".saver", ".appex"}
+)
+
+
+def _standard_key(key: QKeySequence.StandardKey, fallback: str) -> QKeySequence:
+    """Platform standard shortcut; Qt writes Command as Ctrl in portable text on Mac."""
+    sequence = QKeySequence(key)
+    return sequence if not sequence.isEmpty() else QKeySequence(fallback)
 
 
 class ElidedLabel(QLabel):
@@ -114,6 +135,8 @@ class MainWindow(QMainWindow):
             load_manifest(self.paths.resources_dir / "models.json"), self.paths.models_dir
         )
         self.interactive = interactive
+        # Mac: set by Remove Dusty data; True also removes downloaded models.
+        self.removal_request: bool | None = None
         self.settings: dict = {"schema_version": 1}
         self.installed: tuple[str, ...] = ()
         self.vulkan_ok = False
@@ -143,8 +166,10 @@ class MainWindow(QMainWindow):
         self._active_id: UUID | None = None
         self._active_elapsed = 0.0
         self._timed_ids: set[UUID] = set()
-        self._title_clicks = 0
-        self._title_click_started = 0.0
+        if sys.platform == "win32":
+            # Hidden greeting state exists only where the greeting exists (not on Mac).
+            self._title_clicks = 0
+            self._title_click_started = 0.0
         self.setWindowTitle(M.APP_NAME)
         self.setWindowIcon(application_icon())
         self.resize(1060, 780)
@@ -191,7 +216,8 @@ class MainWindow(QMainWindow):
         layout.setSpacing(12)
         self.title = self._label(M.APP_NAME)
         self.title.setObjectName("title")
-        self.title.installEventFilter(self)
+        if sys.platform == "win32":
+            self.title.installEventFilter(self)
         layout.addWidget(self.title)
         layout.addWidget(self._label(M.TAGLINE))
         self.drop_area = QFrame()
@@ -368,7 +394,7 @@ class MainWindow(QMainWindow):
         self.keep_structure = QCheckBox(M.KEEP_STRUCTURE)
         form.addRow(self.same_folder)
         form.addRow(self.keep_structure)
-        self.theme_choice = self._combo(M.THEMES, M.THEME)
+        self.theme_choice = self._combo(M.themes(sys.platform), M.THEME)
         form.addRow(M.THEME, self.theme_choice)
         self.advanced_toggle = QToolButton()
         self.advanced_toggle.setText(M.ADVANCED)
@@ -378,9 +404,9 @@ class MainWindow(QMainWindow):
         form.addRow(self.advanced_toggle)
         self.advanced = QWidget()
         advanced_form = QFormLayout(self.advanced)
-        self.device_choice = self._combo(M.DEVICES, M.DEVICE)
+        self.device_choice = self._combo(M.devices(gpu_backend()), M.DEVICE)
         advanced_form.addRow(M.DEVICE, self.device_choice)
-        advanced_form.addRow(self._label(M.DEVICE_HELP))
+        advanced_form.addRow(self._label(M.device_help(gpu_backend())))
         self.threads_choice = QSpinBox()
         self.threads_choice.setRange(1, os.cpu_count() or 1)
         self.threads_choice.setValue(default_threads())
@@ -417,6 +443,10 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.start_hint)
         layout.addWidget(self.start_button)
         self.setCentralWidget(body)
+        if sys.platform == "darwin":
+            # VoiceOver reads these names; the Windows accessibility tree is unchanged.
+            self.table.setAccessibleName(M.QUEUE_NAME)
+            self.overall.setAccessibleName(M.OVERALL_PROGRESS)
         for combo in (self.model_choice, self.task_choice, self.language_choice):
             combo.currentIndexChanged.connect(self._rules)
         self.model_choice.activated.connect(self._model_chosen)
@@ -448,20 +478,101 @@ class MainWindow(QMainWindow):
             action.triggered.connect(callback)
             menu.addAction(action)
             self.edit_actions.append(action)
-        file_menu.addAction(M.EXIT, self.close)
+        self.exit_action = file_menu.addAction(M.EXIT, self.close)
         self.manage_models_action = tools.addAction(M.MANAGE_MODELS, self.open_model_manager)
         self.selftest_action = tools.addAction(M.SELF_TEST, self.run_selftest)
-        help_menu.addAction(
+        self.privacy_action = help_menu.addAction(
             M.PRIVACY_TITLE,
             lambda: TextDialog(M.PRIVACY_TITLE, (M.PRIVACY, M.ACCURACY), self).exec(),
         )
         self.about_action = help_menu.addAction(M.ABOUT, self.show_about)
+        if sys.platform == "darwin":
+            self._mac_menus(file_menu, tools, help_menu)
+
+    def _mac_menus(self, file_menu: QMenu, tools: QMenu, help_menu: QMenu) -> None:
+        """Native menu bar conventions; Qt moves About and Quit into the app menu."""
+        for menu in (file_menu, tools, help_menu):
+            for item in menu.actions():
+                # No text guessing: only the two actions below join the app menu.
+                item.setMenuRole(QAction.MenuRole.NoRole)
+        self.about_action.setMenuRole(QAction.MenuRole.AboutRole)
+        self.exit_action.setText(M.QUIT)
+        self.exit_action.setMenuRole(QAction.MenuRole.QuitRole)
+        self.exit_action.setShortcut(_standard_key(QKeySequence.StandardKey.Quit, "Ctrl+Q"))
+        add_files, add_folder = self.edit_actions[0], self.edit_actions[1]
+        add_files.setShortcut(_standard_key(QKeySequence.StandardKey.Open, "Ctrl+O"))
+        add_folder.setShortcut(QKeySequence("Ctrl+Shift+O"))  # Command+Shift+O on Mac.
+        self.help_action = QAction(M.HELP_TITLE, self)
+        self.help_action.setMenuRole(QAction.MenuRole.NoRole)
+        self.help_action.setShortcut(_standard_key(QKeySequence.StandardKey.HelpContents, "Ctrl+?"))
+        self.help_action.triggered.connect(self.show_help)
+        self.notices_action = QAction(M.THIRD_PARTY_NOTICES, self)
+        self.notices_action.setMenuRole(QAction.MenuRole.NoRole)
+        self.notices_action.triggered.connect(self.open_notices)
+        help_menu.insertAction(self.privacy_action, self.help_action)
+        help_menu.addAction(self.notices_action)
+        # Windows removes Dusty's data in its uninstaller; a Mac app has none.
+        self.remove_data_action = QAction(M.REMOVE_DATA, self)
+        self.remove_data_action.setMenuRole(QAction.MenuRole.NoRole)
+        self.remove_data_action.triggered.connect(self.remove_data)
+        tools.addSeparator()
+        tools.addAction(self.remove_data_action)
+
+    def remove_data(self) -> None:
+        """Mac: confirm, then close; __main__ removes the data once Dusty has stopped."""
+        from dataclasses import replace
+
+        from dusty.installer_support import model_size
+
+        # Only the models inside the data folder are removed, so count only those.
+        owned = replace(self.paths, models_dir=self.paths.user_dir / "models")
+        try:
+            size = model_size(owned)
+        except (OSError, ValueError):
+            size = M.format_size(0)
+        dialog = RemoveDataDialog(size, self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        self.removal_request = dialog.remove_models.isChecked()
+        self.close()
+        if self.isVisible():  # The close was refused; remove nothing.
+            self.removal_request = None
+
+    def show_help(self) -> None:
+        TextDialog(M.HELP_TITLE, M.HELP_TOPICS, self).exec()
+
+    def _open_folder(self, folder: Path) -> None:
+        """Show a result folder in Finder or Explorer; never a file or a URL."""
+        if sys.platform == "darwin":
+            # Mirror the Windows shell rule (network_guard os.startfile): directories
+            # only. A file URL to a document or app would launch it in Finder.
+            target = os.fspath(folder)
+            if target.startswith("//") or "://" in target:
+                return
+            # Finder runs or installs some folders (bundles) instead of showing them.
+            if folder.suffix.casefold() in _MAC_LAUNCHABLE_FOLDERS:
+                return
+            try:
+                if not folder.is_dir():
+                    return
+            except OSError:
+                return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
 
     def show_about(self) -> None:
         AboutDialog(__version__, self.open_notices, self).exec()
 
     def open_notices(self) -> None:
-        NoticesDialog(self.paths.resources_dir.parent / "THIRD_PARTY_NOTICES.md", self).exec()
+        NoticesDialog(self._notices_path(), self).exec()
+
+    def _notices_path(self) -> Path:
+        """Windows and source trees keep notices beside resources; Dusty.app inside them."""
+        beside = self.paths.resources_dir.parent / "THIRD_PARTY_NOTICES.md"
+        if sys.platform == "darwin":
+            bundled = self.paths.resources_dir / "THIRD_PARTY_NOTICES.md"
+            if bundled.is_file() or not beside.is_file():
+                return bundled
+        return beside
 
     def initialize(self) -> None:
         if self.preparer and self.preparer.isRunning():
@@ -489,7 +600,9 @@ class MainWindow(QMainWindow):
         self._explicit_model = bool(self.settings.get("model_id"))
         self.model_choice.blockSignals(True)
         self.model_choice.clear()
-        recommended = recommend_model(vulkan_ok=self.vulkan_ok, task="transcribe")
+        recommended = recommend_model(
+            gpu_ok=self.vulkan_ok or (not self.installed and gpu_presumed()), task="transcribe"
+        )
         for model_id in self.installed:
             name = M.MODEL_NAMES[model_id]
             self.model_choice.addItem(
@@ -579,7 +692,10 @@ class MainWindow(QMainWindow):
             ("theme", self.theme_choice),
         ):
             if key in settings:
-                self._set_combo(combo, settings[key])
+                value = settings[key]
+                if key == "backend" and value == "vulkan" and gpu_backend() != "vulkan":
+                    value = gpu_backend()  # Older or shared settings name the GPU "vulkan".
+                self._set_combo(combo, value)
         if restore_output and self.output_dir is None and settings.get("output_dir"):
             from dusty.work_area import managed_destination
 
@@ -708,10 +824,49 @@ class MainWindow(QMainWindow):
         self.model_choice.blockSignals(False)
         self._refresh()
         self._save_settings()
+        if sys.platform == "darwin" and newly_installed and not self.vulkan_ok:
+            self._probe_gpu_after_download()
+
+    def _probe_gpu_after_download(self) -> None:
+        """Mac first run: with no model at startup the Metal probe could not run.
+
+        Probe once with the new model, as a restart would, so Automatic uses Metal
+        and the recommendation reflects it. Start waits while this runs, like a
+        Processing device change. A cached result for this engine and GPU is reused.
+        """
+        if self.running or self.closing or not self.ready or not self.interactive:
+            return
+        model_id = "tiny" if "tiny" in self.installed else self.installed[0]
+        worker = GpuProbeWorker(self.paths, self.registry, model_id)
+        self._tasks.append(worker)
+        worker.result.connect(self._gpu_probed)
+        worker.finished.connect(self._background_finished)
+        self.ready = False
+        self.status.setText(M.PREPARING_HELP)
+        self.overall.setRange(0, 0)
+        worker.start()
+        self._refresh()
+
+    @Slot(bool)
+    def _gpu_probed(self, ok: bool) -> None:
+        from dusty.queue.storage import load_settings
+
+        self.vulkan_ok = ok
+        try:
+            probe = load_settings(self.paths.user_dir / "settings.json").get("backend_probe")
+        except (OSError, ValueError):
+            probe = None
+        if isinstance(probe, dict):
+            self.settings["backend_probe"] = probe  # A later settings save keeps it.
+        self.ready = True
+        self.overall.setRange(0, 1000)
+        self.status.setText(M.READY)
+        self._refresh()
 
     def eventFilter(self, watched, event) -> bool:
         if (
-            watched is getattr(self, "title", None)
+            sys.platform == "win32"
+            and watched is getattr(self, "title", None)
             and event.type() == QEvent.Type.MouseButtonRelease
         ):
             if event.button() == Qt.MouseButton.LeftButton:
@@ -724,6 +879,8 @@ class MainWindow(QMainWindow):
                 if self._title_clicks == 7:
                     self._title_clicks = 0
                     self._title_click_started = 0.0
+                    from .dialogs import GreetingDialog
+
                     GreetingDialog(self).exec()
         if (
             watched is getattr(self, "table", None)
@@ -825,7 +982,7 @@ class MainWindow(QMainWindow):
         self.incompatible.setText(M.TRANSLATE_REASON if english_only else M.TRANSLATE_DISABLED)
         self.incompatible.setVisible(bool(invalid or english_only))
         self.use_medium.setVisible(bool(invalid and "medium" in self.installed))
-        self.model_details.setText(M.MODEL_DETAILS.get(model_id, M.EMPTY_CELL))
+        self.model_details.setText(M.model_details(sys.platform).get(model_id, M.EMPTY_CELL))
         self.prompt_warning.setVisible(len(self.prompt.toPlainText()) / 4 > 200)
         cpu_only = not self.vulkan_ok or self.device_choice.currentData() == "cpu"
         slow = bool(model and cpu_only and model.speed_cpu == "slow")
@@ -833,8 +990,13 @@ class MainWindow(QMainWindow):
             notice.setText(M.SLOW if slow else M.EMPTY_CELL)
             notice.setVisible(slow)
         warning = M.EMPTY_CELL
+        # Before any model is installed the GPU cannot be probed; on Apple silicon
+        # a Metal GPU is presumed for the recommendation only (D-MAC-022).
+        recommend_gpu = (
+            self.vulkan_ok or (not self.installed and gpu_presumed())
+        ) and self.device_choice.currentData() != "cpu"
         recommended = recommend_model(
-            vulkan_ok=not cpu_only, task=cast(Task, self.task_choice.currentData())
+            gpu_ok=recommend_gpu, task=cast(Task, self.task_choice.currentData())
         )
         self._recommendation = recommended
         for index in range(self.model_choice.count()):
@@ -903,7 +1065,7 @@ class MainWindow(QMainWindow):
             M.CHOICES_SUMMARY.format(
                 model=M.MODEL_NAMES.get(model_id, M.NO_MODEL_SELECTED),
                 language=self.language_choice.currentText(),
-                device=M.DEVICES["cpu" if cpu_only else "vulkan"],
+                device=M.devices(gpu_backend())["cpu" if cpu_only else gpu_backend()],
             )
             + (", " + M.SILENCE_ON if self.vad.isChecked() else "")
         )
@@ -994,6 +1156,10 @@ class MainWindow(QMainWindow):
             and bool(self.installed)
             and not any(task.isRunning() for task in self._tasks)
         )
+        if hasattr(self, "remove_data_action"):
+            self.remove_data_action.setEnabled(
+                editing and not self.closing and not any(task.isRunning() for task in self._tasks)
+            )
         self.cancel_current_button.setVisible(self.running)
         self.cancel_all_button.setVisible(self.running)
         self.start_button.setVisible(True)
@@ -1290,7 +1456,7 @@ class MainWindow(QMainWindow):
             else:
                 clear_history(self.paths.user_dir / "state/queue.json")
             if any(job.gpu_fallback for job in self.model.jobs):
-                TextDialog(M.APP_NAME, (M.GPU_NOTICE,), self).exec()
+                TextDialog(M.APP_NAME, (M.gpu_notice(sys.platform),), self).exec()
 
     def _tick(self) -> None:
         if not self.running or self._waiting_choice:
@@ -1326,7 +1492,7 @@ class MainWindow(QMainWindow):
     def _table_clicked(self, index) -> None:
         job = self.model.jobs[index.row()]
         if index.column() == 5 and job.outputs:
-            QDesktopServices.openUrl(QUrl.fromLocalFile(str(job.outputs[0].parent)))
+            self._open_folder(job.outputs[0].parent)
 
     def _table_details(self, index) -> None:
         job = self.model.jobs[index.row()]
@@ -1338,7 +1504,7 @@ class MainWindow(QMainWindow):
             (job.outputs[0].parent for job in self.model.jobs if job.outputs), self.output_dir
         )
         if folder:
-            QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
+            self._open_folder(folder)
 
     def run_selftest(self) -> None:
         if not self.ready or self.running or not self.model_choice.currentData():
@@ -1357,7 +1523,9 @@ class MainWindow(QMainWindow):
             ErrorDialog(code, text=text, filename=filename, parent=self).exec()
         else:
             self.status.setText(
-                text or M.FAILURE_MESSAGES[code].message if code else text or M.PREPARATION_ERROR
+                text or M.failure_messages(sys.platform)[code].message
+                if code
+                else text or M.PREPARATION_ERROR
             )
 
     @Slot()

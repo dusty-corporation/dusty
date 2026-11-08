@@ -10,7 +10,13 @@ def main():
     from dusty.runtime_paths import RuntimePaths
 
     port, certificate, resources, user, output = sys.argv[1:]
-    command = [sys.executable, str(Path(__file__).with_name("fetch_child.py")), port, certificate]
+    # The real interpreter: the Mac runner refuses the venv symbolic link.
+    command = [
+        str(Path(sys.executable).resolve()),
+        str(Path(__file__).with_name("fetch_child.py")),
+        port,
+        certificate,
+    ]
     model_manager.resolve_fetch_command = lambda: command
     check.resolve_paths = lambda: RuntimePaths(
         Path(resources) / "bin", Path(user) / "models", Path(resources), Path(user)

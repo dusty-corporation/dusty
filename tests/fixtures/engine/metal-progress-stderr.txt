@@ -1,0 +1,5 @@
+ggml_metal_device_init: GPU name:   MTL0 (Apple M2)
+whisper_model_load: n_text_ctx    = 448
+whisper_backend_init_gpu: using MTL0 backend
+whisper_print_progress_callback: progress = 100%
+whisper_print_timings:     load time =    46.53 ms

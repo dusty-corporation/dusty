@@ -3,6 +3,7 @@
 import hashlib
 import json
 import ssl
+from pathlib import Path
 from urllib.error import URLError
 
 import pytest
@@ -102,3 +103,46 @@ def test_trust_data_attribution_cannot_cover_code_or_changed_roots(tmp_path):
     inventory["files"].pop()
     (tmp_path / "resources/tls/usertrust-ecc.pem").write_bytes(b"changed")
     assert not check_trust_data(tmp_path, inventory)
+
+
+def test_empty_system_store_still_holds_every_pinned_root(monkeypatch):
+    """macOS OpenSSL may start with no roots; the pinned bundle alone remains."""
+    monkeypatch.setattr(
+        ssl, "create_default_context", lambda: ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    )
+    context = create_context()
+    assert context.check_hostname and context.verify_mode == ssl.CERT_REQUIRED
+    assert context.minimum_version == ssl.TLSVersion.TLSv1_2
+    held = {hashlib.sha256(der).hexdigest() for der in context.get_ca_certs(binary_form=True)}
+    assert held == {der for _, der in ROOTS.values()}
+
+
+def test_frozen_root_folders_follow_each_platform_layout(tmp_path):
+    bundle = tmp_path / "Apps/Dusty Copy.app"
+    helper = bundle / "Contents/Helpers/dusty-fetch/dusty-fetch"
+    assert resource_dir(frozen=True, executable=helper, platform="darwin") == (
+        bundle / "Contents/Resources/tls"
+    )
+    windows = tmp_path / "install/dusty-fetch/dusty-fetch.exe"
+    assert resource_dir(frozen=True, executable=windows, platform="win32") == (
+        tmp_path / "install/resources/tls"
+    )
+    source = resource_dir(frozen=False)
+    assert source == Path(__file__).resolve().parents[2] / "resources/tls"
+    assert not bundle.exists()
+
+
+@pytest.mark.parametrize(
+    "helper",
+    [
+        "Dusty.app/Contents/MacOS/dusty-fetch",
+        "Dusty.app/Contents/Helpers/other/dusty-fetch",
+        "Dusty/Contents/Helpers/dusty-fetch/dusty-fetch",
+        "Dusty.app/Wrong/Helpers/dusty-fetch/dusty-fetch",
+    ],
+)
+def test_frozen_mac_root_folder_rejects_other_shapes(tmp_path, helper):
+    with pytest.raises(ssl.SSLError):
+        resource_dir(frozen=True, executable=tmp_path / helper, platform="darwin")
+    with pytest.raises(ssl.SSLError):
+        resource_dir(frozen=True, executable=Path(helper), platform="darwin")

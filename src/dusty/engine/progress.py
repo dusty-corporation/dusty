@@ -3,7 +3,8 @@
 import re
 import time
 from dataclasses import dataclass, field
-from typing import Literal
+
+from dusty.core.types import EngineBackend
 
 _PROGRESS = re.compile(r"whisper_print_progress_callback: progress =\s*(\d+)%")
 _TIMING = re.compile(
@@ -11,6 +12,17 @@ _TIMING = re.compile(
     r"time =\s*([0-9.]+) ms"
 )
 _TEXT_CTX = re.compile(r"whisper_model_load: n_text_ctx\s*=\s*(\d+)")
+_METAL_SELECTION = re.compile(r"whisper_backend_init_gpu: using MTL[0-9]+ backend")
+# Store only recognized Apple Silicon hardware descriptions, never arbitrary stderr.
+_METAL_DEVICE = re.compile(
+    r"ggml_metal_device_init: GPU name:\s+MTL[0-9]+ "
+    r"\((Apple M[1-9][0-9]*(?: (?:Pro|Max|Ultra))?)\)"
+)
+_METAL_FAILURE = re.compile(
+    r"(?:ggml_metal_init: error: failed to (?:create command queue|initialize the Metal library)"
+    r"|ggml_metal_synchronize: error: command buffer [0-9]+ failed with status [0-9]+"
+    r"|ggml_metal_graph_compute: command buffer [0-9]+ failed with status [0-9]+)"
+)
 
 
 @dataclass
@@ -18,7 +30,7 @@ class ProgressState:
     started_at: float
     progress: float = 0.0
     first_progress_sec: float | None = None
-    backend: Literal["cpu", "vulkan"] | None = None
+    backend: EngineBackend | None = None
     device_name: str | None = None
     gpu_error: bool = False
     text_context: int | None = None
@@ -26,6 +38,14 @@ class ProgressState:
 
     def feed(self, line: str) -> None:
         """Discard all unrecognized stderr, including paths and transcript text."""
+        line = line.rstrip("\r\n")
+        if _METAL_SELECTION.fullmatch(line):
+            self.backend = "metal"
+        device = _METAL_DEVICE.fullmatch(line)
+        if device:
+            self.device_name = device.group(1)
+        if _METAL_FAILURE.fullmatch(line):
+            self.gpu_error = True
         match = _PROGRESS.search(line)
         if match:
             self.progress = min(1.0, max(0.0, int(match.group(1)) / 100))

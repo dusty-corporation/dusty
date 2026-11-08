@@ -1,50 +1,28 @@
-"""Per-user, session-local GUI ownership and a content-free activation signal."""
+"""Lazy platform selection for GUI ownership and content-free activation."""
 
-import ctypes
-import hashlib
-from ctypes import wintypes
-from pathlib import Path
+import sys
+from typing import TYPE_CHECKING, Any
 
-_kernel = ctypes.WinDLL("kernel32", use_last_error=True)
-_kernel.CreateMutexW.argtypes = [ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR]
-_kernel.CreateMutexW.restype = wintypes.HANDLE
-_kernel.CreateEventW.argtypes = [ctypes.c_void_p, wintypes.BOOL, wintypes.BOOL, wintypes.LPCWSTR]
-_kernel.CreateEventW.restype = wintypes.HANDLE
-_kernel.SetEvent.argtypes = [wintypes.HANDLE]
-_kernel.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
-_kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+if TYPE_CHECKING:
+    from .windows_instance import GuiInstance as GuiInstance
+
+__all__ = ["GuiInstance", "activate_window"]
 
 
-class GuiInstance:
-    """Kernel handles disappear after a crash; no lock file or personal data is stored."""
+def __getattr__(name: str) -> Any:
+    if name != "GuiInstance":
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    if sys.platform == "darwin":
+        from .mac_instance import GuiInstance
+    elif sys.platform == "win32":
+        from .windows_instance import GuiInstance
+    else:
+        raise OSError("GUI instance ownership is unavailable on this platform")
+    return GuiInstance
 
-    def __init__(self, user_dir: Path):
-        key = hashlib.sha256(str(user_dir.resolve()).casefold().encode()).hexdigest()
-        self.event = _kernel.CreateEventW(None, False, False, f"Local\\Dusty-activate-{key}")
-        if not self.event:
-            raise ctypes.WinError(ctypes.get_last_error())
-        self.mutex = _kernel.CreateMutexW(None, False, f"Local\\Dusty-gui-{key}")
-        error = ctypes.get_last_error()
-        if not self.mutex:
-            self.close()
-            raise ctypes.WinError(error)
-        self.owner = error != 183  # ERROR_ALREADY_EXISTS, captured before another API call.
-        if not self.owner:
-            # Transfer foreground permission from the user's second launch.
-            user = ctypes.WinDLL("user32", use_last_error=True)
-            user.AllowSetForegroundWindow.argtypes = [wintypes.DWORD]
-            user.AllowSetForegroundWindow(0xFFFFFFFF)
-            _kernel.SetEvent(self.event)
 
-    def activation_requested(self) -> bool:
-        return _kernel.WaitForSingleObject(self.event, 0) == 0
-
-    def close(self) -> None:
-        for name in ("mutex", "event"):
-            handle = getattr(self, name, None)
-            if handle:
-                _kernel.CloseHandle(handle)
-                setattr(self, name, None)
+def __dir__() -> list[str]:
+    return sorted(set(globals()) | set(__all__))
 
 
 def activate_window(window) -> None:

@@ -8,10 +8,16 @@ from pathlib import Path
 
 import pytest
 
-from dusty.engine import probe_audio, run_whisper, transcode_audio
-from dusty.engine.backend import probe_vulkan
-from dusty.models import ModelRegistry, load_manifest
-from dusty.runtime_paths import RuntimePaths, resolve_paths
+if sys.platform != "win32":
+    # Every test here already targets the pinned Windows binaries; gate before
+    # importing the Windows Vulkan probe (winreg) so collection works elsewhere.
+    pytest.skip("Pinned development binaries target Windows", allow_module_level=True)
+
+from dusty.engine import probe_audio, run_whisper, transcode_audio  # noqa: E402
+from dusty.engine.backend import probe_vulkan  # noqa: E402
+from dusty.models import ModelRegistry, load_manifest  # noqa: E402
+from dusty.platform.cpu_topology import default_threads  # noqa: E402
+from dusty.runtime_paths import RuntimePaths, resolve_paths  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -36,7 +42,7 @@ def test_decode_transcribe_with_vad(tmp_path: Path) -> None:
         model_id="tiny",
         task="transcribe",
         language="en",
-        threads=4,
+        threads=min(4, default_threads()),
         duration_sec=probe.duration_sec,
         backend=backend,
         vad_model=registry.vad_path(),
@@ -72,7 +78,7 @@ def test_cpu_and_available_vulkan_agree(tmp_path: Path) -> None:
             model_id="tiny",
             task="transcribe",
             language="en",
-            threads=4,
+            threads=min(4, default_threads()),
             duration_sec=11,
             backend=backend,
             vad_model=registry.vad_path(),

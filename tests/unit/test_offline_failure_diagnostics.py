@@ -4,7 +4,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[2]
+# There is no macOS offline audit runner yet, so there is no Mac helper to test.
+pytestmark = pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="Windows-only: PowerShell (pwsh) helper for the Windows WFP offline audit",
+)
 HELPER = ROOT / "tools/offline_failure_diagnostics.ps1"
 
 

@@ -1,4 +1,4 @@
-# Install Dusty
+# Install Dusty on Windows
 
 You need a Windows 10 22H2 or Windows 11 computer with a 64-bit Intel or AMD
 processor. A compatible graphics card can make transcription faster; the

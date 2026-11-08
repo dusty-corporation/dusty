@@ -16,7 +16,7 @@ def test_all_live_workflows_have_visibility_guards():
 def test_ci_visibility_truth_table(private, event):
     actual = jobs((ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
     running = {name for name, body in actual.items() if enabled(condition(body), private, event)}
-    heavy = {"checks", "offline", "installer-upload-regression", "packaging-spike"}
+    heavy = {"checks", "offline", "installer-upload-regression", "macos", "packaging-spike"}
     assert running == ({"source"} if private and event != "workflow_dispatch" else heavy)
 
 

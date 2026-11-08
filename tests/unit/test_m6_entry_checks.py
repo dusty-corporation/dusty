@@ -4,6 +4,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from dusty.installer_support import cancel_partial
 from dusty.models import load_manifest
 from dusty.runtime_paths import RuntimePaths
@@ -11,6 +13,9 @@ from dusty.runtime_paths import RuntimePaths
 ROOT = Path(__file__).resolve().parents[2]
 
 
+@pytest.mark.skipif(
+    sys.platform != "win32", reason="Windows-only: exclusive CreateFileW share-mode lock"
+)
 def test_locked_cancel_partial_reports_retention_then_removes_after_release(tmp_path):
     models = tmp_path / "user/models"
     models.mkdir(parents=True)

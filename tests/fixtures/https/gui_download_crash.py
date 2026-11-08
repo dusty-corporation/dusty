@@ -19,12 +19,20 @@ def main():
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
     (output / "gui-pid").write_text(str(os.getpid()), encoding="ascii")
-    os.environ["DUSTY_TEST_FETCH_CHECKPOINT"] = str(output / "fetch-ready.json")
     atexit.register(lambda: (output / "gui-cleanup-ran").touch())
     app = QApplication([])
     paths = RuntimePaths(Path(resources) / "bin", Path(models), Path(resources), Path(user))
     window = MainWindow(paths, interactive=False)
-    command = [sys.executable, str(Path(__file__).with_name("fetch_child.py")), port, certificate]
+    # The real interpreter: the Mac runner refuses the venv symbolic link. The
+    # checkpoint is an argument, not a variable: the Mac runner passes the
+    # downloader only its exact minimal environment.
+    command = [
+        str(Path(sys.executable).resolve()),
+        str(Path(__file__).with_name("fetch_child.py")),
+        port,
+        certificate,
+        "--test-checkpoint=" + str(output / "fetch-ready.json"),
+    ]
     import dusty.app.model_manager as manager_module
 
     manager_module.resolve_fetch_command = lambda: command

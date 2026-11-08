@@ -201,6 +201,10 @@ def test_receipt_hash_waits_for_exclusive_completed_part(tls, monkeypatch):
     assert (tls.dest / tls.asset.file_name).read_bytes() == DATA
 
 
+WINERROR_ONLY = "OSError takes a winerror only on Windows; POSIX has no sharing violations"
+
+
+@pytest.mark.skipif(os.name != "nt", reason=WINERROR_ONLY)
 def test_part_close_retries_a_temporary_sharing_error(tls, monkeypatch):
     original = Path.open
     errors = []
@@ -232,24 +236,17 @@ def test_part_close_retries_a_temporary_sharing_error(tls, monkeypatch):
     assert (tls.dest / tls.asset.file_name).read_bytes() == DATA
 
 
-def test_tls_identity_is_temporary_and_regenerated(tmp_path, tls_certificate):
+def test_tls_identity_is_temporary_and_regenerated(
+    tmp_path, tls_certificate, tls_identity_generator
+):
     assert tls_certificate.cert.is_relative_to(tmp_path.parent)
     assert tls_certificate.key.is_relative_to(tmp_path.parent)
     assert not (CERTS / tls_certificate.cert.name).exists()
     assert not (CERTS / tls_certificate.key.name).exists()
-    subprocess.run(
-        [
-            "pwsh",
-            "-NoProfile",
-            "-NonInteractive",
-            "-File",
-            str(CERTS / "generate.ps1"),
-            "-Destination",
-            str(tmp_path),
-        ],
-        check=True,
-        capture_output=True,
-        timeout=30,
+    # Windows runs generate.ps1 exactly as before; other platforms use /usr/bin/openssl.
+    tls_identity_generator(tmp_path)
+    assert sorted(item.name for item in tmp_path.iterdir()) == sorted(
+        [tls_certificate.cert.name, tls_certificate.key.name]
     )
     assert (tmp_path / tls_certificate.cert.name).read_bytes() != tls_certificate.cert.read_bytes()
     assert (tmp_path / tls_certificate.key.name).read_bytes() != tls_certificate.key.read_bytes()
@@ -550,6 +547,7 @@ def test_failed_download_writes_one_redacted_local_log_line(tls, capsys):
     assert "step" in capsys.readouterr().out
 
 
+@pytest.mark.skipif(os.name != "nt", reason=WINERROR_ONLY)
 def test_local_sharing_failure_log_names_rename_and_winerror(tls, monkeypatch):
     tls.dest.mkdir()
     (tls.dest / (tls.asset.file_name + ".part")).write_bytes(DATA)
@@ -563,6 +561,25 @@ def test_local_sharing_failure_log_names_rename_and_winerror(tls, monkeypatch):
     assert main(args(tls) + ["--failure-log", str(log)], client=tls.client) == Exit.IO
     assert log.read_text(encoding="utf-8").splitlines() == [
         "download_failure step=rename class=PermissionError winerror=32 code=IO exit_code=7"
+    ]
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX counterpart of the winerror test above")
+def test_posix_access_failure_is_not_retried_and_logs_no_winerror(tls, monkeypatch):
+    tls.dest.mkdir()
+    (tls.dest / (tls.asset.file_name + ".part")).write_bytes(DATA)
+    log = tls.dest.parent / "Library" / "Dusty" / "logs" / "dusty.log"
+    attempts = []
+
+    def fail_rename(source, target):
+        attempts.append(1)
+        raise PermissionError(13, "Synthetic access failure", str(source))
+
+    monkeypatch.setattr("dusty_fetch.downloader.os.replace", fail_rename)
+    assert main(args(tls) + ["--failure-log", str(log)], client=tls.client) == Exit.IO
+    assert attempts == [1]
+    assert log.read_text(encoding="utf-8").splitlines() == [
+        "download_failure step=rename class=PermissionError winerror=0 code=IO exit_code=7"
     ]
 
 

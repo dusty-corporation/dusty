@@ -23,6 +23,16 @@ ABOUT_LICENSE = "License: Apache-2.0"
 REPOSITORY_ADDRESS = "https://github.com/dusty-corporation/dusty"
 THIRD_PARTY_NOTICES = "Third-party notices"
 NOTICES_UNAVAILABLE = "The bundled notices could not be opened. Reinstall Dusty to restore them."
+NOTICES_UNAVAILABLE_MAC = (
+    "The bundled notices could not be opened. Drag a fresh copy of Dusty to "
+    "Applications to restore them."
+)
+
+
+def notices_unavailable(platform: str) -> str:
+    return NOTICES_UNAVAILABLE_MAC if platform == "darwin" else NOTICES_UNAVAILABLE
+
+
 TAGLINE = "Private transcription that never leaves your computer."
 PRIVACY = (
     "Dusty processes your recordings entirely on this computer. After installation, it "
@@ -92,6 +102,21 @@ MODEL_DETAILS = {
     "tiny": "Lower accuracy",
     "medium": "Slower",
 }
+# macOS: Metal is the Mac graphics processor; Tiny's silence hint comes from
+# measured Metal runs with Skip long silences off (DECISIONS D-MAC-021).
+MODEL_DETAILS_MAC = {
+    **MODEL_DETAILS,
+    "large-v3-turbo-q8_0": "Recommended when Metal graphics work on this Mac",
+    "tiny": (
+        "Lower accuracy. With Skip long silences off, Tiny can invent text "
+        "during long silent parts."
+    ),
+}
+
+
+def model_details(platform: str) -> dict[str, str]:
+    return MODEL_DETAILS_MAC if platform == "darwin" else MODEL_DETAILS
+
 
 RECOMMENDED = "{name}, recommended"
 MISSING_RECOMMENDATION = "The recommended model, {name}, is not installed yet."
@@ -123,6 +148,27 @@ DEVICES = {"auto": "Automatic", "vulkan": "Graphics card", "cpu": "Processor onl
 DEVICE_HELP = (
     "Automatic uses a compatible graphics card, with the processor available as a fallback."
 )
+# macOS wording for the same choices; the Metal key is the shared backend name.
+DEVICES_METAL = {
+    "auto": "Automatic",
+    "metal": "Graphics processor (Metal)",
+    "cpu": "Processor only",
+}
+DEVICE_HELP_METAL = (
+    "Automatic uses the Mac graphics processor through Metal, with the processor available "
+    "as a fallback."
+)
+
+
+def devices(gpu: str) -> dict[str, str]:
+    """Processing device labels for the platform GPU backend ("vulkan" or "metal")."""
+    return DEVICES_METAL if gpu == "metal" else DEVICES
+
+
+def device_help(gpu: str) -> str:
+    return DEVICE_HELP_METAL if gpu == "metal" else DEVICE_HELP
+
+
 THREADS = "Processor threads"
 THREADS_HELP = "More threads use more processor capacity. The default suits most computers."
 VAD = "Skip long silences"
@@ -186,6 +232,38 @@ CLOSE_CONFIRM = "Stop and save"
 KEEP_WORKING = "Keep working"
 CLOSING = "Stopping safely..."
 ERROR_TITLE = "Dusty needs your attention"
+# macOS start refusals: shown in a dialog (and on the terminal), never with a path.
+DATA_FOLDER_UNSAFE = (
+    "Dusty cannot start because its data folder is not safe to use. It must be a "
+    "folder that belongs to you, not a link and not shared with other users. In "
+    "Finder, choose Go > Go to Folder, enter ~/Library/Application Support, rename "
+    "the Dusty folder, then open Dusty again."
+)
+INSTANCE_UNAVAILABLE = (
+    "Dusty could not safely use its data folder to check whether it is already "
+    "open. Quit any other copy of Dusty, then open it again. If this keeps "
+    "happening, restart your Mac."
+)
+# macOS: Tools > Remove Dusty data. Windows removes this data in its uninstaller.
+REMOVE_DATA = "Remove Dusty data"
+REMOVE_DATA_TITLE = "Remove Dusty's data from this Mac?"
+REMOVE_DATA_HELP = (
+    "Dusty will quit and permanently delete its settings, queue history, logs and "
+    "unfinished work. Your recordings and transcripts are never removed."
+)
+REMOVE_DATA_MODELS = "Also remove downloaded models ({size})"
+REMOVE_DATA_MODELS_HELP = "Uncheck this to keep downloaded models in case you use Dusty again."
+REMOVE_DATA_CONFIRM = "Remove and quit"
+REMOVE_DATA_DONE_TITLE = "Dusty's data was removed"
+REMOVE_DATA_DONE = "To finish removing Dusty, drag it from your Applications folder to the Trash."
+REMOVE_DATA_MODELS_KEPT = "Downloaded models were kept."
+REMOVE_DATA_KEPT_TITLE = "Some of Dusty's data was kept"
+REMOVE_DATA_KEPT = (
+    "Dusty kept files in its data folder that it could not confirm are safe to "
+    "remove, for example a folder of transcripts saved there. To see them, in "
+    "Finder choose Go > Go to Folder and enter ~/Library/Application Support/Dusty. "
+    "Your recordings and transcripts were not removed."
+)
 PREPARATION_ERROR = "Dusty could not prepare transcription."
 SAVE_ERROR = "Dusty could not save your settings."
 STATE_SAVE_ERROR = "Dusty could not save its progress. Close other Dusty windows and try again."
@@ -197,10 +275,29 @@ INCLUDE_SUBFOLDERS = "Include subfolders"
 FOLDER_TITLE = "Add a folder of recordings"
 THEME = "Appearance"
 THEMES = {"system": "Follow Windows", "light": "Light", "dark": "Dark"}
+THEMES_MAC = {"system": "Follow macOS", "light": "Light", "dark": "Dark"}
+
+
+def themes(platform: str) -> dict[str, str]:
+    return THEMES_MAC if platform == "darwin" else THEMES
+
+
 FILE_MENU = "File"
 TOOLS_MENU = "Tools"
 HELP_MENU = "Help"
 EXIT = "Exit"
+QUIT = "Quit Dusty"
+HELP_TITLE = "Dusty Help"
+HELP_TOPICS = (
+    "Add recordings with Add files or Add folder, or drop them on the window.",
+    "Choose where to save transcripts, pick the formats you want, then press Start.",
+    "Options lets you choose the model, spoken language, translation and vocabulary hints.",
+    "Manage models in the Tools menu downloads a model only after you confirm, "
+    "then checks the file before Dusty uses it.",
+    "Click Open folder next to a finished recording to show its transcripts in Finder.",
+    "To remove Dusty, choose Remove Dusty data in the Tools menu, then drag Dusty "
+    "from Applications to the Trash.",
+)
 CLEAR_HISTORY = "Clear history"
 SELF_TEST = "Run self-test"
 SELF_TEST_OK = "Dusty's self-test passed."
@@ -222,6 +319,9 @@ def ready_again(count: int) -> str:
 
 
 HEADERS = ("Recording", "Duration", "Status", "Progress", "Elapsed", "Result")
+# macOS VoiceOver names for controls whose visible text does not name them.
+QUEUE_NAME = "Recordings"
+OVERALL_PROGRESS = "Overall progress"
 STATUSES = {
     "queued": "Waiting",
     "preflight": "Preparing",
@@ -237,6 +337,21 @@ GPU_FALLBACK = "Completed on processor (graphics card failed)"
 GPU_NOTICE = (
     "The graphics card could not finish a file. Dusty completed it with the processor instead."
 )
+GPU_FALLBACK_MAC = "Completed on processor (Metal graphics failed)"
+GPU_NOTICE_MAC = (
+    "The Mac graphics processor could not finish a file. "
+    "Dusty completed it with the processor instead."
+)
+
+
+def gpu_fallback(platform: str) -> str:
+    return GPU_FALLBACK_MAC if platform == "darwin" else GPU_FALLBACK
+
+
+def gpu_notice(platform: str) -> str:
+    return GPU_NOTICE_MAC if platform == "darwin" else GPU_NOTICE
+
+
 UNFINISHED_NOTICE = "Your unfinished recordings are saved."
 
 
@@ -304,6 +419,23 @@ FAILURE_MESSAGES: dict[FailureCode, FailureMessage] = {
         "Dusty could not complete this file.", "Click Retry. If it happens again, restart Dusty."
     ),
 }
+# macOS names the Metal graphics processor and the Processor only choice in Options.
+FAILURE_MESSAGES_MAC: dict[FailureCode, FailureMessage] = {
+    **FAILURE_MESSAGES,
+    FailureCode.ENGINE_CRASH: FailureMessage(
+        "Transcription stopped unexpectedly.",
+        "Click Retry. If it keeps happening, set Processing device to Processor only "
+        "in Options, under Advanced.",
+    ),
+    FailureCode.GPU_ERROR: FailureMessage(
+        "The Mac graphics processor (Metal) could not process this file.",
+        "Retry with Processing device set to Processor only.",
+    ),
+}
+
+
+def failure_messages(platform: str) -> dict[FailureCode, FailureMessage]:
+    return FAILURE_MESSAGES_MAC if platform == "darwin" else FAILURE_MESSAGES
 
 
 LANGUAGES = (
@@ -522,6 +654,17 @@ MODEL_NOTE = {
     "tiny": "Lowest accuracy. Good for quick drafts.",
     "silero-vad": "Small download",
 }
+MODEL_NOTE_MAC = {
+    **MODEL_NOTE,
+    "large-v3-turbo-q8_0": "Fast with Metal graphics. Slower on the processor only.",
+    "tiny": "Lowest accuracy. May invent text in long silences.",
+}
+
+
+def model_note(platform: str) -> dict[str, str]:
+    return MODEL_NOTE_MAC if platform == "darwin" else MODEL_NOTE
+
+
 MODEL_BEST_FOR = dict(
     zip(
         ("large-v3-turbo-q8_0", "small", "small.en", "medium", "tiny", "silero-vad"),

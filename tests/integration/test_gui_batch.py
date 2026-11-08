@@ -4,8 +4,9 @@ import shutil
 import time
 from pathlib import Path
 
+import pytest
 from PySide6.QtCore import Qt, QThread, QTimer
-from PySide6.QtWidgets import QDialog
+from PySide6.QtWidgets import QApplication, QDialog
 
 from dusty.app.dialogs import CloseDialog, CollisionDialog, ResumeDialog, SyncDialog
 from dusty.app.window import MainWindow
@@ -17,11 +18,59 @@ from dusty.runtime_paths import RuntimePaths, resolve_paths
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def ready_window(qtbot, tmp_path):
+MODAL_LIMIT_SECONDS = 20.0
+
+
+@pytest.fixture
+def windows(qtbot):
+    """Windows whose teardown stops any batch before closing, with a modal watchdog.
+
+    pytest-qt closes registered widgets before fixture teardown. Closing a window
+    whose batch still runs opens CloseDialog through exec(), which nobody answers,
+    so teardown hangs. These windows are not registered with qtbot: teardown here
+    cancels, waits a bounded time for the workers, then closes. A modal dialog
+    left open longer than MODAL_LIMIT_SECONDS, during the test or teardown, is
+    rejected (which cancels a batch) and fails the test instead of hanging it.
+    """
+    created: list[MainWindow] = []
+    opened: dict[int, float] = {}
+    stuck: list[str] = []
+
+    def check() -> None:
+        modal = QApplication.activeModalWidget()
+        if not isinstance(modal, QDialog):
+            return
+        first = opened.setdefault(id(modal), time.monotonic())
+        if time.monotonic() - first >= MODAL_LIMIT_SECONDS:
+            stuck.append(type(modal).__name__)
+            opened.pop(id(modal))
+            modal.done(QDialog.DialogCode.Rejected)
+
+    watchdog = QTimer()
+    watchdog.timeout.connect(check)
+    watchdog.start(50)
+    yield created
+    try:
+        for window in created:
+            window.cancel_all()
+            qtbot.waitUntil(
+                lambda window=window: not window.running
+                and not any(task.isRunning() for task in window._tasks),
+                timeout=60000,
+            )
+            window.close()
+            window.deleteLater()
+        QApplication.processEvents()
+    finally:
+        watchdog.stop()
+    assert not stuck, f"Modal dialogs were left open and closed by the watchdog: {stuck}"
+
+
+def ready_window(windows, tmp_path):
     dev = resolve_paths(repo_root=ROOT, frozen=False)
     paths = RuntimePaths(dev.bin_dir, dev.models_dir, dev.resources_dir, tmp_path / "user")
     window = MainWindow(paths, interactive=False)
-    qtbot.addWidget(window)
+    windows.append(window)
     window.apply_prepared(
         Prepared(("tiny",), False, {"schema_version": 1, "welcome_seen": True}, vad_installed=True)
     )
@@ -30,8 +79,10 @@ def ready_window(qtbot, tmp_path):
     return window
 
 
-def test_real_batch_event_loop_gap_never_exceeds_200ms(qtbot, tmp_path, monkeypatch) -> None:
-    window = ready_window(qtbot, tmp_path)
+def test_real_batch_event_loop_gap_never_exceeds_200ms(
+    qtbot, windows, tmp_path, monkeypatch
+) -> None:
+    window = ready_window(windows, tmp_path)
     window.model.set_jobs([Job(ROOT / "tests/fixtures/audio/formats/jfk.wav", duration_sec=11)])
     window._set_combo(window.device_choice, "cpu")
     window.threads_choice.setValue(2)
@@ -65,8 +116,10 @@ def test_real_batch_event_loop_gap_never_exceeds_200ms(qtbot, tmp_path, monkeypa
     assert maximum_gap <= 0.200, f"Qt event-loop maximum gap: {maximum_gap:.3f} seconds"
 
 
-def test_ui_cancel_current_and_collision_apply_to_all(qtbot, tmp_path, monkeypatch) -> None:
-    window = ready_window(qtbot, tmp_path)
+def test_ui_cancel_current_and_collision_apply_to_all(
+    qtbot, windows, tmp_path, monkeypatch
+) -> None:
+    window = ready_window(windows, tmp_path)
     window.vad.setChecked(False)
     other = tmp_path / "other.wav"
     shutil.copyfile(ROOT / "tests/fixtures/audio/formats/jfk.wav", other)
@@ -103,8 +156,10 @@ def test_ui_cancel_current_and_collision_apply_to_all(qtbot, tmp_path, monkeypat
     assert window.model.jobs[2].status == JobStatus.DONE
 
 
-def test_close_mid_batch_saves_resume_and_sync_warning(qtbot, tmp_path, monkeypatch) -> None:
-    window = ready_window(qtbot, tmp_path)
+def test_close_mid_batch_saves_resume_and_sync_warning(
+    qtbot, windows, tmp_path, monkeypatch
+) -> None:
+    window = ready_window(windows, tmp_path)
     source = tmp_path / "long.m4a"
     shutil.copyfile(ROOT / "tests/fixtures/audio/vad/mostly-silence-10min.m4a", source)
     window.model.set_jobs([Job(source)])
@@ -125,7 +180,7 @@ def test_close_mid_batch_saves_resume_and_sync_warning(qtbot, tmp_path, monkeypa
     assert recovered is not None
     assert recovered[1][0].status == JobStatus.QUEUED
     assert list((window.paths.user_dir / "work").iterdir()) == []
-    second = ready_window(qtbot, tmp_path)
+    second = ready_window(windows, tmp_path)
     monkeypatch.setattr(ResumeDialog, "exec", lambda self: QDialog.DialogCode.Accepted)
     second._startup_dialogs(
         Prepared(("tiny",), False, second.settings, recovered, vad_installed=True)
@@ -139,8 +194,8 @@ def test_close_mid_batch_saves_resume_and_sync_warning(qtbot, tmp_path, monkeypa
     assert second.model.jobs[0].status == JobStatus.DONE
 
 
-def test_amr_add_and_start_through_real_window(qtbot, tmp_path) -> None:
-    window = ready_window(qtbot, tmp_path)
+def test_amr_add_and_start_through_real_window(qtbot, windows, tmp_path) -> None:
+    window = ready_window(windows, tmp_path)
     window.add_paths([ROOT / "tests/fixtures/audio/formats/jfk.amr"])
     qtbot.waitUntil(lambda: window.model.rowCount() == 1 and not window.scanner.isRunning())
     assert window.model.data(window.model.index(0, 1)) == "--"

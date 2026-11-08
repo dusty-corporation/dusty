@@ -22,12 +22,24 @@ and proves true upgrade with models preserved and the downloader blocked.
 A missing prior release or receipt fails staging. Drafts never satisfy the
 previous-public-release rule. Do not replace old release assets.
 
+Starting with v1.1.0, a public release ships Windows and Mac together from the
+same snapshot (ADR 0029). The macos CI job builds Dusty.app from the pinned
+engine-macos-v1 engine, audits it, builds and verifies the disk image, runs the
+headless self-test, upgrade, removal and moved app scenarios and writes the Mac
+SBOM. Staging checks those receipts and fails the whole draft when any Mac input
+is missing or did not pass. A v1.0.x servicing release stays Windows only.
+The draft's text is docs/release-notes/<tag>.md, which must exist.
+
 The gated release contains:
 
 - Dusty-<version>-Setup.exe (unsigned).
-- THIRD_PARTY_NOTICES.md and a CycloneDX SBOM.
+- THIRD_PARTY_NOTICES.md and a CycloneDX SBOM, dusty-<version>-sbom.json.
 - installer-jedi-source.zip with retained reviewed source and notices.
 - ffmpeg-n9.0.2-946fcce.tar.gz and the exact build_ffmpeg.sh.
+- From v1.1.0: Dusty-<version>-macos-arm64.dmg (signed ad hoc, not notarized),
+  THIRD_PARTY_NOTICES-macos.md, dusty-<version>-macos-arm64-sbom.json and the
+  exact Mac FFmpeg build script, build_ffmpeg-macos.sh. The Mac FFmpeg is built
+  from the same ffmpeg-n9.0.2-946fcce.tar.gz.
 - SHA256SUMS.txt covering every asset above.
 
 FFmpeg corresponding-source and build-script bytes are checked against pins.

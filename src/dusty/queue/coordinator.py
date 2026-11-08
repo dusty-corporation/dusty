@@ -2,17 +2,18 @@
 
 import errno
 import logging
+import os
 import shutil
 import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Literal
 
 from dusty.core import BatchOptions, FailureCode, Job, JobStatus
-from dusty.core.types import Cancellation, CollisionPolicy
-from dusty.models import ModelCorrupt, ModelMissing, ModelRegistry, can_translate
+from dusty.core.types import Cancellation, CollisionPolicy, EngineBackend
+from dusty.engine.binaries import ffmpeg_path, ffprobe_path, gpu_backend, whisper_path
+from dusty.models import Model, ModelCorrupt, ModelMissing, ModelRegistry, can_translate
 from dusty.platform.power import prevent_sleep
 from dusty.runtime_paths import RuntimePaths
 from dusty.work_area import OwnedWork, cleanup_owned, linked, managed_destination, protected_paths
@@ -29,6 +30,41 @@ class _CancellationGroup:
 
     def is_set(self) -> bool:
         return any(event.is_set() for event in self.events)
+
+
+class UnsupportedOptions(ValueError):
+    """The selected model cannot honor these batch options; nothing was started."""
+
+    def __init__(self, message: str, code: str):
+        super().__init__(message)
+        self.code = code
+
+
+ENGLISH_ONLY_LANGUAGES = frozenset({"auto", "en"})
+
+
+def check_model_options(model: Model, options: BatchOptions) -> None:
+    """Refuse task and language choices the selected model cannot honor."""
+    if options.task == "translate" and not can_translate(model):
+        raise UnsupportedOptions("Selected model cannot translate", "TRANSLATE_UNSUPPORTED")
+    if options.language not in ENGLISH_ONLY_LANGUAGES and model.english_only:
+        raise UnsupportedOptions("Selected model is English-only", "LANGUAGE_UNSUPPORTED")
+
+
+def _identity(info: os.stat_result) -> tuple[int, int, int, int]:
+    """Device, file ID (inode on macOS, file index on Windows), size and mtime."""
+    return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns)
+
+
+def _source_lost(source: Path, identity: tuple[int, int, int, int]) -> FailureCode | None:
+    """After decoding, refuse a recording that vanished or changed (D-MAC-023)."""
+    try:
+        current = source.stat()
+    except FileNotFoundError:
+        return FailureCode.NOT_FOUND
+    except OSError:
+        return FailureCode.UNREADABLE
+    return None if _identity(current) == identity else FailureCode.UNREADABLE
 
 
 def cleanup_orphaned_work(work_root: Path) -> None:
@@ -63,10 +99,7 @@ class Coordinator:
         on_collision: Callable[[Job], CollisionPolicy] | None = None,
     ) -> list[Job]:
         """Save every transition; preserve finished jobs on restart."""
-        if options.task == "translate" and not can_translate(
-            self.registry.manifest.models[options.model_id]
-        ):
-            raise ValueError("Selected model cannot translate")
+        check_model_options(self.registry.manifest.models[options.model_id], options)
         if options.threads < 1:
             raise ValueError("Threads must be positive")
         for job in jobs:
@@ -113,11 +146,18 @@ class Coordinator:
             ]
             repeated_name = any(target.resolve() in claimed for target in nominal)
             claimed.update(target.resolve() for target in nominal)
+            skip_existing = False
             if repeated_name or (existing and not prior):
                 current_options = replace(options, collision="keep_both")
             elif prior and options.collision == "ask" and on_collision:
                 decision = on_collision(replace(job, outputs=prior))
                 current_options = replace(options, collision=decision)
+                skip_existing = decision == "skip"
+            elif prior and options.collision in {"skip", "ask"}:
+                skip_existing = True
+            # Skip, an Ask answered with Skip, or an Ask with nobody to answer is
+            # decided before any probing, decoding or inference, so no native
+            # process starts for a file that is skipped.
             if cancel and cancel.is_set():
                 job.status = JobStatus.CANCELLED
                 self._changed(job, options, jobs, on_change)
@@ -132,6 +172,11 @@ class Coordinator:
                 job.failure = None
                 job.progress = 0.0
                 job.gpu_fallback = False
+                if skip_existing:
+                    job.failure = FailureCode.OUTPUT_EXISTS_SKIPPED
+                    job.status = JobStatus.SKIPPED
+                    changed()
+                    continue
                 self._run_one(job, current_options, signals, vulkan_ok, changed)
                 if job.status == JobStatus.DONE:
                     produced.update(path.resolve() for path in job.outputs)
@@ -176,6 +221,7 @@ class Coordinator:
 
         owned = OwnedWork(self.work_root, "job")
         work = owned.path
+        identity: tuple[int, int, int, int] | None = None
         try:
             job.status = JobStatus.PREFLIGHT
             changed()
@@ -183,20 +229,20 @@ class Coordinator:
                 job.failure = FailureCode.NOT_FOUND
                 return
             try:
-                size = job.source.stat().st_size
+                info = job.source.stat()
+                size = info.st_size
                 with job.source.open("rb"):
                     pass
             except OSError:
                 job.failure = FailureCode.UNREADABLE
                 return
+            identity = _identity(info)
             if size == 0:
                 job.failure = FailureCode.EMPTY_FILE
                 return
             model = self.registry.model_path(options.model_id)
             vad = self.registry.vad_path() if options.vad else None
-            probe = probe_audio(
-                self.paths.bin_dir / "ffmpeg/ffprobe.exe", job.source, cancel=cancel
-            )
+            probe = probe_audio(ffprobe_path(self.paths.bin_dir), job.source, cancel=cancel)
             if not probe.has_audio:
                 job.failure = FailureCode.NO_AUDIO
                 return
@@ -209,20 +255,26 @@ class Coordinator:
             changed()
             wav = work / "audio.wav"
             decode_sec = transcode_audio(
-                self.paths.bin_dir / "ffmpeg/ffmpeg.exe", job.source, wav, cancel=cancel
+                ffmpeg_path(self.paths.bin_dir), job.source, wav, cancel=cancel
             )
             owned.record("audio.wav")
+            lost = _source_lost(job.source, identity)
+            if lost:
+                job.failure = lost
+                return
             if probe.duration_sec == 0:
-                probe = probe_audio(self.paths.bin_dir / "ffmpeg/ffprobe.exe", wav, cancel=cancel)
+                probe = probe_audio(ffprobe_path(self.paths.bin_dir), wav, cancel=cancel)
                 job.duration_sec = probe.duration_sec
             job.status = JobStatus.TRANSCRIBING
             changed()
-            backend: Literal["cpu", "vulkan"] = (
+            # vulkan_ok means the platform GPU probe passed. Any explicit GPU request
+            # runs this platform's single GPU backend; backend_used records which.
+            backend: EngineBackend = (
                 "cpu"
                 if options.backend == "cpu" or (options.backend == "auto" and not vulkan_ok)
-                else "vulkan"
+                else gpu_backend()
             )
-            executable = self.paths.bin_dir / backend / "whisper-cli.exe"
+            executable = whisper_path(self.paths.bin_dir, backend)
 
             def progress(value: float) -> None:
                 job.progress = value
@@ -246,13 +298,13 @@ class Coordinator:
                     on_progress=progress,
                 )
             except EngineError as exc:
-                if backend != "vulkan" or not exc.gpu_error or (cancel and cancel.is_set()):
+                if backend == "cpu" or not exc.gpu_error or (cancel and cancel.is_set()):
                     raise
                 job.gpu_fallback = True
                 job.progress = 0.0
                 backend = "cpu"
                 result = run_whisper(
-                    self.paths.bin_dir / "cpu/whisper-cli.exe",
+                    whisper_path(self.paths.bin_dir, "cpu"),
                     model,
                     wav,
                     work / "raw",
@@ -297,8 +349,13 @@ class Coordinator:
         except DecoderError as exc:
             if cancel and cancel.is_set():
                 job.status = JobStatus.CANCELLED
+            elif exc.disk_full:
+                job.failure = FailureCode.DISK_FULL
+            elif exc.unreadable:
+                lost = _source_lost(job.source, identity) if identity else None
+                job.failure = lost or FailureCode.UNREADABLE
             else:
-                job.failure = FailureCode.DISK_FULL if exc.disk_full else FailureCode.DECODE_ERROR
+                job.failure = FailureCode.DECODE_ERROR
         except EngineError as exc:
             job.failure = FailureCode.GPU_ERROR if exc.gpu_error else FailureCode.ENGINE_ERROR
             if exc.cancelled:

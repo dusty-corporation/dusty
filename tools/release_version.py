@@ -4,15 +4,24 @@ import argparse
 import re
 from pathlib import Path
 
+PUBLIC_TAG = r"v1\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
+
+
+def public_version(tag: str) -> tuple[int, int, int] | None:
+    """(1, minor, patch) for a public v1.minor.patch tag, else None."""
+    match = re.fullmatch(PUBLIC_TAG, tag)
+    if not match or int(match[1]) > 65535 or int(match[2]) > 65535:
+        return None
+    return 1, int(match[1]), int(match[2])
+
 
 def versions(tag: str) -> tuple[str, str, str]:
-    public = re.fullmatch(r"v1\.0\.(0|[1-9][0-9]*)", tag)
-    if public and int(public[1]) <= 65535:
+    if public_version(tag):
         version = tag[1:]
         return version, version, version + ".0"
     match = re.fullmatch(r"v0\.5\.0-m5\.([1-9][0-9]*)", tag)
     if not match or int(match[1]) > 65535:
-        raise ValueError("Only v1.0.x and approved v0.5.0-m5.N test versions are supported")
+        raise ValueError("Only v1.x.y and approved v0.5.0-m5.N test versions are supported")
     number = match[1]
     return f"0.5.0.dev{number}", tag[1:], f"0.5.0.{number}"
 

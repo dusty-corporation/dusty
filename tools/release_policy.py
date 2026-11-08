@@ -4,7 +4,7 @@ import argparse
 import json
 from typing import Any
 
-from tools.release_version import versions
+from tools.release_version import public_version, versions
 
 
 def needs_receipts(tag: str) -> bool:
@@ -13,22 +13,25 @@ def needs_receipts(tag: str) -> bool:
 
 
 def validate(tag: str, releases: list[dict[str, Any]]) -> tuple[str, str]:
+    """The previous release is the newest published public release; versions only go up."""
     versions(tag)
-    if not tag.startswith("v1.0."):
-        raise ValueError("Public release workflow accepts only v1.0.x")
+    current = public_version(tag)
+    if current is None:
+        raise ValueError("Public release workflow accepts only v1.x.y")
     if tag == "v1.0.0":
         return "", ""
-    previous = f"v1.0.{int(tag.rsplit('.', 1)[1]) - 1}"
-    eligible = [
-        r
+    published = [
+        (version, str(r["tagName"]))
         for r in releases
-        if r.get("tagName") == previous
-        and r.get("isDraft") is False
+        if r.get("isDraft") is False
         and r.get("isPrerelease") is False
+        and (version := public_version(str(r.get("tagName", "")))) is not None
     ]
-    if len(eligible) != 1:
-        raise ValueError("Expected the immediately previous public release, not a draft")
-    return previous, ""
+    if any(version >= current for version, _ in published):
+        raise ValueError("A published public release already has this or a higher version")
+    if not published:
+        raise ValueError("Expected a previous public release, not a draft")
+    return max(published)[1], ""
 
 
 if __name__ == "__main__":

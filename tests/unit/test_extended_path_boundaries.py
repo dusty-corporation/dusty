@@ -1,13 +1,21 @@
-"""Windows extended namespace aliases cannot bypass managed/protected roots."""
+"""Path aliases (Windows namespaces, symlinks) cannot bypass managed/protected roots."""
 
+import sys
 from pathlib import Path
+
+import pytest
 
 from dusty.installer_cleanup import cleanup, uninstall_allowed
 from dusty.queue.storage import save_settings
 from dusty.runtime_paths import RuntimePaths
 from dusty.work_area import canonical, managed_destination
 
+WINDOWS_NAMESPACE = pytest.mark.skipif(
+    sys.platform != "win32", reason="Windows-only: \\\\?\\ extended and UNC path namespaces"
+)
 
+
+@WINDOWS_NAMESPACE
 def test_extended_alias_is_blocked_and_protected_before_uninstall(tmp_path):
     install = tmp_path / "app"
     resources = install / "resources"
@@ -26,6 +34,7 @@ def test_extended_alias_is_blocked_and_protected_before_uninstall(tmp_path):
     assert (user / "settings.json").is_file()
 
 
+@WINDOWS_NAMESPACE
 def test_drive_and_unc_namespace_normalization():
     assert canonical(Path(r"\\?\C:\Windows")) == canonical(Path(r"C:\Windows"))
     # Pure spelling check: no share is opened or created by this assertion.
@@ -34,3 +43,28 @@ def test_drive_and_unc_namespace_normalization():
     path = Path(r"\\?\UNC\fixture-server\share\folder")
     with patch.object(type(path), "resolve", return_value=path):
         assert str(canonical(path)) == r"\\fixture-server\share\folder"
+
+
+def test_symlink_alias_is_blocked_and_protected_before_uninstall(tmp_path):
+    """The same boundary through the alias every platform has: a directory symlink."""
+    install = tmp_path / "app"
+    resources = install / "resources"
+    resources.mkdir(parents=True)
+    sentinel = resources / "models.json"
+    sentinel.write_bytes(b"synthetic private transcript, never remove")
+    user = tmp_path / "user"
+    paths = RuntimePaths(install / "bin", user / "models", resources, user, install)
+    alias = tmp_path / "alias"
+    alias.symlink_to(resources, target_is_directory=True)
+    try:
+        assert canonical(alias) == canonical(resources)
+        assert managed_destination(alias, paths)
+        save_settings(
+            user / "settings.json", {"schema_version": 1, "preserved_paths": [str(alias)]}
+        )
+        assert not uninstall_allowed(paths)
+        assert not cleanup(paths, remove_models=True)
+        assert sentinel.read_bytes() == b"synthetic private transcript, never remove"
+        assert (user / "settings.json").is_file()
+    finally:
+        alias.unlink()

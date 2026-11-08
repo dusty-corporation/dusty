@@ -1,4 +1,10 @@
-"""Test-only TLS injection in a separate downloader process, never in the GUI."""
+"""Test-only TLS injection in a separate downloader process, never in the GUI.
+
+Usage: fetch_child.py PORT CA_FILE [--test-checkpoint=PATH] DUSTY_FETCH_ARGS...
+The checkpoint arrives as an argument because the macOS runner gives the
+downloader an exact minimal environment. The DUSTY_TEST_FETCH_CHECKPOINT
+variable remains a fallback, which a Windows child still inherits.
+"""
 
 import atexit
 import json
@@ -14,7 +20,11 @@ client = Downloader(
     policy=HostPolicy(frozenset({"localhost"}), int(sys.argv[1])),
     context=ssl.create_default_context(cafile=sys.argv[2]),
 )
-checkpoint = os.environ.get("DUSTY_TEST_FETCH_CHECKPOINT")
+CHECKPOINT_FLAG = "--test-checkpoint="
+if len(sys.argv) > 3 and sys.argv[3].startswith(CHECKPOINT_FLAG):
+    checkpoint = sys.argv.pop(3).removeprefix(CHECKPOINT_FLAG)
+else:
+    checkpoint = os.environ.get("DUSTY_TEST_FETCH_CHECKPOINT")
 if checkpoint:
     target = Path(checkpoint)
     original_emit = cli.emit

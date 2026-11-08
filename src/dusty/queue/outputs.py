@@ -1,5 +1,6 @@
 """Plan collision-safe names and atomically publish rendered outputs."""
 
+import errno
 import hashlib
 import os
 import tempfile
@@ -18,6 +19,45 @@ RENDERERS = {
 
 class OutputExistsError(Exception):
     """A collision requires a user decision or a skip."""
+
+
+# FAT32 and exFAT volumes have no hard links: macOS reports ENOTSUP and Linux
+# vfat reports EPERM. These volumes publish through an exclusive reservation.
+_NO_HARD_LINKS = frozenset({errno.ENOTSUP, errno.EOPNOTSUPP, errno.EPERM})
+
+
+def _publish_exclusive(temporary: Path, target: Path) -> None:
+    """Give a complete POSIX file its final name without replacing any file."""
+    try:
+        os.link(temporary, target)
+    except OSError as error:
+        if error.errno not in _NO_HARD_LINKS:
+            raise
+    else:
+        temporary.unlink()
+        return
+    # O_EXCL claims the free name, so a file that already exists is never
+    # replaced. The rename then swaps only that empty reservation for the
+    # complete file in one step, as the hard link does on other volumes.
+    descriptor = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        reserved = os.fstat(descriptor)
+    finally:
+        os.close(descriptor)
+    try:
+        os.rename(temporary, target)
+    except BaseException:
+        try:
+            current = os.lstat(target)
+            if (current.st_dev, current.st_ino, current.st_size) == (
+                reserved.st_dev,
+                reserved.st_ino,
+                0,
+            ):
+                os.unlink(target)
+        except OSError:
+            pass
+        raise
 
 
 def output_targets(job: Job, options: BatchOptions) -> list[Path]:
@@ -77,8 +117,7 @@ def write_outputs(job: Job, options: BatchOptions, transcript: Transcript) -> li
                     if os.name == "nt":
                         os.rename(temporary, target)
                     else:
-                        os.link(temporary, target)
-                        temporary.unlink()
+                        _publish_exclusive(temporary, target)
                 published.append(target)
                 identities[target] = hashlib.sha256(content).hexdigest()
             finally:

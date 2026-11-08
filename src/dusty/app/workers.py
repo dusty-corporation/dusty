@@ -9,6 +9,7 @@ from PySide6.QtCore import QThread, Signal
 
 from dusty.core import BatchOptions, Job
 from dusty.core.types import CollisionPolicy
+from dusty.engine.binaries import ffprobe_path
 from dusty.models import ModelCorrupt, ModelMissing, ModelRegistry, cleanup_stale_partials
 from dusty.queue import Coordinator, cleanup_orphaned_work, load_batch
 from dusty.queue.scanning import scan_inputs
@@ -99,7 +100,7 @@ class ScanWorker(QThread):
                         return
                     try:
                         job.duration_sec = probe_audio(
-                            self.runtime.bin_dir / "ffmpeg/ffprobe.exe", job.source
+                            ffprobe_path(self.runtime.bin_dir), job.source
                         ).duration_sec
                     except (DecoderError, OSError):
                         pass
@@ -178,3 +179,22 @@ class SelfTestWorker(QThread):
         from dusty.selftest import run_selftest
 
         self.result.emit(run_selftest(self.paths, self.model_id) == "OK")
+
+
+class GpuProbeWorker(QThread):
+    """Platform GPU probe (Metal on Mac) with an installed model, off the GUI thread."""
+
+    result = Signal(bool)
+
+    def __init__(self, paths: RuntimePaths, registry: ModelRegistry, model_id: str):
+        super().__init__()
+        self.paths, self.registry, self.model_id = paths, registry, model_id
+
+    def run(self) -> None:
+        from dusty.engine.backend import probe_vulkan
+
+        try:
+            ok = probe_vulkan(self.paths, self.registry, model_id=self.model_id)
+        except Exception:
+            ok = False
+        self.result.emit(ok)

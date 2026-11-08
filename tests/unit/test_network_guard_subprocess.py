@@ -6,6 +6,8 @@ import sys
 import textwrap
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -126,7 +128,12 @@ def test_guard_blocks_dynamic_network_and_shell_delegation(tmp_path):
             else:
                 raise AssertionError(event)
         sys.audit('os.startfile', {str(tmp_path)!r}, 'open')
-        ctypes.WinDLL('kernel32')
+        # A non-network system library still loads.
+        if sys.platform == 'win32':
+            ctypes.WinDLL('kernel32')
+        else:
+            import ctypes.util
+            ctypes.CDLL(ctypes.util.find_library('c'))
         print('all blocked, folder allowed')
     """)
     assert "all blocked, folder allowed" in result.stdout
@@ -154,6 +161,13 @@ def test_shell_guard_rejects_unc_without_inspecting_the_remote_filesystem():
     assert "CANARY_HOST" not in result.stderr
 
 
+# The macOS twin is test_mac_fetch_launch.py: a guarded parent launches the real
+# downloader command through dusty.platform.process.run_job_process, and the
+# unguarded child verifies and transfers over loopback sockets.
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="Windows-only: Job Object runner dusty.platform.win_process.run_job_process",
+)
 def test_dusty_fetch_process_does_not_inherit_guard(tmp_path: Path) -> None:
     child = """
 import runpy, socket, sys

@@ -5,9 +5,16 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
+# The macOS app has no uninstaller; removing Dusty.app runs no Dusty code.
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="Windows-only: Inno uninstall process tracker in PowerShell (pwsh)",
+)
 def test_uninstall_tracker_waits_for_a_worker_after_its_launcher_exits(tmp_path):
     marker = tmp_path / "worker-completed"
     child = (

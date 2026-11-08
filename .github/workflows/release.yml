@@ -53,10 +53,16 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: m5-installer-draft-unsigned
-          path: build/release-input
-      - name: Stage approved assets and checksums
+          path: build/release-input/windows
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: mac-dmg-draft-unsigned
+          path: build/release-input/mac
+      - name: Stage approved assets and checksums for Windows and Mac
         shell: pwsh
-        run: python -m tools.release_assets --source build/release-input --output build/release-assets --tag '${{ github.ref_name }}'
+        run: |
+          python -m tools.release_assets --source build/release-input/windows --mac-source build/release-input/mac --output build/release-assets --tag '${{ github.ref_name }}' --previous-tag '${{ needs.validate.outputs.previous_tag }}'
+          if ($LASTEXITCODE -ne 0) { throw 'Release inputs failed their checks' }
       - name: Create draft only after every source and installed gate passes
         shell: pwsh
         env:
@@ -64,5 +70,7 @@ jobs:
         run: |
           $tag = '${{ github.ref_name }}'
           $version = $tag.Substring(1)
-          gh release create $tag --repo '${{ github.repository }}' --verify-tag --draft --title "Dusty $version" --notes "Private transcription on your Windows computer. Download Dusty-$version-Setup.exe and check it against SHA256SUMS.txt. This installer is unsigned; see the installation guide for Windows SmartScreen steps. Models download only with your permission during Setup or in Model Manager." build/release-assets/*
+          $notes = "docs/release-notes/$tag.md"
+          if (-not (Test-Path -LiteralPath $notes)) { throw "Missing release notes $notes" }
+          gh release create $tag --repo '${{ github.repository }}' --verify-tag --draft --title "Dusty $version" --notes-file $notes build/release-assets/*
           if ($LASTEXITCODE -ne 0) { throw 'Draft release creation failed' }

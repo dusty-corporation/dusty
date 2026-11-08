@@ -9,11 +9,20 @@ import textwrap
 import zipfile
 from pathlib import Path
 
+import pytest
+
 from tools import mingw_runtime as policy
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
+# macOS natives are checked against their own pins when staged: see
+# test_ffmpeg_is_verified_against_the_runtime_manifest, test_package_hash_mismatch_is_refused
+# and test_native_v3_ffmpeg_is_preferred_and_verified in test_stage_macos_dev_bin.
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="Windows-only: engine-v3 minimal-ffmpeg.zip release asset with MinGW binaries",
+)
 def test_approved_binary_pins_match_exact_existing_archive():
     import tomllib
 

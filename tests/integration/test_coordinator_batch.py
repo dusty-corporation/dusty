@@ -10,6 +10,7 @@ import pytest
 
 from dusty.core import BatchOptions, FailureCode, Job, JobStatus
 from dusty.engine import EngineError
+from dusty.engine.binaries import ffprobe_path
 from dusty.models import ModelRegistry, load_manifest
 from dusty.privacy.logging import configure_logger
 from dusty.queue import Coordinator
@@ -219,7 +220,7 @@ def test_amr_unknown_duration_and_same_run_stems_use_real_pipeline(tmp_path: Pat
     paths = RuntimePaths(dev.bin_dir, dev.models_dir, dev.resources_dir, tmp_path / "user")
     registry = ModelRegistry(load_manifest(paths.resources_dir / "models.json"), paths.models_dir)
     folder = ROOT / "tests/fixtures/audio/formats"
-    assert probe_audio(paths.bin_dir / "ffmpeg/ffprobe.exe", folder / "jfk.amr").duration_sec == 0
+    assert probe_audio(ffprobe_path(paths.bin_dir), folder / "jfk.amr").duration_sec == 0
     jobs = [Job(folder / "jfk.wav"), Job(folder / "jfk.amr")]
     asked = []
     options = BatchOptions("tiny", tmp_path / "out", formats=("txt", "docx"), backend="cpu")

@@ -1,5 +1,6 @@
 """NN-7: a chosen transcript folder must survive app and installer cleanup."""
 
+import sys
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,16 @@ from dusty.runtime_paths import RuntimePaths
 from dusty.work_area import OwnedWork, cleanup_owned, managed_destination, sanitize_output
 
 ROOT = Path(__file__).resolve().parents[2]
+# The symlink cases cover the same link refusal on macOS.
+LINK_KINDS = [
+    pytest.param(
+        "junction",
+        marks=pytest.mark.skipif(
+            sys.platform != "win32", reason="Windows-only: NTFS junction made with cmd mklink /J"
+        ),
+    ),
+    "symlink",
+]
 
 
 def saved_output(tmp_path: Path, name: str) -> tuple[Path, Path]:
@@ -70,7 +81,7 @@ def test_uncertain_work_preserved(tmp_path, damage):
     assert "patient-secret" not in log
 
 
-@pytest.mark.parametrize("kind", ["junction", "symlink"])
+@pytest.mark.parametrize("kind", LINK_KINDS)
 def test_linked_work_never_deletes_external_target(tmp_path, kind):
     import subprocess
 
@@ -158,7 +169,7 @@ def test_installer_reports_damaged_model_without_removing_it(tmp_path):
     assert damaged.read_bytes() == b"damaged synthetic model"
 
 
-@pytest.mark.parametrize("kind", ["junction", "symlink"])
+@pytest.mark.parametrize("kind", LINK_KINDS)
 def test_downloader_refuses_linked_destination_before_any_transfer(tmp_path, kind):
     import subprocess
 
@@ -209,8 +220,19 @@ def test_development_outputs_can_be_siblings_of_native_staging(tmp_path):
         frozen=True,
         executable=tmp_path / "app/dusty/dusty.exe",
         environment={"LOCALAPPDATA": str(tmp_path / "local")},
+        platform="win32",
     )
     assert managed_destination(tmp_path / "app/anywhere", installed)
+    # The installed Mac app owns its whole bundle, but not the folder it sits in.
+    mac = resolve_paths(
+        frozen=True,
+        executable=tmp_path / "app/Dusty.app/Contents/MacOS/Dusty",
+        environment={"LOCALAPPDATA": str(tmp_path / "local")},
+        platform="darwin",
+    )
+    assert managed_destination(tmp_path / "app/Dusty.app/anywhere", mac)
+    assert managed_destination(tmp_path / "app/Dusty.app/Contents/Helpers/bin/cpu", mac)
+    assert not managed_destination(tmp_path / "app/outputs", mac)
 
 
 @pytest.mark.parametrize("damage", ["missing", "changed"])

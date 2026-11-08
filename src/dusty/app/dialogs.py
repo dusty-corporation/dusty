@@ -1,5 +1,6 @@
 """Small reviewable dialogs with centralized text and safe default choices."""
 
+import sys
 from collections.abc import Callable
 from pathlib import Path
 from typing import cast
@@ -52,11 +53,14 @@ class TextDialog(QDialog):
         return button
 
 
-class GreetingDialog(TextDialog):
-    def __init__(self, parent=None):
-        super().__init__(M.APP_NAME, (M.GREETING,), parent)
-        self.setMinimumWidth(240)
-        self.button(M.OK, self.accept, default=True)
+if sys.platform == "win32":
+    # Owner-requested hidden greeting, Windows only. The Mac app must not define
+    # or reach it (PARITY P34), so the class exists only on Windows.
+    class GreetingDialog(TextDialog):
+        def __init__(self, parent=None):
+            super().__init__(M.APP_NAME, (M.GREETING,), parent)
+            self.setMinimumWidth(240)
+            self.button(M.OK, self.accept, default=True)
 
 
 class AboutDialog(TextDialog):
@@ -90,7 +94,7 @@ class NoticesDialog(TextDialog):
         try:
             text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeError):
-            text = M.NOTICES_UNAVAILABLE
+            text = M.notices_unavailable(sys.platform)
         self.text.setPlainText(text)
         self.body.insertWidget(0, self.text, 1)
         self.button(M.DISMISS, self.accept, default=True)
@@ -155,6 +159,23 @@ class CloseDialog(TextDialog):
         self.button(M.CLOSE_CONFIRM, self.accept)
 
 
+class RemoveDataDialog(TextDialog):
+    """macOS: confirm removing Dusty's own data; Cancel is the safe default."""
+
+    def __init__(self, model_size: str, parent=None):
+        super().__init__(M.REMOVE_DATA_TITLE, (M.REMOVE_DATA_HELP,), parent)
+        self.remove_models = QCheckBox(M.REMOVE_DATA_MODELS.format(size=model_size))
+        self.remove_models.setAccessibleName(self.remove_models.text())
+        self.remove_models.setChecked(True)  # The same default as the Windows uninstaller.
+        hint = QLabel(M.REMOVE_DATA_MODELS_HELP)
+        hint.setWordWrap(True)
+        hint.setTextFormat(Qt.TextFormat.PlainText)
+        self.body.insertWidget(1, self.remove_models)
+        self.body.insertWidget(2, hint)
+        self.cancel = self.button(M.CANCEL, self.reject, default=True)
+        self.confirm = self.button(M.REMOVE_DATA_CONFIRM, self.accept)
+
+
 class SummaryDialog(TextDialog):
     def __init__(self, jobs: list[Job], parent=None):
         super().__init__(M.SUMMARY, (M.summary_counts(counts(jobs)),), parent)
@@ -168,7 +189,9 @@ class SummaryDialog(TextDialog):
             layout = QVBoxLayout(content)
             for job in failed:
                 reason = (
-                    M.FAILURE_MESSAGES[job.failure].message if job.failure else M.PREPARATION_ERROR
+                    M.failure_messages(sys.platform)[job.failure].message
+                    if job.failure
+                    else M.PREPARATION_ERROR
                 )
                 label = QLabel(M.NAMED_FAILURE.format(name=job.source.name, reason=reason))
                 label.setTextFormat(Qt.TextFormat.PlainText)
@@ -199,7 +222,9 @@ class ErrorDialog(TextDialog):
         filename: str | None = None,
         parent=None,
     ):
-        reason = text or (M.FAILURE_MESSAGES[code].message if code else M.PREPARATION_ERROR)
+        reason = text or (
+            M.failure_messages(sys.platform)[code].message if code else M.PREPARATION_ERROR
+        )
         message = M.NAMED_FAILURE.format(name=filename, reason=reason) if filename else reason
         super().__init__(M.ERROR_TITLE, (message,), parent)
         self.button(M.OK, self.accept, default=True)

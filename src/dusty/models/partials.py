@@ -3,9 +3,11 @@
 import hashlib
 import json
 import stat
+import sys
 import time
 from pathlib import Path
 
+from dusty.platform.work_lease import acquire
 from dusty.work_area import canonical, linked, protected_paths
 
 PARTIAL_MAX_AGE_SEC = 7 * 24 * 60 * 60
@@ -44,21 +46,30 @@ def cleanup_stale_partials(directory: Path, *, now: float | None = None) -> int:
             receipt = path.with_name(path.name.removesuffix(".part") + ".lock")
             if linked(receipt):
                 continue
+            # An active download holds an OS lock on its receipt. On Windows that
+            # byte-range lock makes the receipt read below fail. flock on macOS
+            # is advisory, so take the same lock and hold it through proof and
+            # removal; a busy or missing receipt leaves the prefix alone.
+            held = None if sys.platform == "win32" else acquire(receipt)
             try:
-                data = json.loads(receipt.read_bytes()[1:])
-                with path.open("rb") as stream:
-                    digest = hashlib.file_digest(stream, "sha256").hexdigest()
-                if data != {
-                    "schema": 1,
-                    "purpose": "model-download",
-                    "file": path.name,
-                    "sha256": digest,
-                }:
+                try:
+                    data = json.loads(receipt.read_bytes()[1:])
+                    with path.open("rb") as stream:
+                        digest = hashlib.file_digest(stream, "sha256").hexdigest()
+                    if data != {
+                        "schema": 1,
+                        "purpose": "model-download",
+                        "file": path.name,
+                        "sha256": digest,
+                    }:
+                        continue
+                except (OSError, ValueError):
                     continue
-            except (OSError, ValueError):
-                continue
-            path.unlink()
-            removed += 1
+                path.unlink()
+                removed += 1
+            finally:
+                if held is not None:
+                    held.close()
         except OSError:
             # Never turn a busy prefix into an app-startup failure or log its name.
             continue
