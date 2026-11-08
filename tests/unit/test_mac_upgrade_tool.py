@@ -63,3 +63,18 @@ def test_trash_uses_free_names_like_finder(tmp_path):
 def test_redact_removes_run_and_home_paths(tmp_path):
     text = f"{tmp_path}/p25/home and {Path.home()}/x"
     assert check.redact(text, tmp_path) == "<out>/p25/home and <home>/x"
+
+
+def test_cpu_results_are_expected_only_on_the_reported_virtual_gpu():
+    virtual = {"ok": False, "unsupported": True, "device_name": "Apple Paravirtual device"}
+    assert check.engine_cannot_use_virtual_gpu(virtual)
+    # An Apple Silicon GPU, an unnamed GPU or a failed check without the
+    # engine's report must still pass the Metal rows.
+    for probe in (
+        {**virtual, "device_name": "Apple M2"},
+        {**virtual, "device_name": None},
+        {"ok": False, "device_name": "Apple Paravirtual device"},
+        {"ok": True, "device_name": "Apple M1"},
+        {},
+    ):
+        assert not check.engine_cannot_use_virtual_gpu(probe)

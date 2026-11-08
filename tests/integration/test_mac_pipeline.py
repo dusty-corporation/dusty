@@ -101,14 +101,18 @@ def test_tiny_cpu_all_formats_and_clean_work(mac_paths: RuntimePaths, tmp_path: 
     _check_log(mac_paths, "cpu")
 
 
+@pytest.mark.usefixtures("metal_gpu")
 def test_tiny_metal_when_probe_passes(mac_paths: RuntimePaths, tmp_path: Path) -> None:
     from dusty.engine.backend import probe_gpu
 
     registry = ModelRegistry(
         load_manifest(mac_paths.resources_dir / "models.json"), mac_paths.models_dir
     )
-    if not whisper_path(mac_paths.bin_dir, "metal").is_file() or not probe_gpu(mac_paths, registry):
-        pytest.skip("No usable Metal backend in this staged bin_dir")
+    if not whisper_path(mac_paths.bin_dir, "metal").is_file():
+        pytest.skip("This staged bin_dir has no Metal engine")
+    # Unless the engine reports a GPU it cannot use (metal_gpu skips then), the
+    # GPU check must pass: a failing check fails this test instead of skipping it.
+    assert probe_gpu(mac_paths, registry)
     configure_logger(mac_paths.user_dir)
     job, out = _run(mac_paths, tmp_path, "auto", vulkan_ok=True)
     _check_outputs(job, out, mac_paths, "metal")

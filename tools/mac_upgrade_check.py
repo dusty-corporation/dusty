@@ -41,6 +41,8 @@ MODELS = ("ggml-tiny.bin", "ggml-silero-vad.bin")
 CATALOG = ("large-v3-turbo-q8_0", "small", "medium", "small.en", "tiny")
 PREFERENCES = {"welcome_seen": True, "formats": ["txt", "srt"], "language": "en"}
 QUARANTINE = "0081;{:x};Safari;"
+# The GPU a virtual Mac reports, as the Metal engine names it.
+VIRTUAL_GPU = "Apple Paravirtual device"
 
 
 @dataclass
@@ -245,12 +247,22 @@ class Harness:
         )
         self.expect(scenario, "--self-test (Auto)", app, home, ["--self-test"], 0, "OK")
         probe = self.settings(home).get("backend_probe") or {}
+        virtual = engine_cannot_use_virtual_gpu(probe)
+        self.record(
+            scenario,
+            "GPU path this run verifies",
+            "Metal, or the CPU where the engine reports a GPU it cannot use",
+            f"CPU, the engine cannot use {VIRTUAL_GPU}" if virtual else "Metal",
+            None,
+        )
         self.record(
             scenario,
             "probe cached in settings.json backend_probe",
-            "ok true, engine and driver signatures, device named",
+            "ok false and unsupported, engine and driver signatures"
+            if virtual
+            else "ok true, engine and driver signatures, device named",
             f"ok {probe.get('ok')}, device {probe.get('device_name')}, keys {sorted(probe)}",
-            probe.get("ok") is True and {"engine", "driver"} <= set(probe),
+            probe.get("ok") is (not virtual) and {"engine", "driver"} <= set(probe),
         )
         before = sha256(data / "settings.json")
         self.expect(scenario, "--self-test (Auto) again", app, home, ["--self-test"], 0, "OK")
@@ -267,8 +279,7 @@ class Harness:
             app,
             home,
             ["--self-test", "--backend", "metal"],
-            0,
-            "OK",
+            *((1, "GPU_ERROR") if virtual else (0, "OK")),
         )
         self.expect(
             scenario,
@@ -277,7 +288,7 @@ class Harness:
             home,
             ["--installer-test", "--model", "tiny"],
             0,
-            "OK_METAL",
+            "OK_CPU" if virtual else "OK_METAL",
         )
         work = sorted(p.name for p in (data / "work").iterdir())
         self.record(scenario, "work folder after the runs", "empty", str(work), not work)
@@ -635,6 +646,16 @@ def trash(path: Path, home: Path) -> None:
 def version(app: Path) -> str:
     info = plistlib.loads((app / "Contents/Info.plist").read_bytes())
     return str(info["CFBundleShortVersionString"])
+
+
+def engine_cannot_use_virtual_gpu(probe: dict) -> bool:
+    """Whether the GPU check found Apple's paravirtual GPU, which the engine cannot use.
+
+    GitHub's Mac runners have that GPU without the features the Metal engine
+    needs. Only there, positively named by the engine, are the truthful CPU
+    results expected; any other GPU, Apple Silicon included, must pass as Metal.
+    """
+    return probe.get("unsupported") is True and probe.get("device_name") == VIRTUAL_GPU
 
 
 def codesign_verify(app: Path) -> str:

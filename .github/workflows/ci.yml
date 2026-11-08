@@ -215,9 +215,11 @@ jobs:
             uv run python "tools/$tool"
           done
       - name: Tests, with the pinned Mac engine and models for the Mac integration tests
+        # -rs lists why tests skipped, such as Metal tests on a virtual Mac's GPU.
+        # A test still running after 10 minutes prints every thread's stack.
         run: |
           export DUSTY_BIN_DIR="$PWD/build/bin" DUSTY_MODELS_DIR="$PWD/build/models"
-          uv run pytest -q --durations=20
+          uv run pytest -q -rs --durations=20 -o faulthandler_timeout=600
       - name: Build Dusty.app from the pinned Mac engine
         run: uv run python -m tools.build_macos_app build/mac-app --native-root build/engine-macos/macos-arm64
       - name: Built app tests

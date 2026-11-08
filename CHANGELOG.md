@@ -2,7 +2,20 @@
 
 All notable changes to Dusty will be documented here. This project follows Keep a Changelog.
 
-## [1.1.0] - 2026-11-08
+## [1.1.1] - 2026-11-08
+
+The first release of Dusty 1.1, for Windows and Mac. Dusty 1.1.0 was never
+released: its public tests stalled on a virtual Mac, so it got no downloads.
+1.1.1 includes everything listed under 1.1.0, plus this fix.
+
+### Fixed
+
+- On a Mac whose graphics processor cannot run transcription, such as a virtual
+  Mac, Dusty now uses the processor at once instead of waiting on the graphics
+  processor, which could stall. The Mac GPU check also gives up after two
+  minutes.
+
+## [1.1.0] - 2026-11-08 (not released)
 
 ### Added
 

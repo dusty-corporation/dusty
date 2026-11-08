@@ -36,6 +36,18 @@ METAL_FAILURE = "ggml_metal_synchronize: error: command buffer 0 failed with sta
 FORMATS = ("txt", "srt", "vtt", "json", "docx")
 
 
+def _virtual_gpu(line: str) -> str:
+    """The recorded M2 report as Apple's paravirtual GPU on GitHub's Mac runners gives it."""
+    if line.startswith("ggml_metal_device_init: GPU name:"):
+        return line.replace("(Apple M2)", "(Apple Paravirtual device)")
+    if line.startswith("ggml_metal_device_init: simdgroup "):
+        return line.replace("= true", "= false")
+    return line
+
+
+VIRTUAL_GPU_LINES = [_virtual_gpu(line) for line in METAL_LINES]
+
+
 class FakeNative:
     """Answer ffprobe, ffmpeg and whisper-cli calls without starting processes."""
 
@@ -43,6 +55,10 @@ class FakeNative:
         self.outcomes = outcomes or {}
         self.ffmpeg_calls: list[list[str]] = []
         self.whisper_calls: list[list[str]] = []
+        # Whether the engine was asked to stop once its stderr was read, and
+        # the time limit each run was given.
+        self.stop_requested: list[bool] = []
+        self.whisper_timeouts: list[float | None] = []
 
     def run_ffmpeg(self, args, **kwargs):
         self.ffmpeg_calls.append(list(args))
@@ -63,6 +79,9 @@ class FakeNative:
         )
         for line in outcome.get("lines", ()):
             kwargs["on_stderr"](line)
+        stop = kwargs.get("cancel")
+        self.stop_requested.append(stop is not None and stop.is_set())
+        self.whisper_timeouts.append(kwargs.get("timeout_sec"))
         if kwargs.get("on_poll"):
             kwargs["on_poll"]()
         if outcome.get("set_cancel"):
@@ -270,6 +289,54 @@ def test_no_cpu_retry_after_cancel(tmp_path, platform, native, cancelled_result)
     assert list((paths.user_dir / "work").iterdir()) == []
 
 
+@pytest.mark.parametrize(("requested", "vulkan_ok"), [("metal", False), ("auto", True)])
+def test_gpu_without_the_metal_features_is_stopped_and_the_job_runs_on_cpu(
+    tmp_path, platform, native, requested, vulkan_ok
+):
+    """GitHub's virtual Macs report a GPU without simdgroup support; M1 hosts stall on it."""
+    platform("darwin")
+    # The runner reports a stopped engine as cancelled and leaves no output.
+    fake = native({"metal": [{"lines": VIRTUAL_GPU_LINES, "cancelled": True}]})
+    paths, job = _run(tmp_path, requested, vulkan_ok=vulkan_ok)
+    assert fake.stop_requested == [True, False]
+    assert fake.whisper_programs == [
+        (paths.bin_dir / "metal/whisper-cli").resolve(),
+        (paths.bin_dir / "cpu/whisper-cli").resolve(),
+    ]
+    assert job.status == JobStatus.DONE and job.failure is None
+    assert job.backend_used == "cpu" and job.gpu_fallback
+    assert _exported_backend(tmp_path) == "cpu"
+    assert list((paths.user_dir / "work").iterdir()) == []
+
+
+def test_metal_failure_stops_the_engine_at_once_and_retries_on_cpu(tmp_path, platform, native):
+    platform("darwin")
+    fake = native({"metal": [{"lines": METAL_LINES[:20] + [METAL_FAILURE], "cancelled": True}]})
+    _paths, job = _run(tmp_path)
+    assert fake.stop_requested == [True, False]
+    assert job.status == JobStatus.DONE and job.backend_used == "cpu" and job.gpu_fallback
+
+
+def test_user_cancel_wins_over_a_gpu_the_engine_cannot_use(tmp_path, platform, native):
+    platform("darwin")
+    cancel = threading.Event()
+    outcome = {"lines": VIRTUAL_GPU_LINES, "set_cancel": cancel, "cancelled": True}
+    fake = native({"metal": [outcome]})
+    paths, job = _run(tmp_path, cancel=cancel)
+    assert len(fake.whisper_calls) == 1
+    assert job.status == JobStatus.CANCELLED and job.failure is None
+    assert list((paths.user_dir / "work").iterdir()) == []
+
+
+def test_a_working_gpu_report_never_stops_the_engine(tmp_path, platform, native):
+    platform("darwin")
+    fake = native()
+    _paths, job = _run(tmp_path)
+    assert fake.stop_requested == [False]
+    assert fake.whisper_timeouts == [whisper.WHISPER_LIMIT_SEC]
+    assert job.backend_used == "metal" and not job.gpu_fallback
+
+
 # Coordinator on Windows: same programs and Vulkan behavior as before
 
 
@@ -351,6 +418,21 @@ def test_vulkan_request_requires_vulkan_selection(tmp_path, monkeypatch):
     assert raised.value.gpu_error
 
 
+def test_gpu_without_the_metal_features_is_an_unsupported_gpu_error(tmp_path, monkeypatch):
+    # Even when the engine exits by itself with an output, the GPU run fails.
+    with pytest.raises(EngineError, match="GPU cannot run the Metal engine") as raised:
+        _whisper(tmp_path, "metal", VIRTUAL_GPU_LINES, monkeypatch=monkeypatch)
+    error = raised.value
+    assert error.gpu_error and error.unsupported_gpu and not error.cancelled
+    assert error.device_name == "Apple Paravirtual device"
+
+
+def test_metal_features_do_not_matter_for_cpu_runs(tmp_path, monkeypatch):
+    lines = MAC_CPU_LINES + [line for line in VIRTUAL_GPU_LINES if "simdgroup" in line]
+    run = _whisper(tmp_path, "cpu", lines, monkeypatch=monkeypatch)
+    assert run.transcript.backend == "cpu"
+
+
 # Logging allowlist
 
 
@@ -413,6 +495,50 @@ def test_mac_probe_keys_cache_on_metal_engine_and_mac_signature(
     assert list((paths.user_dir / "work").iterdir()) == []
 
 
+def test_mac_probe_records_a_gpu_the_engine_cannot_use(tmp_path, platform, native, monkeypatch):
+    from dusty.engine import backend
+    from dusty.queue.storage import load_settings
+
+    platform("darwin")
+    fake = native({"metal": [{"lines": VIRTUAL_GPU_LINES, "cancelled": True}]})
+    monkeypatch.setattr(backend, "display_driver_signature", lambda: "mac-signature")
+    paths = _probe_paths(tmp_path, "metal/whisper-cli")
+    registry = StubRegistry(paths.models_dir)
+    assert backend.probe_gpu(paths, registry) is False
+    assert fake.stop_requested == [True]
+    assert fake.whisper_timeouts == [backend.GPU_CHECK_LIMIT_SEC]
+    cached = load_settings(paths.user_dir / "settings.json")["backend_probe"]
+    assert cached == {
+        "engine": hashlib.sha256(b"pinned engine v1").hexdigest(),
+        "driver": "mac-signature",
+        "ok": False,
+        "device_name": "Apple Paravirtual device",
+        "unsupported": True,
+    }
+    assert backend.probe_gpu(paths, registry) is False
+    assert len(fake.whisper_calls) == 1  # Remembered for this engine and GPU.
+    assert list((paths.user_dir / "work").iterdir()) == []
+
+
+def test_mac_probe_that_reaches_its_time_limit_uses_the_cpu(
+    tmp_path, platform, native, monkeypatch
+):
+    from dusty.engine import backend
+    from dusty.queue.storage import load_settings
+
+    platform("darwin")
+    # The runner stops a run at its time limit and reports it as cancelled.
+    stalled = {"lines": METAL_LINES[:20], "cancelled": True}
+    fake = native({"metal": [stalled]})
+    monkeypatch.setattr(backend, "display_driver_signature", lambda: "mac-signature")
+    paths = _probe_paths(tmp_path, "metal/whisper-cli")
+    assert backend.probe_gpu(paths, StubRegistry(paths.models_dir)) is False
+    assert fake.whisper_timeouts == [backend.GPU_CHECK_LIMIT_SEC]
+    cached = load_settings(paths.user_dir / "settings.json")["backend_probe"]
+    assert cached["ok"] is False and "unsupported" not in cached
+    assert list((paths.user_dir / "work").iterdir()) == []
+
+
 def test_windows_probe_alias_uses_vulkan_engine(tmp_path, platform, native, monkeypatch):
     from dusty.engine import backend
 
@@ -422,6 +548,8 @@ def test_windows_probe_alias_uses_vulkan_engine(tmp_path, platform, native, monk
     paths = _probe_paths(tmp_path, "vulkan/whisper-cli.exe")
     assert backend.probe_vulkan(paths, StubRegistry(paths.models_dir)) is True
     assert fake.whisper_programs == [(paths.bin_dir / "vulkan/whisper-cli.exe").resolve()]
+    # Windows keeps its engine time limit: the Mac GPU check limit is Mac only.
+    assert fake.whisper_timeouts == [whisper.WHISPER_LIMIT_SEC]
 
 
 def test_probe_without_gpu_engine_is_false_without_running(tmp_path, platform, native):

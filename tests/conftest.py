@@ -109,6 +109,44 @@ def tls_certificate(tmp_path_factory):
     return generate_tls_identity(tmp_path_factory.mktemp("localhost-tls"))
 
 
+@pytest.fixture(scope="session")
+def mac_gpu(tmp_path_factory) -> SimpleNamespace:
+    """What Dusty's own GPU check finds on this Mac, run once with the staged engine.
+
+    On Apple's paravirtual GPU without the simdgroup features (GitHub's Mac
+    runners), the engine reports that it cannot work and Dusty uses the CPU:
+    ``backend`` is then "cpu" and ``reason`` says why tests of the Metal engine
+    itself skip. Every other result expects Metal, including a failed check on
+    an Apple Silicon GPU, so a broken Metal engine fails the tests instead.
+    """
+    from dusty.engine.backend import probe_gpu
+    from dusty.models import ModelRegistry, load_manifest
+    from dusty.queue.storage import load_settings
+    from dusty.runtime_paths import RuntimePaths, resolve_paths
+
+    dev = resolve_paths(repo_root=Path(__file__).resolve().parents[1], frozen=False)
+    user = tmp_path_factory.mktemp("gpu-check") / "user"
+    user.mkdir(mode=0o700)
+    paths = RuntimePaths(dev.bin_dir, dev.models_dir, dev.resources_dir, user)
+    registry = ModelRegistry(load_manifest(paths.resources_dir / "models.json"), paths.models_dir)
+    probe_gpu(paths, registry, refresh=True)
+    probe = load_settings(user / "settings.json").get("backend_probe") or {}
+    if probe.get("unsupported") is True and probe.get("device_name") == "Apple Paravirtual device":
+        reason = (
+            "The Metal engine reports that this Mac's GPU, Apple's paravirtual GPU as on "
+            "GitHub's Mac runners, lacks the simdgroup features it needs, so Dusty uses the CPU"
+        )
+        return SimpleNamespace(backend="cpu", reason=reason, probe=probe)
+    return SimpleNamespace(backend="metal", reason=None, probe=probe)
+
+
+@pytest.fixture
+def metal_gpu(mac_gpu: SimpleNamespace) -> None:
+    """Skip a test of the Metal engine itself on a GPU the engine reports it cannot use."""
+    if mac_gpu.reason:
+        pytest.skip(mac_gpu.reason)
+
+
 @pytest.fixture(autouse=True)
 def isolate_application_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Subprocesses inherit this too; tests must not write the maintainer's app data."""

@@ -89,6 +89,22 @@ int main(int argc, char **argv) {
     if (strcmp(mode, "sleep") == 0) {
         wait_forever();
     }
+    if (strcmp(mode, "-m") == 0 && argc > 2) {
+        /* A whisper-cli stand-in: the model file name picks what the engine
+           reports, and then it stalls the way a hung GPU does. */
+        if (strstr(argv[2], "virtual-gpu")) {
+            fprintf(stderr, "ggml_metal_device_init: GPU name:   "
+                            "MTL0 (Apple Paravirtual device)\n");
+            fprintf(stderr, "ggml_metal_device_init: simdgroup reduction   = false\n");
+            fprintf(stderr, "ggml_metal_device_init: simdgroup matrix mul. = false\n");
+        } else if (strstr(argv[2], "failed-command")) {
+            fprintf(stderr, "whisper_backend_init_gpu: using MTL0 backend\n");
+            fprintf(stderr, "ggml_metal_synchronize: error: "
+                            "command buffer 0 failed with status 5\n");
+        }
+        fflush(stderr);
+        wait_forever();
+    }
     return 2;
 }
 """
@@ -218,6 +234,39 @@ def test_timeout_cancels_quickly(program: str) -> None:
     result, _, _ = run_lines([program, "sleep"], timeout_sec=0.3)
     assert result.cancelled and result.exit_code == CANCELLED
     assert result.elapsed_sec < 2
+
+
+@pytest.mark.parametrize("report", ["virtual-gpu", "failed-command"])
+def test_stalled_metal_run_is_stopped_once_its_stderr_shows_it_cannot_work(
+    program: str, tmp_path: Path, report: str
+) -> None:
+    """On a GPU the engine cannot use, or after a failed Metal command, it stops at once.
+
+    The stand-in never exits by itself, like the engine on a stalled GPU, so this
+    finishes only because Dusty stops it through the lifeline.
+    """
+    from dusty.engine.whisper import EngineError, run_whisper
+
+    started = time.monotonic()
+    with pytest.raises(EngineError) as raised:
+        run_whisper(
+            Path(program),
+            tmp_path / f"{report}.bin",
+            tmp_path / "audio.wav",
+            tmp_path / "raw",
+            model_id="tiny",
+            task="transcribe",
+            language="en",
+            threads=1,
+            duration_sec=1.0,
+            backend="metal",
+            vad_model=None,
+            prompt="",
+        )
+    assert time.monotonic() - started < 5
+    error = raised.value
+    assert error.gpu_error and not error.cancelled
+    assert error.unsupported_gpu == (report == "virtual-gpu")
 
 
 def test_cancel_before_start_still_runs_one_poll(program: str) -> None:

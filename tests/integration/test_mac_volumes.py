@@ -16,6 +16,7 @@ import unicodedata
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -257,11 +258,14 @@ def _tree(root: Path) -> Path:
 def test_outputs_on_external_formats_keep_structure_and_duplicate_names(
     runtime: tuple[RuntimePaths, ModelRegistry],
     volumes: Volumes,
+    mac_gpu: SimpleNamespace,
     tmp_path: Path,
     fs: str,
     backend: str,
 ) -> None:
     paths, _ = runtime
+    # A Metal request runs on the CPU where the engine reports it cannot use the GPU.
+    used = mac_gpu.backend if backend == "metal" else backend
     root = _tree(tmp_path / "in")
     mount = volumes.attach(fs)
     sidecars_expected = _keeps_provenance_sidecars(mount)
@@ -279,7 +283,7 @@ def test_outputs_on_external_formats_keep_structure_and_duplicate_names(
         )
         _run(runtime, jobs, options)
         assert [job.status for job in jobs] == [JobStatus.DONE] * 4, [job.failure for job in jobs]
-        assert {job.backend_used for job in jobs} == {backend}
+        assert {job.backend_used for job in jobs} == {used}
         produced[layout] = sorted(
             str(path.relative_to(mount / layout)) for job in jobs for path in job.outputs
         )

@@ -41,13 +41,50 @@ def run_job_process(
     )
 
 
-class EngineError(RuntimeError):
-    """The native transcription process failed without exposing raw stderr."""
+# The longest one transcription may run before it is stopped.
+WHISPER_LIMIT_SEC = 12 * 3600
 
-    def __init__(self, message: str, *, gpu_error: bool = False, cancelled: bool = False):
+
+class EngineError(RuntimeError):
+    """The native transcription process failed without exposing raw stderr.
+
+    ``unsupported_gpu`` means the Metal engine reported a GPU it cannot use, and
+    ``device_name`` is the recognized GPU description it reported, if any.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        gpu_error: bool = False,
+        cancelled: bool = False,
+        unsupported_gpu: bool = False,
+        device_name: str | None = None,
+    ):
         super().__init__(message)
         self.gpu_error = gpu_error
         self.cancelled = cancelled
+        self.unsupported_gpu = unsupported_gpu
+        self.device_name = device_name
+
+
+@dataclass(frozen=True)
+class _MetalStop:
+    """Stop a Metal run on a user cancel, or once its stderr shows it cannot succeed.
+
+    A GPU without the features the engine needs, or a failed Metal command,
+    fails the run on the GPU whatever happens next. A stalled GPU can keep the
+    engine waiting for hours, so it is stopped at once and the caller may
+    retry on the CPU.
+    """
+
+    state: ProgressState
+    cancel: Cancellation | None
+
+    def is_set(self) -> bool:
+        if self.state.metal_unsupported or self.state.gpu_error:
+            return True
+        return self.cancel is not None and self.cancel.is_set()
 
 
 @dataclass(frozen=True)
@@ -105,6 +142,7 @@ def run_whisper(
     prompt: str,
     cancel: Cancellation | None = None,
     on_progress: Callable[[float], None] | None = None,
+    timeout_sec: float = WHISPER_LIMIT_SEC,
 ) -> EngineRun:
     """Pass prompts as one argument and never retain raw native stderr."""
     args = [
@@ -142,10 +180,23 @@ def run_whisper(
     result = run_job_process(
         args,
         on_stderr=state.feed,
-        cancel=cancel,
-        timeout_sec=12 * 3600,
+        cancel=_MetalStop(state, cancel) if backend == "metal" else cancel,
+        timeout_sec=timeout_sec,
         on_poll=publish_progress,
     )
+    # A Metal run whose stderr showed a GPU the engine cannot use, or a failed
+    # Metal command, fails on the GPU whether it was stopped or exited itself.
+    # A user cancel still wins. Other backends never consult the cancel here.
+    if backend == "metal" and not (cancel is not None and cancel.is_set()):
+        if state.metal_unsupported:
+            raise EngineError(
+                "GPU cannot run the Metal engine",
+                gpu_error=True,
+                unsupported_gpu=True,
+                device_name=state.device_name,
+            )
+        if state.gpu_error:
+            raise EngineError("Transcription engine failed", gpu_error=True)
     if result.cancelled:
         raise EngineError("Transcription cancelled", cancelled=True)
     if result.exit_code:

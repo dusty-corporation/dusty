@@ -17,7 +17,12 @@ from dusty.work_area import OwnedWork
 
 from .binaries import ffmpeg_path, ffprobe_path, gpu_backend, whisper_path
 from .ffmpeg import probe_audio, transcode_audio
-from .whisper import EngineError, run_whisper
+from .whisper import WHISPER_LIMIT_SEC, EngineError, run_whisper
+
+# The Mac GPU check transcribes a few seconds of speech with Tiny, which a
+# working Apple GPU does in about a second. A check still running after this
+# long is stalled: it is stopped and Dusty uses the CPU.
+GPU_CHECK_LIMIT_SEC = 120.0
 
 
 def _engine_signature(executable: Path) -> str:
@@ -55,6 +60,7 @@ def probe_gpu(
     owned = OwnedWork(paths.user_dir / "work", "probe")
     work = owned.path
     ok = False
+    unsupported = False
     device_name = None
     try:
         fixture = paths.resources_dir / "selftest.wav"
@@ -74,15 +80,23 @@ def probe_gpu(
             backend=backend,
             vad_model=None,
             prompt="",
+            timeout_sec=GPU_CHECK_LIMIT_SEC if backend == "metal" else WHISPER_LIMIT_SEC,
         )
         ok = bool(run.transcript.segments)
         device_name = run.device_name
-    except (OSError, EngineError, ValueError, ModelMissing, ModelCorrupt):
+    except EngineError as exc:
+        ok = False
+        unsupported = exc.unsupported_gpu
+        device_name = exc.device_name
+    except (OSError, ValueError, ModelMissing, ModelCorrupt):
         ok = False
     finally:
         owned.record("audio.wav", "raw.json")
         owned.cleanup(paths.user_dir)
     settings["backend_probe"] = {**identity, "ok": ok, "device_name": device_name}
+    if unsupported:
+        # The engine itself reported a GPU it cannot use, not a failed run.
+        settings["backend_probe"]["unsupported"] = True
     save_settings(settings_path, settings)
     return ok
 

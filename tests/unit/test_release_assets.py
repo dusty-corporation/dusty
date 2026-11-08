@@ -2,12 +2,14 @@
 
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
+from dusty import __version__
 from tools.release_assets import stage, verify_checksum
 from tools.release_version import apply, versions
 
@@ -238,6 +240,8 @@ def test_public_release_validation_requires_preceding_published_release():
     with pytest.raises(ValueError, match="previous public"):
         validate("v1.1.0", [draft, engine])
     assert needs_receipts("v1.1.0")
+    # 1.1.0 was never released, so 1.1.1 also follows 1.0.1.
+    assert validate("v1.1.1", [v101, v100, draft, engine]) == ("v1.0.1", "")
     assert not needs_receipts("v0.5.0-m5.1")
     assert not needs_receipts("v0.5.0-m5.2")
     assert needs_receipts("v0.5.0-m5.3")
@@ -433,6 +437,14 @@ def test_release_workflow_stages_windows_and_mac_with_notes():
     assert "--notes-file $notes" in text
     ci = (ROOT / ".github/workflows/ci.yml").read_text()
     assert "name: mac-dmg-draft-unsigned" in ci and "tools.macos_sbom" in ci
-    notes = (ROOT / "docs/release-notes/v1.1.0.md").read_text(encoding="utf-8")
-    for name in ("Dusty-1.1.0-Setup.exe", "Dusty-1.1.0-macos-arm64.dmg", "SHA256SUMS.txt"):
+    # The draft's text is the current version's notes, naming its own files.
+    notes = (ROOT / f"docs/release-notes/v{__version__}.md").read_text(encoding="utf-8")
+    for name in (
+        f"Dusty-{__version__}-Setup.exe",
+        f"Dusty-{__version__}-macos-arm64.dmg",
+        f"dusty-{__version__}-sbom.json",
+        f"dusty-{__version__}-macos-arm64-sbom.json",
+        "SHA256SUMS.txt",
+    ):
         assert name in notes
+    assert set(re.findall(r"[Dd]usty-([0-9.]+)-", notes)) == {__version__}

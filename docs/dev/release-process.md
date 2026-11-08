@@ -30,6 +30,13 @@ SBOM. Staging checks those receipts and fails the whole draft when any Mac input
 is missing or did not pass. A v1.0.x servicing release stays Windows only.
 The draft's text is docs/release-notes/<tag>.md, which must exist.
 
+A pushed snapshot is tagged only after its public CI passes in full. If it
+fails, that snapshot is never tagged or released. The exporter allows one
+snapshot per version and never rewrites public history, so the fix ships as
+the next patch version, exported on top, and the changelog marks the skipped
+version as not released. 1.1.0 was skipped this way, so the first release with
+Windows and Mac is 1.1.1, and its upgrade gate still starts from 1.0.1.
+
 The gated release contains:
 
 - Dusty-<version>-Setup.exe (unsigned).

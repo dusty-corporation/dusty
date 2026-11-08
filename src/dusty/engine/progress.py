@@ -13,10 +13,17 @@ _TIMING = re.compile(
 )
 _TEXT_CTX = re.compile(r"whisper_model_load: n_text_ctx\s*=\s*(\d+)")
 _METAL_SELECTION = re.compile(r"whisper_backend_init_gpu: using MTL[0-9]+ backend")
-# Store only recognized Apple Silicon hardware descriptions, never arbitrary stderr.
+# Store only recognized Apple GPU descriptions, never arbitrary stderr. A virtual
+# Mac reports Apple's paravirtual GPU instead of the Apple Silicon one.
 _METAL_DEVICE = re.compile(
     r"ggml_metal_device_init: GPU name:\s+MTL[0-9]+ "
-    r"\((Apple M[1-9][0-9]*(?: (?:Pro|Max|Ultra))?)\)"
+    r"\((Apple M[1-9][0-9]*(?: (?:Pro|Max|Ultra))?|Apple Paravirtual device)\)"
+)
+# The Metal engine needs both simdgroup features, which every Apple Silicon GPU
+# has. Some virtual Macs' GPUs lack them: the engine then runs most of the work
+# on the CPU anyway and can stall on the rest, so Dusty does not use that GPU.
+_METAL_FEATURE = re.compile(
+    r"ggml_metal_device_init: simdgroup (?:reduction|matrix mul\.)\s+= (true|false)"
 )
 _METAL_FAILURE = re.compile(
     r"(?:ggml_metal_init: error: failed to (?:create command queue|initialize the Metal library)"
@@ -33,6 +40,7 @@ class ProgressState:
     backend: EngineBackend | None = None
     device_name: str | None = None
     gpu_error: bool = False
+    metal_unsupported: bool = False
     text_context: int | None = None
     timings_ms: dict[str, float] = field(default_factory=dict)
 
@@ -46,6 +54,9 @@ class ProgressState:
             self.device_name = device.group(1)
         if _METAL_FAILURE.fullmatch(line):
             self.gpu_error = True
+        feature = _METAL_FEATURE.fullmatch(line)
+        if feature and feature.group(1) == "false":
+            self.metal_unsupported = True
         match = _PROGRESS.search(line)
         if match:
             self.progress = min(1.0, max(0.0, int(match.group(1)) / 100))

@@ -141,3 +141,50 @@ def test_vulkan_device_name_format_preserved() -> None:
     state = ProgressState(started_at=0)
     state.feed("ggml_vulkan: 0 = Intel(R) Iris(R) Xe Graphics (Intel driver)")
     assert state.device_name == "Intel(R) Iris(R) Xe Graphics"
+
+
+def test_recorded_apple_silicon_report_has_both_metal_features() -> None:
+    state = ProgressState(started_at=0)
+    for line in (ROOT / "tests/fixtures/engine/mac-metal-full-stderr.txt").read_text().splitlines():
+        state.feed(line)
+    assert state.backend == "metal" and state.device_name == "Apple M2"
+    assert not state.metal_unsupported
+
+
+# What the pinned engine prints on Apple's paravirtual GPU (GitHub's Mac runners).
+PARAVIRTUAL_REPORT = (
+    "ggml_metal_device_init: GPU name:   MTL0 (Apple Paravirtual device)",
+    "ggml_metal_device_init: GPU family: MTLGPUFamilyApple5  (1005)",
+    "ggml_metal_device_init: simdgroup reduction   = false",
+    "ggml_metal_device_init: simdgroup matrix mul. = false",
+)
+
+
+@pytest.mark.parametrize("missing", [2, 3])
+def test_a_gpu_missing_either_metal_feature_is_unsupported(missing: int) -> None:
+    state = ProgressState(started_at=0)
+    for index, line in enumerate(PARAVIRTUAL_REPORT):
+        state.feed(line if index in (0, 1, missing) else line.replace("false", "true"))
+    assert state.metal_unsupported
+    assert state.device_name == "Apple Paravirtual device"
+    assert state.backend is None and not state.gpu_error
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "ggml_metal_device_init: simdgroup reduction   = true",
+        "ggml_metal_device_init: simdgroup matrix mul. = true\r\n",
+        "main: ggml_metal_device_init: simdgroup reduction   = false",
+        "ggml_metal_device_init: simdgroup reduction   = false CANARY_HINT",
+        "ggml_metal_device_init: has bfloat            = false",
+        "[00:00.000 --> 00:01.000] simdgroup reduction = false CANARY_TRANSCRIPT",
+        "ggml_metal_device_init: GPU name:   MTL0 (Apple Paravirtual device) CANARY",
+    ],
+)
+def test_metal_feature_evidence_is_anchored(line: str) -> None:
+    state = ProgressState(started_at=0)
+    state.feed(line)
+    assert not state.metal_unsupported
+    assert state.device_name is None
+    assert "CANARY" not in repr(state)

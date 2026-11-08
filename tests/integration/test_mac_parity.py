@@ -3,6 +3,10 @@
 Stage a development bin_dir with tools/stage_macos_dev_bin.py and point
 DUSTY_BIN_DIR at it and DUSTY_MODELS_DIR at hash verified catalog models.
 Tests that need a model other than Tiny skip when that model is absent.
+
+Rows that ask for Metal expect the backend Dusty uses on this Mac (the mac_gpu
+fixture): Metal on Apple Silicon, or the CPU after the engine reports that a
+virtual Mac's GPU cannot run it. Rows about the Metal engine itself skip there.
 """
 
 import io
@@ -19,6 +23,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from itertools import pairwise
 from pathlib import Path
+from types import SimpleNamespace
 from xml.etree import ElementTree
 
 import pytest
@@ -190,11 +195,14 @@ def test_backend_selection_is_truthful_with_vad_and_threads(
     paths: RuntimePaths,
     registry: ModelRegistry,
     engine_calls: EngineCalls,
+    mac_gpu: SimpleNamespace,
     tmp_path: Path,
     backend: str,
     vulkan_ok: bool,
     expected: str,
 ) -> None:
+    if expected == "metal" and mac_gpu.reason:
+        pytest.skip(mac_gpu.reason)
     (source,) = _inputs(tmp_path, "formats/jfk.wav")
     options = BatchOptions(
         "tiny",
@@ -224,11 +232,52 @@ def test_backend_selection_is_truthful_with_vad_and_threads(
     assert _work_empty(paths)
 
 
+def test_gpu_the_engine_cannot_use_falls_back_to_the_cpu_at_once(
+    paths: RuntimePaths,
+    registry: ModelRegistry,
+    engine_calls: EngineCalls,
+    mac_gpu: SimpleNamespace,
+    tmp_path: Path,
+) -> None:
+    """On a virtual Mac's GPU the engine is stopped at its report and the job runs on the CPU.
+
+    GitHub's M1 runners stalled for over an hour in the Metal engine on that GPU.
+    """
+    if not mac_gpu.reason:
+        pytest.skip("This Mac's GPU runs the Metal engine; unit tests replay a virtual GPU")
+    assert mac_gpu.probe["ok"] is False and mac_gpu.probe["unsupported"] is True
+    (source,) = _inputs(tmp_path, "formats/jfk.wav")
+    options = BatchOptions(
+        "tiny", tmp_path / "out", formats=("json",), backend="metal", language="en"
+    )
+    started = time.monotonic()
+    (job,) = _run(paths, registry, [Job(source)], options, vulkan_ok=False)
+    assert time.monotonic() - started < 120
+    assert job.status == JobStatus.DONE, job.failure
+    assert job.backend_used == "cpu" and job.gpu_fallback
+    assert _json(tmp_path / "out/jfk.json")["backend"] == "cpu"
+    metal_args, cpu_args = engine_calls.args
+    assert Path(metal_args[0]) == whisper_path(paths.bin_dir, "metal").resolve()
+    assert Path(cpu_args[0]) == whisper_path(paths.bin_dir, "cpu").resolve()
+    assert "-ng" in cpu_args and "-ng" not in metal_args
+    assert any(
+        line.startswith("ggml_metal_device_init: simdgroup") and line.endswith("= false")
+        for line in engine_calls.stderr[0]
+    )
+    assert "backend=cpu" in _log(paths)
+    assert _native_children(paths.bin_dir) == []
+    assert _work_empty(paths)
+
+
 # P06, P07: VAD off by default; hints passed as one argument and never logged.
 
 
 def test_vad_default_off_and_hints_are_one_argument_not_logged(
-    paths: RuntimePaths, registry: ModelRegistry, engine_calls: EngineCalls, tmp_path: Path
+    paths: RuntimePaths,
+    registry: ModelRegistry,
+    engine_calls: EngineCalls,
+    mac_gpu: SimpleNamespace,
+    tmp_path: Path,
 ) -> None:
     (source,) = _inputs(tmp_path, "formats/jfk.wav")
     hints = "CANARYHINT Kennedy, Project Stardust, XYZ"
@@ -238,9 +287,11 @@ def test_vad_default_off_and_hints_are_one_argument_not_logged(
     assert options.vad is False
     (job,) = _run(paths, registry, [Job(source)], options)
     assert job.status == JobStatus.DONE, job.failure
-    (args,) = engine_calls.args
-    assert "--vad" not in args and "-vm" not in args
-    assert args.count(hints) == 1 and args[args.index("--prompt") + 1] == hints
+    # One Metal run, or on a GPU the engine cannot use, the stopped one and the CPU retry.
+    assert len(engine_calls.args) == (1 if mac_gpu.backend == "metal" else 2)
+    for args in engine_calls.args:
+        assert "--vad" not in args and "-vm" not in args
+        assert args.count(hints) == 1 and args[args.index("--prompt") + 1] == hints
     assert _jfk_words((tmp_path / "out/jfk.txt").read_text(encoding="utf-8"))
     log = _log(paths)
     assert "CANARYHINT" not in log and "Stardust" not in log and "/Users/" not in log
@@ -388,7 +439,7 @@ def test_persian_translate_to_english(
 
 
 def test_every_format_fixture_decodes_and_transcribes(
-    paths: RuntimePaths, registry: ModelRegistry, tmp_path: Path
+    paths: RuntimePaths, registry: ModelRegistry, mac_gpu: SimpleNamespace, tmp_path: Path
 ) -> None:
     long_path = next((AUDIO / "long-path").rglob("jfk.m4a")).relative_to(AUDIO)
     names = sorted(
@@ -408,7 +459,7 @@ def test_every_format_fixture_decodes_and_transcribes(
     jobs = _run(paths, registry, list(scanned.jobs), options)
     for job in jobs:
         assert job.status == JobStatus.DONE, (job.source.name, job.failure)
-        assert job.backend_used == "metal"
+        assert job.backend_used == mac_gpu.backend
         (output,) = job.outputs
         assert _jfk_words(output.read_text(encoding="utf-8")), job.source.name
     assert (tmp_path / "out/formats/تست ضبط.txt").is_file()
@@ -489,7 +540,7 @@ def _monotonic(times: list[tuple[float, float]]) -> bool:
 
 
 def test_all_formats_are_valid(
-    paths: RuntimePaths, registry: ModelRegistry, tmp_path: Path
+    paths: RuntimePaths, registry: ModelRegistry, mac_gpu: SimpleNamespace, tmp_path: Path
 ) -> None:
     (source,) = _inputs(tmp_path, "vad/mostly-silence-10min.m4a")
     options = BatchOptions(
@@ -530,7 +581,8 @@ def test_all_formats_are_valid(
         "segments",
     }
     assert exported["schema"] == "dusty.transcript" and exported["schema_version"] == 1
-    assert exported["source_file_name"] == source.name and exported["backend"] == "metal"
+    assert exported["source_file_name"] == source.name
+    assert exported["backend"] == mac_gpu.backend
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z", exported["created_utc"])
     starts = [segment["start"] for segment in exported["segments"]]
     assert starts == sorted(starts)
@@ -680,6 +732,7 @@ def _cancel_once_transcribing(
 
 
 @pytest.mark.parametrize("scope", ["current", "all"])
+@pytest.mark.usefixtures("metal_gpu")
 def test_cancel_during_metal_run_leaves_no_children_or_work(
     paths: RuntimePaths, registry: ModelRegistry, tmp_path: Path, long_source: Path, scope: str
 ) -> None:
@@ -720,7 +773,9 @@ def test_cancel_during_metal_run_leaves_no_children_or_work(
 # P31: a guarded batch never needs Python networking.
 
 
-def test_guarded_batch_makes_no_python_network_attempt(tmp_path: Path) -> None:
+def test_guarded_batch_makes_no_python_network_attempt(
+    mac_gpu: SimpleNamespace, tmp_path: Path
+) -> None:
     (source,) = _inputs(tmp_path, "formats/jfk.mp3")
     appdata = tmp_path / "appdata-guarded"
     script = (
@@ -763,5 +818,6 @@ def test_guarded_batch_makes_no_python_network_attempt(tmp_path: Path) -> None:
     assert "done OK" in result.stdout
     log = (appdata / "Dusty/logs/dusty.log").read_text(encoding="utf-8")
     assert "network_blocked" not in log
-    assert "backend=metal" in log
-    assert _json(tmp_path / "out/jfk.json")["backend"] == "metal"
+    # Automatic runs its own GPU check, so it chooses what the mac_gpu check found.
+    assert f"backend={mac_gpu.backend}" in log
+    assert _json(tmp_path / "out/jfk.json")["backend"] == mac_gpu.backend
