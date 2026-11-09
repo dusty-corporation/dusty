@@ -240,8 +240,8 @@ def test_public_release_validation_requires_preceding_published_release():
     with pytest.raises(ValueError, match="previous public"):
         validate("v1.1.0", [draft, engine])
     assert needs_receipts("v1.1.0")
-    # 1.1.0 and 1.1.1 were never released, so 1.1.2 also follows 1.0.1.
-    assert validate("v1.1.2", [v101, v100, draft, engine]) == ("v1.0.1", "")
+    # 1.1.0, 1.1.1 and 1.1.2 were never released, so 1.1.3 also follows 1.0.1.
+    assert validate("v1.1.3", [v101, v100, draft, engine]) == ("v1.0.1", "")
     assert not needs_receipts("v0.5.0-m5.1")
     assert not needs_receipts("v0.5.0-m5.2")
     assert needs_receipts("v0.5.0-m5.3")

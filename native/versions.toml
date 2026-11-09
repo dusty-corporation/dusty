@@ -4,6 +4,13 @@ commit = "d1be6fde11ac6e0407606b4e42fe72d34add8037"
 patch = "native/patches/0001-vad-timestamp-mapping.patch"
 patch_sha256 = "5dea476a89b6a7ac725cffeb72e2d80a33dc04ac0f0635dfe28cc4a25d911d1b"
 
+[whisper_cpp_macos]
+# The Mac engine's complete approved patch: the patch above plus one change,
+# speech detection never uses more threads than the run (ADR 0032, MAC11-VAD).
+# The Windows engine keeps the patch above until its next build.
+patch = "native/patches/0002-vad-timestamps-and-threads.patch"
+patch_sha256 = "8667cb407d80e1ac044728f323621ddcc911a76d533593282debbb274fdb2c91"
+
 [openai_whisper]
 commit = "86098128c0b4f24f0e2aa2994de830614b474227"
 
@@ -39,9 +46,13 @@ tag = "models-v1"
 manifest_sha256 = "6f8e4afd9665c18a14ff38d5541d9160110dc82ca47b6862918d86257c16277e"
 
 [engine_release_macos]
-tag = "engine-macos-v1"
-built_from_commit = "4ad90615bde74557539f68ce46d930fa5033c0a4"
-built_by_run = 42451307858
-cpu_archive_sha256 = "b384b21d068441e4095d035d4420077585a5e1a177723332d4e4fc6ccb6d2ebb"
-metal_archive_sha256 = "aa27cfeb79144de33d01a5fd0374a283466de880a45c85469355eb30d3c33a31"
-ffmpeg_archive_sha256 = "0f436373ca3f2de9c35dbe0b1b84fd2bdef1aa01ab165eff38bd7254f194c636"
+# Built in dusty-corporation/dusty-staging from the reviewed tree of dusty-dev
+# commit dc4a0f4a874038a642edca4bdbf6aba0acda96d3,
+# with the speech detection threads patch (ADR 0032, MAC11-VAD).
+tag = "engine-macos-v2"
+built_in_repository = "dusty-corporation/dusty-staging"
+built_from_commit = "3433ea3b7023afa11eb484638104e32b8ee20bf5"
+built_by_run = 42542628054
+cpu_archive_sha256 = "c7f26b20056843f7a8bd72a5f620d01a33b28351b84b0f47b1d9ba42d5e8ed20"
+metal_archive_sha256 = "c0ead3a489206aa57f97aa1586e7de133ad15f1a7039374ca827483de01bcc57"
+ffmpeg_archive_sha256 = "6e7a9f06aed57fd8e0f53999799ec4e3f219d95598923ab5d558d2e15ffbc14d"

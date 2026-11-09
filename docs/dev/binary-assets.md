@@ -35,21 +35,27 @@ and FFmpeg build workflows remain available only by manual dispatch.
 
 ## The Mac engine
 
-On a Mac the same command fetches the engine-macos-v1 prerelease instead of
+On a Mac the same command fetches the engine-macos-v2 prerelease instead of
 the three Windows archives: `whisper-cpu-macos-arm64.zip`,
 `whisper-metal-macos-arm64.zip` and `ffmpeg-macos-arm64.zip`, each checked
 against its hash in the `[engine_release_macos]` section of
 `native/versions.toml`. They are the unchanged output of the manual
-native-macos.yml workflow (run 42451307858 at
-4ad90615bde74557539f68ce46d930fa5033c0a4), which builds whisper.cpp CPU and
+native-macos.yml workflow, run 42542628054 in the public repository
+dusty-corporation/dusty-staging at 3433ea3b7023afa11eb484638104e32b8ee20bf5,
+the reviewed tree of dusty-dev commit dc4a0f4a874038a642edca4bdbf6aba0acda96d3. It builds whisper.cpp CPU and
 Metal and FFmpeg with `native/macos/build_whisper.sh` and `build_ffmpeg.sh` on
 a macos-15 runner and checks the architecture, minimum macOS and package hashes.
 
 | Asset | Bytes | SHA-256 |
 |---|---:|---|
-| whisper-cpu-macos-arm64.zip | 2885717 | b384b21d068441e4095d035d4420077585a5e1a177723332d4e4fc6ccb6d2ebb |
-| whisper-metal-macos-arm64.zip | 5951376 | aa27cfeb79144de33d01a5fd0374a283466de880a45c85469355eb30d3c33a31 |
-| ffmpeg-macos-arm64.zip | 3693531 | 0f436373ca3f2de9c35dbe0b1b84fd2bdef1aa01ab165eff38bd7254f194c636 |
+| whisper-cpu-macos-arm64.zip | 2885692 | c7f26b20056843f7a8bd72a5f620d01a33b28351b84b0f47b1d9ba42d5e8ed20 |
+| whisper-metal-macos-arm64.zip | 5951422 | c0ead3a489206aa57f97aa1586e7de133ad15f1a7039374ca827483de01bcc57 |
+| ffmpeg-macos-arm64.zip | 3693530 | 6e7a9f06aed57fd8e0f53999799ec4e3f219d95598923ab5d558d2e15ffbc14d |
+
+engine-macos-v2 replaced engine-macos-v1 (run 42451307858 in dusty-dev at
+4ad90615bde74557539f68ce46d930fa5033c0a4) to add the speech detection threads
+patch (ADR 0032, MAC11-VAD). Inside the archives only `libwhisper` differs from
+engine-macos-v1; whisper-cli, the ggml libraries and FFmpeg are byte-identical.
 
 Each archive holds one component folder: its `SHA256SUMS.txt`, build facts
 such as `minimum-os.txt`, and `package/` with the programs, libraries and

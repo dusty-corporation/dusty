@@ -15,15 +15,16 @@ deployment="${4:-13.3}"
 [[ "$deployment" =~ ^[1-9][0-9]\.[0-9]$ ]] || fail 'Invalid macOS deployment target'
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 pin() {
-  awk -v key="$1" '
-    /^\[whisper_cpp\]$/ { section=1; next }
+  awk -v want="[$1]" -v key="$2" '
+    $0 == want { section=1; next }
     /^\[/ { section=0 }
     section && $1 == key && $2 == "=" { gsub(/"/, "", $3); print $3 }
   ' "$repo/native/versions.toml"
 }
-commit="$(pin commit)"
-patch_name="$(pin patch)"
-patch_hash="$(pin patch_sha256)"
+# The Mac engine has its own complete approved patch; the commit is shared with Windows.
+commit="$(pin whisper_cpp commit)"
+patch_name="$(pin whisper_cpp_macos patch)"
+patch_hash="$(pin whisper_cpp_macos patch_sha256)"
 [[ "$commit" =~ ^[0-9a-f]{40}$ && "$patch_hash" =~ ^[0-9a-f]{64}$ && -n "$patch_name" ]] || fail 'Missing source or patch pin'
 patch_path="$repo/$patch_name"
 [[ "$(shasum -a 256 "$patch_path" | awk '{print $1}')" == "$patch_hash" ]] || fail 'Approved patch hash mismatch'

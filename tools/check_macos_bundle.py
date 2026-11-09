@@ -678,7 +678,7 @@ def notices_findings(app: Path, bin_dir: str, buildconf: str | None = None) -> l
         pins = tomllib.loads((ROOT / "native/versions.toml").read_text(encoding="utf-8"))
         for value in (
             pins["whisper_cpp"]["commit"],
-            pins["whisper_cpp"]["patch_sha256"],
+            pins["whisper_cpp_macos"]["patch_sha256"],
             pins["ffmpeg"]["commit"],
         ):
             if value not in text:

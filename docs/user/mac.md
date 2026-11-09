@@ -40,8 +40,8 @@ transcription and Medium for translation. Tiny is the fastest, but with
 recordings with long pauses, turn it on in Options before you press **Start**.
 
 Inside a virtual Mac, Dusty uses the processor for everything, because the
-graphics processor there lacks features that transcription needs or stalls.
-That is slower but gives the same transcripts.
+graphics processor there lacks features the engine uses and is much slower.
+The transcripts are the same.
 
 Useful keys: Command+O adds files, Command+Shift+O adds a folder, Command+? opens
 help and Command+Q quits. To reach every button with Tab, turn on Keyboard

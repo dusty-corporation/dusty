@@ -434,7 +434,7 @@ def components(
             "https://github.com/ggml-org/whisper.cpp",
             ["whisper.cpp-LICENSE.txt"],
             "executable and shared libraries",
-            f"approved patch sha256 {pins['whisper_cpp']['patch_sha256']}",
+            f"approved patch sha256 {pins['whisper_cpp_macos']['patch_sha256']}",
         ),
         Component(
             "ggml",
@@ -659,8 +659,8 @@ def render(
         "## Native pins",
         "",
         f"whisper.cpp: {pins['whisper_cpp']['tag']} commit {pins['whisper_cpp']['commit']} "
-        f"with the approved patch {pins['whisper_cpp']['patch']} "
-        f"(sha256 {pins['whisper_cpp']['patch_sha256']}).",
+        f"with the approved patch {pins['whisper_cpp_macos']['patch']} "
+        f"(sha256 {pins['whisper_cpp_macos']['patch_sha256']}).",
         f"ggml: {items['ggml'].version}, from the same whisper.cpp tree.",
         "",
         f"FFmpeg: {pins['ffmpeg']['tag']} commit {pins['ffmpeg']['commit']}.",

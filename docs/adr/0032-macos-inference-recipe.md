@@ -78,3 +78,41 @@ so no working GPU is lost. The stderr check stays for any other GPU the engine
 reports it cannot use. Tests of the Metal engine itself skip only where Dusty's
 own GPU check recorded a virtual Mac; on a real Mac they must pass, and a test
 makes Dusty see a virtual Mac on every Mac to check that no Metal engine starts.
+
+## Amendment 2026-11-08: speech detection threads (MAC11-VAD)
+
+The two amendments above did not find the cause of the stalls. A probe in the
+public repository dusty-corporation/dusty-staging (run 42531936313) timed the
+published engine-macos-v1 on three of GitHub's M1 runners (3 cores), with no
+Dusty code. The CPU engine transcribed 11 seconds of speech in 0.5 to 1.6
+seconds with 1 to 3 threads but took 13 to 14 seconds with 4. Speech detection
+over the ten minute test recording did not finish in 8 minutes; on an M2 Mac
+the same run takes about 2 seconds. The Metal engine finished the 11 seconds of
+speech in 17 to 35 seconds: slow, but it did not stall.
+
+The cause is in whisper.cpp. Speech detection creates its own context with the
+library default of 4 threads and ignores the thread count of the run, and
+upstream has the same default. With more threads than cores, ggml's threads
+wait for each other at every step, and speech detection takes about 18,750
+small steps over ten minutes of audio. Both tests that stalled use speech
+detection on that recording. It always runs on the CPU, inside the Metal
+engine too, so the Metal runs of 1.1.0 and 1.1.1 stalled in the same place.
+
+The Mac engine therefore gets its own complete approved patch,
+native/patches/0002-vad-timestamps-and-threads.patch, pinned in the
+[whisper_cpp_macos] section of native/versions.toml: patch 0001 plus one line,
+so that speech detection never uses more threads than the run. Dusty runs at
+most 4 threads, so where it runs 4, as on every Mac with at least 4
+performance cores, nothing changes. Transcripts and timestamps from the
+patched engine match the published one exactly with 1 to 4 threads. On two M1
+runners (staging run 42542594477) the patched engine finished the same speech
+detection run in 2.1 to 3.3 seconds with 1 to 3 threads, with the same
+transcript as on the M2 Mac, while the published engine was still running at
+300 seconds and the patched engine with 4 threads at 180 seconds. The rebuilt
+engine, engine-macos-v2 (staging run 42542628054), differs from
+engine-macos-v1 only in libwhisper. The Windows engine keeps patch 0001 until
+its next build, so on a Windows PC with fewer than 4 logical processors, Skip
+long silences can still be very slow.
+
+The changes of the two amendments above stay: inside a virtual Mac the CPU is
+much faster than the paravirtual GPU, so the CPU is the right engine there.

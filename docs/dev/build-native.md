@@ -31,6 +31,13 @@ and applies `native/patches/0001-vad-timestamp-mapping.patch` before CMake.
 A second build accepts an already applied identical patch; a partial or
 incompatible patch fails. Both native CI matrix jobs use this build script.
 
+The Mac engine has its own complete approved patch, pinned in the
+`[whisper_cpp_macos]` section: `native/patches/0002-vad-timestamps-and-threads.patch`
+is patch 0001 plus one line, so that speech detection never uses more threads
+than the run (ADR 0032, MAC11-VAD). `native/macos/build_whisper.sh` applies it
+and refuses any other source change. The Windows engine keeps patch 0001 until
+its next build.
+
 The correction prevents a boundary between two speech passages from becoming
 a time in the long silence between them. Starts move to the next speech
 boundary, ends move to the previous one. JSON token times use the library's

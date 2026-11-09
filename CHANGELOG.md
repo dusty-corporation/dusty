@@ -2,26 +2,34 @@
 
 All notable changes to Dusty will be documented here. This project follows Keep a Changelog.
 
-## [1.1.2] - 2026-11-08
+## [1.1.3] - 2026-11-08
 
-The first release of Dusty 1.1, for Windows and Mac. Dusty 1.1.0 and 1.1.1
-were never released: their public tests stalled on a virtual Mac, so they got
-no downloads. 1.1.2 includes everything listed under 1.1.1 and 1.1.0, plus
-this fix.
+The first release of Dusty 1.1, for Windows and Mac. Dusty 1.1.0, 1.1.1 and
+1.1.2 were never released: their public tests stalled on a virtual Mac, so
+they got no downloads. 1.1.3 includes everything listed under 1.1.2, 1.1.1 and
+1.1.0, plus this fix.
 
 ### Fixed
 
-- Inside a virtual Mac, Dusty now uses the processor without ever starting the
-  graphics engine, which could stall there before transcribing anything.
+- On a Mac with fewer than four processor cores, such as a virtual Mac, Skip
+  long silences could take many minutes, because the transcription engine
+  always used four threads for it. It now uses no more threads than the
+  transcription itself; most Macs are unchanged.
+
+## [1.1.2] - 2026-11-08 (not released)
+
+### Fixed
+
+- Inside a virtual Mac, Dusty now uses the processor without starting the
+  graphics engine, which is much slower there.
 
 ## [1.1.1] - 2026-11-08 (not released)
 
 ### Fixed
 
-- On a Mac whose graphics processor cannot run transcription, such as a virtual
-  Mac, Dusty now uses the processor at once instead of waiting on the graphics
-  processor, which could stall. The Mac GPU check also gives up after two
-  minutes.
+- On a Mac whose graphics processor lacks features the engine uses, such as a
+  virtual Mac, Dusty now uses the processor at once instead of the much slower
+  graphics processor. The Mac GPU check also gives up after two minutes.
 
 ## [1.1.0] - 2026-11-08 (not released)
 

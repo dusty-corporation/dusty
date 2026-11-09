@@ -60,6 +60,9 @@ and sentence endings can be lost when voice detection is on. An option you
 previously saved stays as you chose it. Voice detection is still downloaded
 automatically, so it is available if you choose to use it.
 
+On a Windows PC with fewer than four logical processors, Skip long silences can
+make a transcription very slow. If that happens, turn it off in Options.
+
 
 When upgrading from an older test build, Skip long silences is reset off once.
 After that, Dusty remembers the choice you make in Options.

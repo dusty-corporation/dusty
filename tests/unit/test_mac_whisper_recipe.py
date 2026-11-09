@@ -1,5 +1,6 @@
 """Reject source/patch drift and preserve caller/output boundaries before building."""
 
+import hashlib
 import os
 import subprocess
 import sys
@@ -10,8 +11,11 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 RECIPE = ROOT / "native/macos/build_whisper.sh"
-PINS = tomllib.loads((ROOT / "native/versions.toml").read_text())["whisper_cpp"]
-PATCH = ROOT / PINS["patch"]
+PINS = tomllib.loads((ROOT / "native/versions.toml").read_text())
+COMMIT = PINS["whisper_cpp"]["commit"]
+# The Mac engine has its own complete approved patch (ADR 0032, MAC11-VAD).
+PATCH = ROOT / PINS["whisper_cpp_macos"]["patch"]
+WINDOWS_PATCH = ROOT / PINS["whisper_cpp"]["patch"]
 DARWIN = pytest.mark.skipif(sys.platform != "darwin", reason="native Mac recipe shell behavior")
 
 
@@ -35,6 +39,28 @@ def test_explicit_backend_and_offline_build_contract():
     assert "canonical_diff_hash" in source
     assert "--no-ext-diff --no-textconv" in source
     assert "curl " not in source and "wget " not in source
+
+
+def _changed_lines(patch: Path) -> tuple[list[bytes], list[bytes]]:
+    lines = patch.read_bytes().splitlines()
+    added = [line for line in lines if line.startswith(b"+") and not line.startswith(b"+++")]
+    removed = [line for line in lines if line.startswith(b"-") and not line.startswith(b"---")]
+    return added, removed
+
+
+def test_mac_patch_is_the_windows_patch_plus_the_speech_detection_threads():
+    pinned = PINS["whisper_cpp_macos"]["patch_sha256"]
+    assert hashlib.sha256(PATCH.read_bytes()).hexdigest() == pinned
+    mac_added, mac_removed = _changed_lines(PATCH)
+    windows_added, windows_removed = _changed_lines(WINDOWS_PATCH)
+    assert mac_removed == windows_removed
+    threads = (
+        b"+        vad_ctx_params.n_threads = std::min(vad_ctx_params.n_threads, params.n_threads);"
+    )
+    extra = [line for line in mac_added if line not in windows_added]
+    assert extra[-1] == threads
+    assert all(line.startswith(b"+        //") for line in extra[:-1]) and len(extra) == 3
+    assert [line for line in mac_added if line not in extra] == windows_added
 
 
 @pytest.fixture
@@ -62,7 +88,7 @@ esac
     env.update(
         PATH=str(tools) + os.pathsep + env["PATH"],
         WHISPER_TEST_ROOT=str(source),
-        WHISPER_TEST_PIN=PINS["commit"],
+        WHISPER_TEST_PIN=COMMIT,
     )
     return source, env
 
@@ -92,7 +118,7 @@ def test_bad_patch_hash_fails_before_source_or_output_mutation(tmp_path):
     recipe.parent.mkdir(parents=True)
     recipe.write_bytes(RECIPE.read_bytes())
     (repo / "native/versions.toml").write_bytes((ROOT / "native/versions.toml").read_bytes())
-    patch = repo / PINS["patch"]
+    patch = repo / PINS["whisper_cpp_macos"]["patch"]
     patch.parent.mkdir(parents=True)
     patch.write_bytes(PATCH.read_bytes() + b"\nunapproved\n")
     out = tmp_path / "out"

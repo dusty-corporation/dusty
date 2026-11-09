@@ -24,7 +24,7 @@ previous-public-release rule. Do not replace old release assets.
 
 Starting with v1.1.0, a public release ships Windows and Mac together from the
 same snapshot (ADR 0029). The macos CI job builds Dusty.app from the pinned
-engine-macos-v1 engine, audits it, builds and verifies the disk image, runs the
+Mac engine (engine-macos-v2 from 1.1.3), audits it, builds and verifies the disk image, runs the
 headless self-test, upgrade, removal and moved app scenarios and writes the Mac
 SBOM. Staging checks those receipts and fails the whole draft when any Mac input
 is missing or did not pass. A v1.0.x servicing release stays Windows only.
@@ -34,10 +34,12 @@ A pushed snapshot is tagged only after its public CI passes in full. If it
 fails, that snapshot is never tagged or released. The exporter allows one
 snapshot per version and never rewrites public history, so the fix ships as
 the next patch version, exported on top, and the changelog marks the skipped
-version as not released. 1.1.0 and 1.1.1 were skipped this way, so the first
-release with Windows and Mac is 1.1.2, and its upgrade gate still starts from
-1.0.1. To avoid skipping versions, run the candidate's CI on the same kind of
-runner before the push whenever that is possible.
+version as not released. 1.1.0, 1.1.1 and 1.1.2 were skipped this way, so the
+first release with Windows and Mac is 1.1.3, and its upgrade gate still starts
+from 1.0.1. To avoid skipping versions, a candidate first runs the same public
+CI in dusty-corporation/dusty-staging, which is free: push the reviewed dry
+run's tree to a branch there and push it to dusty only when every job passes.
+dusty-staging never gets tags or releases.
 
 The gated release contains:
 
