@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
-from dusty.core import Segment, Transcript
+from dusty.core import Segment, Transcript, Word
 from dusty.core.types import Cancellation, EngineBackend
 
 from .progress import ProgressState
@@ -100,6 +100,62 @@ class EngineRun:
     device_name: str | None
 
 
+# Scripts written without spaces between words: each token counts as one word,
+# so one unsure character never marks a whole sentence.
+_NO_SPACE_SCRIPTS = (
+    (0x0E00, 0x0EFF),  # Thai, Lao
+    (0x1000, 0x109F),  # Myanmar
+    (0x1780, 0x17FF),  # Khmer
+    (0x3040, 0x30FF),  # Hiragana, Katakana
+    (0x3400, 0x4DBF),  # CJK extension A
+    (0x4E00, 0x9FFF),  # CJK unified ideographs
+    (0xF900, 0xFAFF),  # CJK compatibility ideographs
+    (0x20000, 0x2FA1F),  # CJK extensions B and later
+)
+
+
+def _no_space_script(text: str) -> bool:
+    return any(low <= ord(char) <= high for char in text for low, high in _NO_SPACE_SCRIPTS)
+
+
+def _words(tokens: object, text: str) -> tuple[Word, ...]:
+    """Group engine tokens into words; return none when they do not match the text.
+
+    Special tokens such as "[_BEG_]" and "[_TT_150]" are not speech. A token that
+    starts with a space starts a new word. The engine already joins tokens that
+    split one character. Anything unexpected keeps the plain segment text only.
+    """
+    if not isinstance(tokens, list):
+        return ()
+    words: list[list] = []
+    for token in tokens:
+        if not isinstance(token, dict):
+            return ()
+        piece, probability = token.get("text"), token.get("p")
+        if not isinstance(piece, str) or isinstance(probability, bool):
+            return ()
+        if not isinstance(probability, (int, float)) or not 0 <= probability <= 1:
+            return ()
+        if piece.startswith("[_") and piece.endswith("]"):
+            continue
+        spoken = any(char.isalnum() for char in piece)
+        sure = float(probability) if spoken else 1.0
+        previous = words[-1][0] if words else ""
+        if (
+            not words
+            or piece[:1].isspace()
+            or _no_space_script(piece)
+            or _no_space_script(previous[-1:])
+        ):
+            words.append([piece, sure])
+        else:
+            words[-1][0] += piece
+            words[-1][1] = min(words[-1][1], sure)
+    if "".join(piece for piece, _ in words).split() != text.split():
+        return ()
+    return tuple(Word(piece, confidence) for piece, confidence in words)
+
+
 def parse_whisper_json(
     output: Path,
     *,
@@ -108,7 +164,10 @@ def parse_whisper_json(
     backend: EngineBackend,
     duration_sec: float,
 ) -> Transcript:
-    """Read only the segment text needed for output; ignore engine metadata paths."""
+    """Read the segment text and word confidence needed for output.
+
+    Engine metadata paths are ignored.
+    """
     data = json.loads(output.read_text(encoding="utf-8"))
     segments = tuple(
         Segment(
@@ -116,6 +175,7 @@ def parse_whisper_json(
             start=part["offsets"]["from"] / 1000,
             end=part["offsets"]["to"] / 1000,
             text=part["text"],
+            words=_words(part.get("tokens"), part["text"]),
         )
         for index, part in enumerate(data["transcription"])
     )

@@ -2,6 +2,8 @@
 
 import argparse
 import json
+import tomllib
+from pathlib import Path
 from typing import Any
 
 from tools.release_version import public_version, versions
@@ -34,10 +36,23 @@ def validate(tag: str, releases: list[dict[str, Any]]) -> tuple[str, str]:
     return max(published)[1], ""
 
 
+ROOT = Path(__file__).resolve().parents[1]
+# Where Dusty's releases are published. A push or manual CI run, which the release
+# workflow does not give a previous tag, upgrades from the newest release here.
+PUBLIC_REPOSITORY = "dusty-corporation/dusty"
+
+
+def source_tag(root: Path = ROOT) -> str:
+    """The release tag of this checkout's version, such as v1.2.0."""
+    data = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    return "v" + data["project"]["version"]
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("tag")
+    parser.add_argument("tag", help="The release tag, or 'source' for this checkout's version")
     parser.add_argument("runs", help="JSON from public release list")
     args = parser.parse_args()
-    prior, run = validate(args.tag, json.loads(args.runs))
+    tag = source_tag() if args.tag == "source" else args.tag
+    prior, run = validate(tag, json.loads(args.runs))
     print(f"previous_tag={prior}\nprevious_run_id={run}")

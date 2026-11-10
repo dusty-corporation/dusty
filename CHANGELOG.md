@@ -2,6 +2,21 @@
 
 All notable changes to Dusty will be documented here. This project follows Keep a Changelog.
 
+## [1.2.0] - 2026-11-09
+
+The first release that upgrades an installed Dusty for Mac. Installing it over
+Dusty 1.1.3 keeps your models, settings and transcripts on Windows and Mac.
+
+### Added
+
+- Time markers in Text and Word transcripts, at an interval you choose from 0.5
+  to 120 minutes, such as every 5 or every 5.4 minutes. In Word they are
+  headings, listed in the Navigation pane. Off by default.
+- Mark words that may be wrong: Text and Word transcripts can show [?] after
+  words the engine was unsure of, with a choice of only very unsure words or
+  also somewhat unsure ones. Off by default. It is a hint: some marked words
+  are right and some mistakes are not marked.
+
 ## [1.1.3] - 2026-11-08
 
 The first release of Dusty 1.1, for Windows and Mac. Dusty 1.1.0, 1.1.1 and

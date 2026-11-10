@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dusty"
-version = "1.1.3"
+version = "1.2.0"
 description = "Offline Windows transcription application"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"

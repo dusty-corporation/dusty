@@ -8,10 +8,10 @@ from pathlib import Path
 
 from dusty.core import BatchOptions, Job, Transcript
 from dusty.export import render_docx, render_json, render_srt, render_txt, render_vtt
+from dusty.export.formats import TextExtras
 from dusty.work_area import canonical, linked
 
 RENDERERS = {
-    "txt": render_txt,
     "srt": render_srt,
     "vtt": render_vtt,
 }
@@ -91,6 +91,12 @@ def output_targets(job: Job, options: BatchOptions) -> list[Path]:
 def write_outputs(job: Job, options: BatchOptions, transcript: Transcript) -> list[Path]:
     """Render formats then publish each complete file without silent replacement."""
     targets = output_targets(job, options)
+    extras = TextExtras.choose(
+        time_markers=options.time_markers,
+        marker_minutes=options.marker_minutes,
+        mark_unsure=options.mark_unsure,
+        unsure_level=options.unsure_level,
+    )
     published: list[Path] = []
     identities: dict[Path, str] = {}
     try:
@@ -101,7 +107,9 @@ def write_outputs(job: Job, options: BatchOptions, transcript: Transcript) -> li
             if fmt == "json":
                 content = render_json(transcript, job.source)
             elif fmt == "docx":
-                content = render_docx(transcript, job.source)
+                content = render_docx(transcript, job.source, extras=extras)
+            elif fmt == "txt":
+                content = render_txt(transcript, extras)
             else:
                 content = RENDERERS[fmt](transcript)
             descriptor, name = tempfile.mkstemp(suffix=".dusty-tmp", dir=target.parent)

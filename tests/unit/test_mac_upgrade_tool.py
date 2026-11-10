@@ -79,3 +79,30 @@ def test_cpu_results_are_expected_only_inside_a_virtual_mac():
         {},
     ):
         assert not check.virtual_mac(probe)
+
+
+PROBE = {"engine": "a" * 64, "driver": "d" * 64, "ok": True, "device_name": "Apple M2"}
+CHOICES = {"schema_version": 1, "model_id": "tiny", "formats": ["txt", "srt"], "language": "en"}
+
+
+def test_saved_choices_must_survive_an_upgrade_exactly():
+    before = {**CHOICES, "backend_probe": PROBE}
+    assert check.settings_kept(before, {**CHOICES, "backend_probe": {**PROBE, "engine": "b"}})
+    assert not check.settings_kept(before, {**CHOICES, "language": "fr", "backend_probe": PROBE})
+    assert not check.settings_kept(before, {"backend_probe": PROBE})
+
+
+def test_gpu_check_cache_is_kept_or_redone_only_for_a_new_engine_file():
+    before = {**CHOICES, "backend_probe": PROBE}
+    new_engine = "b" * 64
+    redone = {**CHOICES, "backend_probe": {**PROBE, "engine": new_engine}}
+    assert check.probe_cache_kept(before, before, PROBE["engine"])
+    assert check.probe_cache_kept(before, redone, new_engine)
+    # The engine file did not change, so the cache had to be reused.
+    assert not check.probe_cache_kept(before, redone, PROBE["engine"])
+    failed = {**CHOICES, "backend_probe": {**PROBE, "engine": new_engine, "ok": False}}
+    assert not check.probe_cache_kept(before, failed, new_engine)
+    other_gpu = {**CHOICES, "backend_probe": {**PROBE, "engine": new_engine, "driver": "e"}}
+    assert not check.probe_cache_kept(before, other_gpu, new_engine)
+    stale = {**CHOICES, "backend_probe": {**PROBE, "engine": "c" * 64}}
+    assert not check.probe_cache_kept(before, stale, new_engine)

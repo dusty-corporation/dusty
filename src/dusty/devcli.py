@@ -1,12 +1,22 @@
 """Development-only headless entry point for the shared offline coordinator."""
 
 import argparse
+import math
 import sys
 from pathlib import Path
 from typing import cast
 
 from dusty.core import BatchOptions, JobStatus
-from dusty.core.types import Backend, CollisionPolicy, OutputFormat, Task
+from dusty.core.types import (
+    MARKER_MINUTES_DEFAULT,
+    MARKER_MINUTES_MAX,
+    MARKER_MINUTES_MIN,
+    Backend,
+    CollisionPolicy,
+    OutputFormat,
+    Task,
+    UnsureLevel,
+)
 from dusty.engine.backend import probe_vulkan
 from dusty.engine.binaries import gpu_backend
 from dusty.models import ModelRegistry, load_manifest
@@ -39,6 +49,8 @@ def transcribe(
     collision: CollisionPolicy = "ask",
     recursive: bool = False,
     keep_structure: bool = False,
+    marker_minutes: float | None = None,
+    mark_unsure: UnsureLevel | None = None,
 ) -> int:
     if not backend_supported(backend):
         print("BACKEND_UNSUPPORTED")
@@ -52,6 +64,11 @@ def transcribe(
         return 2
     if not formats or len(set(formats)) != len(formats):
         print("FORMATS_INVALID")
+        return 2
+    if marker_minutes is not None and not (
+        math.isfinite(marker_minutes) and MARKER_MINUTES_MIN <= marker_minutes <= MARKER_MINUTES_MAX
+    ):
+        print("MARKER_MINUTES_INVALID")
         return 2
     if is_synced(out):
         print("Warning: this output folder may sync files to a cloud service.")
@@ -69,6 +86,10 @@ def transcribe(
         prompt=prompt,
         collision=collision,
         keep_structure=keep_structure,
+        time_markers=marker_minutes is not None,
+        mark_unsure=mark_unsure is not None,
+        marker_minutes=MARKER_MINUTES_DEFAULT if marker_minutes is None else marker_minutes,
+        unsure_level=mark_unsure or "very",
     )
     try:
         # Refuse before the GPU probe or any job, with a code instead of a traceback.
@@ -106,6 +127,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--collision", choices=("ask", "skip", "overwrite", "keep_both"), default="ask"
     )
+    parser.add_argument("--marker-minutes", type=float, help="TXT and DOCX time marker interval")
+    parser.add_argument(
+        "--mark-unsure", choices=("very", "somewhat"), help="mark words that may be wrong"
+    )
     args = parser.parse_args(argv)
     if not backend_supported(args.backend):
         print("BACKEND_UNSUPPORTED")
@@ -124,6 +149,8 @@ def main(argv: list[str] | None = None) -> int:
         collision=cast(CollisionPolicy, args.collision),
         recursive=args.recursive,
         keep_structure=args.keep_structure,
+        marker_minutes=args.marker_minutes,
+        mark_unsure=cast(UnsureLevel | None, args.mark_unsure),
     )
 
 

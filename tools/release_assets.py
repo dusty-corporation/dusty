@@ -18,6 +18,9 @@ from tools.release_version import public_version, versions
 
 ROOT = Path(__file__).resolve().parents[1]
 FIRST_COMBINED = (1, 1, 0)
+# The first published Mac release. Every later release must prove its Mac
+# upgrade from the previous published release, not from its own build.
+FIRST_MAC_RELEASE = (1, 1, 3)
 MAC_BUNDLE_ID = "org.dusty.Dusty"
 MAC_SCENARIOS = ("1 first run", "2 upgrade", "3 remove and reinstall", "4 moved app")
 
@@ -35,8 +38,17 @@ def _one(source: Path, pattern: str) -> Path:
     return found[0]
 
 
-def mac_assets(source: Path, display: str) -> dict[str, Path]:
-    """Check the macos CI job's receipts and return the Mac assets by release name."""
+def _row(rows: list[dict], scenario: str, step: str) -> dict:
+    found = [row for row in rows if row.get("scenario") == scenario and row.get("step") == step]
+    return found[0] if len(found) == 1 else {}
+
+
+def mac_assets(source: Path, display: str, previous_tag: str = "") -> dict[str, Path]:
+    """Check the macos CI job's receipts and return the Mac assets by release name.
+
+    After the first Mac release, the upgrade scenario must have installed the
+    previous published release (previous_tag) and replaced it with this one.
+    """
     image_name = f"Dusty-{display}-macos-arm64.dmg"
     images = [path for path in source.rglob("*.dmg") if not path.is_symlink()]
     if len(images) != 1 or images[0].name != image_name:
@@ -68,6 +80,20 @@ def mac_assets(source: Path, display: str) -> dict[str, Path]:
         or {row.get("scenario") for row in checked} != set(MAC_SCENARIOS)
     ):
         raise ValueError("Mac self-test, upgrade, removal and moved app scenarios did not pass")
+    current = public_version("v" + display)
+    if current is not None and current > FIRST_MAC_RELEASE:
+        if public_version(previous_tag) is None:
+            raise ValueError("A Mac upgrade needs the previous public release tag")
+        _, previous, _ = versions(previous_tag)
+        old = _row(rows, "2 upgrade", "old app --version")
+        new = _row(rows, "2 upgrade", "new app --version")
+        if (
+            old.get("result") != "pass"
+            or old.get("observed") != f"exit 0, Dusty {previous}"
+            or new.get("result") != "pass"
+            or new.get("observed") != f"exit 0, Dusty {display}"
+        ):
+            raise ValueError(f"Mac upgrade did not start from the published Dusty {previous}")
     sbom = _one(source, "sbom.cdx.json")
     if json.loads(sbom.read_text(encoding="utf-8")).get("bomFormat") != "CycloneDX":
         raise ValueError("Expected a CycloneDX Mac SBOM")
@@ -168,7 +194,7 @@ def stage(
         selected[name] = found[0]
     verify_ffmpeg_source(selected[FFMPEG_SOURCE["name"]].parent)
     if mac_source is not None:
-        mac = mac_assets(mac_source, display)
+        mac = mac_assets(mac_source, display, previous_tag)
         if set(mac) & set(selected):
             raise ValueError("Mac and Windows release assets would overwrite each other")
         selected.update(mac)

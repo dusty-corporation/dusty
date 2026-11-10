@@ -173,6 +173,25 @@ THREADS = "Processor threads"
 THREADS_HELP = "More threads use more processor capacity. The default suits most computers."
 VAD = "Skip long silences"
 VAD_HELP = "Faster on recordings with long pauses. May miss quiet or distant speech."
+TEXT_EXTRAS = "In Text and Word files"
+TIME_MARKERS = "Add a time marker every"
+TIME_MARKERS_NAME = "Add time markers"
+MINUTES = "minutes"
+MARKER_MINUTES_NAME = "Minutes between time markers"
+MARKERS_HELP = "Markers near {first}, {second} and so on. From {low} to {high} minutes."
+MARK_UNSURE = "Mark words that may be wrong"
+UNSURE_LEVELS = {
+    "very": "Only very unsure words (fewer marks)",
+    "somewhat": "Also somewhat unsure words (more marks)",
+}
+UNSURE_HELP = (
+    "Adds [?] after words Dusty is unsure of, such as names. Some marked words are right, "
+    "and some mistakes are not marked. If a name is often wrong, add it to Vocabulary hints "
+    "and transcribe again."
+)
+TEXT_EXTRAS_NEED_FORMAT = "Choose Text or Word on the main screen to use these."
+MARKERS_ON = "time markers every {minutes} minutes"
+UNSURE_ON = "unsure words marked"
 SLOW = "This model will be slow on this computer. For faster results, choose Balanced."
 PREPARING = "Preparing..."
 PREPARING_HELP = (

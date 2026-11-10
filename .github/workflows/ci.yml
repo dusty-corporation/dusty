@@ -230,8 +230,27 @@ jobs:
         run: uv run python -m tools.check_macos_bundle build/mac-app/Dusty.app --json build/mac-app/bundle-check.json
       - name: Build and verify the disk image
         run: uv run python -m tools.build_macos_dmg build/mac-app/Dusty.app build/mac-dmg
-      - name: Headless self-test, upgrade, removal and moved app scenarios
-        run: uv run python -m tools.mac_upgrade_check --new build/mac-app/Dusty.app --models build/models --out build/mac-upgrade
+      - name: Fetch the published Dusty to upgrade from
+        # The release workflow names the newest published release. A push or a
+        # manual run looks it up the same way in the public repository, so a
+        # candidate also upgrades from what users have, never from itself.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIOUS_TAG: ${{ inputs.previous_tag || '' }}
+        run: |
+          repo="$GITHUB_REPOSITORY"
+          tag="$PREVIOUS_TAG"
+          if [ -z "$tag" ]; then
+            repo=dusty-corporation/dusty
+            releases=$(gh release list --repo "$repo" --limit 100 --json tagName,isDraft,isPrerelease)
+            tag=$(uv run python -m tools.release_policy source "$releases" | sed -n 's/^previous_tag=//p')
+          fi
+          test -n "$tag"
+          test "$(gh release view "$tag" --repo "$repo" --json isDraft,isPrerelease --jq '.isDraft or .isPrerelease')" = false
+          gh release download "$tag" --repo "$repo" --pattern 'Dusty-*-macos-arm64.dmg' --pattern SHA256SUMS.txt --dir build/mac-previous/release
+          uv run python -m tools.mac_previous_app --release build/mac-previous/release --tag "$tag" --out build/mac-previous/Dusty.app
+      - name: Headless self-test, upgrade from the published Dusty, removal and moved app scenarios
+        run: uv run python -m tools.mac_upgrade_check --old build/mac-previous/Dusty.app --new build/mac-app/Dusty.app --models build/models --out build/mac-upgrade
       - name: Software bill of materials and release inputs
         run: |
           uv run python -m tools.macos_sbom build/mac-app/Dusty.app build/mac-app/audit/notices-inventory.json build/mac-release/sbom.cdx.json
@@ -339,10 +358,21 @@ jobs:
           PREVIOUS_TAG: ${{ inputs.previous_tag || '' }}
           PREVIOUS_RUN_ID: ${{ inputs.previous_run_id || '' }}
         run: |
+          $repo = '${{ github.repository }}'
+          if (-not $env:PREVIOUS_TAG) {
+            # A push or manual run upgrades from the newest release published in
+            # the public repository, as the release workflow does.
+            $repo = 'dusty-corporation/dusty'
+            $releases = gh release list --repo $repo --limit 100 --json tagName,isDraft,isPrerelease
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot list the published releases' }
+            $policy = uv run python -m tools.release_policy source "$releases"
+            if ($LASTEXITCODE -ne 0) { throw 'No published release to upgrade from' }
+            $env:PREVIOUS_TAG = ($policy | Select-String '^previous_tag=(.*)$').Matches[0].Groups[1].Value
+          }
           if ($env:PREVIOUS_TAG) {
-            $previous = gh release view $env:PREVIOUS_TAG --repo '${{ github.repository }}' --json isDraft,isPrerelease | ConvertFrom-Json
+            $previous = gh release view $env:PREVIOUS_TAG --repo $repo --json isDraft,isPrerelease | ConvertFrom-Json
             if ($LASTEXITCODE -ne 0 -or $previous.isDraft -or $previous.isPrerelease) { throw 'Previous public release is missing or still a draft/prerelease' }
-            gh release download $env:PREVIOUS_TAG --repo '${{ github.repository }}' --pattern 'Dusty-*-Setup.exe' --pattern SHA256SUMS.txt --dir build/previous-release
+            gh release download $env:PREVIOUS_TAG --repo $repo --pattern 'Dusty-*-Setup.exe' --pattern SHA256SUMS.txt --dir build/previous-release
             if ($LASTEXITCODE -ne 0) { throw 'Previous published installer download failed' }
             $older = @(Get-ChildItem build/previous-release -Recurse -Filter '*.exe')
             if ($older.Count -ne 1) { throw 'Expected one previous installer' }

@@ -1,5 +1,6 @@
 """Typed values shared by the headless pipeline and the future GUI."""
 
+import math
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -11,6 +12,12 @@ EngineBackend = Literal["cpu", "vulkan", "metal"]
 Task = Literal["transcribe", "translate"]
 OutputFormat = Literal["txt", "srt", "vtt", "json", "docx"]
 CollisionPolicy = Literal["ask", "skip", "overwrite", "keep_both"]
+UnsureLevel = Literal["very", "somewhat"]
+
+# Time markers in TXT and DOCX: the interval in minutes the user may choose.
+MARKER_MINUTES_MIN = 0.5
+MARKER_MINUTES_MAX = 120.0
+MARKER_MINUTES_DEFAULT = 5.0
 
 
 class Cancellation(Protocol):
@@ -51,11 +58,24 @@ class FailureCode(str, Enum):
 
 
 @dataclass(frozen=True)
+class Word:
+    """One word as the engine wrote it, with its leading space, and how sure it was.
+
+    ``confidence`` is the lowest probability of the word's letter or digit
+    tokens, from 0 to 1. Punctuation alone counts as fully sure.
+    """
+
+    text: str
+    confidence: float
+
+
+@dataclass(frozen=True)
 class Segment:
     index: int
     start: float
     end: float
     text: str
+    words: tuple[Word, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -108,6 +128,10 @@ class BatchOptions:
     collision: CollisionPolicy = "ask"
     same_folder: bool = False
     keep_structure: bool = False
+    time_markers: bool = False
+    marker_minutes: float = MARKER_MINUTES_DEFAULT
+    mark_unsure: bool = False
+    unsure_level: UnsureLevel = "very"
 
     def __post_init__(self) -> None:
         if not isinstance(self.model_id, str) or not self.model_id.strip():
@@ -136,6 +160,21 @@ class BatchOptions:
         if not isinstance(self.prompt, str):
             raise ValueError("Prompt must be text")
         if any(
-            type(value) is not bool for value in (self.vad, self.same_folder, self.keep_structure)
+            type(value) is not bool
+            for value in (
+                self.vad,
+                self.same_folder,
+                self.keep_structure,
+                self.time_markers,
+                self.mark_unsure,
+            )
         ):
             raise ValueError("Invalid boolean preference")
+        if (
+            type(self.marker_minutes) not in (int, float)
+            or not math.isfinite(self.marker_minutes)
+            or not MARKER_MINUTES_MIN <= self.marker_minutes <= MARKER_MINUTES_MAX
+        ):
+            raise ValueError("Invalid time marker interval")
+        if self.unsure_level not in ("very", "somewhat"):
+            raise ValueError("Invalid unsure word level")

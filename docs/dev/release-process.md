@@ -22,6 +22,16 @@ and proves true upgrade with models preserved and the downloader blocked.
 A missing prior release or receipt fails staging. Drafts never satisfy the
 previous-public-release rule. Do not replace old release assets.
 
+Starting with v1.2.0, the Mac gate is a true upgrade as well. The macos CI job
+downloads the previous published release's disk image with its SHA256SUMS.txt
+(Windows line endings are accepted), checks the image, takes Dusty.app out of
+it with tools/mac_previous_app.py and installs that first in the upgrade
+scenario. Staging refuses Mac receipts whose upgrade did not start from that
+version. A push or manual CI run, which the release workflow gives no previous
+tag, finds the newest published release in dusty-corporation/dusty with
+tools/release_policy.py on both platforms, so a staging candidate also proves
+both upgrades before it is tagged.
+
 Starting with v1.1.0, a public release ships Windows and Mac together from the
 same snapshot (ADR 0029). The macos CI job builds Dusty.app from the pinned
 Mac engine (engine-macos-v2 from 1.1.3), audits it, builds and verifies the disk image, runs the

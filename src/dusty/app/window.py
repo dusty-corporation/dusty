@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import cast
 from uuid import UUID
 
-from PySide6.QtCore import QByteArray, QEvent, Qt, QThread, QTimer, QUrl, Slot
+from PySide6.QtCore import QByteArray, QEvent, QLocale, Qt, QThread, QTimer, QUrl, Slot
 from PySide6.QtGui import (
     QAction,
     QCloseEvent,
@@ -17,13 +17,16 @@ from PySide6.QtGui import (
     QKeySequence,
     QResizeEvent,
     QStandardItemModel,
+    QValidator,
 )
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
+    QButtonGroup,
     QCheckBox,
     QComboBox,
     QDialog,
+    QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
     QFrame,
@@ -35,6 +38,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
+    QRadioButton,
     QScrollArea,
     QSizePolicy,
     QSpinBox,
@@ -46,7 +50,16 @@ from PySide6.QtWidgets import (
 
 from dusty import __version__
 from dusty.core import BatchOptions, FailureCode, Job, JobStatus
-from dusty.core.types import Backend, CollisionPolicy, OutputFormat, Task
+from dusty.core.types import (
+    MARKER_MINUTES_DEFAULT,
+    MARKER_MINUTES_MAX,
+    MARKER_MINUTES_MIN,
+    Backend,
+    CollisionPolicy,
+    OutputFormat,
+    Task,
+    UnsureLevel,
+)
 from dusty.engine.binaries import gpu_backend
 from dusty.models import ModelRegistry, can_translate, load_manifest, recommend_model
 from dusty.models.catalog import gpu_presumed
@@ -92,6 +105,15 @@ _MAC_LAUNCHABLE_FOLDERS = frozenset(
 )
 
 
+def _clock(seconds: int) -> str:
+    return f"{seconds // 3600:02}:{seconds % 3600 // 60:02}:{seconds % 60:02}"
+
+
+def _minutes(locale: QLocale, value: float) -> str:
+    """Minutes in the computer's language, without trailing zeros: 5, 5.4 or 5,4."""
+    return locale.toString(round(float(value), 2), ord("g"), 6)
+
+
 def _standard_key(key: QKeySequence.StandardKey, fallback: str) -> QKeySequence:
     """Platform standard shortcut; Qt writes Command as Ctrl in portable text on Mac."""
     sequence = QKeySequence(key)
@@ -125,6 +147,69 @@ class ElidedLabel(QLabel):
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
         self._elide()
+
+
+class MinutesBox(QDoubleSpinBox):
+    """Minutes between time markers, typed with any usual decimal separator.
+
+    5, 5.4 and 5,4 are accepted whatever the language of the computer, as is its
+    own separator (5٫4 on a Persian or Arabic system), and the value is shown in
+    that language. A value that is empty or out of range when
+    the field loses focus goes back to the last good one.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.setRange(MARKER_MINUTES_MIN, MARKER_MINUTES_MAX)
+        self.setDecimals(2)
+        self.setSingleStep(1)
+        self.setCorrectionMode(QDoubleSpinBox.CorrectionMode.CorrectToPreviousValue)
+        # The value changes only when typing is finished, so a half typed number
+        # never becomes the value a correction goes back to.
+        self.setKeyboardTracking(False)
+        self.setValue(MARKER_MINUTES_DEFAULT)
+
+    def _plain(self, text: str) -> str:
+        """Text with every decimal separator written as ".".
+
+        Accepts ".", ",", this computer's own separator and the Arabic one
+        (U+066B), which Persian and Arabic systems show.
+        """
+        text = text.strip()
+        for separator in {",", "\u066b", self.locale().decimalPoint()} - {""}:
+            text = text.replace(separator, ".")
+        return text
+
+    @staticmethod
+    def _number(text: str) -> float | None:
+        # str.isdigit and float also take Persian and Arabic digits.
+        if not text or text.count(".") > 1 or not text.replace(".", "").isdigit():
+            return None
+        if "." in text and len(text.split(".")[1]) > 2:
+            return None
+        return float(text)
+
+    def textFromValue(self, value: float) -> str:
+        return _minutes(self.locale(), value)
+
+    def valueFromText(self, text: str) -> float:
+        number = self._number(self._plain(text))
+        return self.value() if number is None else number
+
+    def validate(self, text: str, pos: int) -> object:
+        plain = self._plain(text)
+        if not plain or plain == ".":
+            return QValidator.State.Intermediate, text, pos
+        unfinished = plain.endswith(".")
+        number = self._number(plain[:-1] if unfinished else plain)
+        if number is None:
+            return QValidator.State.Invalid, text, pos
+        if unfinished or not MARKER_MINUTES_MIN <= number <= MARKER_MINUTES_MAX:
+            return QValidator.State.Intermediate, text, pos
+        return QValidator.State.Acceptable, text, pos
+
+    def fixup(self, text: str) -> str:
+        return self.textFromValue(self.value())
 
 
 class MainWindow(QMainWindow):
@@ -390,6 +475,48 @@ class MainWindow(QMainWindow):
         for key in ("srt", "vtt", "json"):
             more_layout.addWidget(self.formats[key])
         form.addRow(M.MORE_FORMATS, more_formats)
+        extras = QWidget()
+        extras_layout = QVBoxLayout(extras)
+        extras_layout.setContentsMargins(0, 0, 0, 0)
+        extras_layout.setSpacing(4)
+        markers_row = QWidget()
+        markers_layout = QHBoxLayout(markers_row)
+        markers_layout.setContentsMargins(0, 0, 0, 0)
+        self.time_markers = QCheckBox(M.TIME_MARKERS)
+        self.time_markers.setAccessibleName(M.TIME_MARKERS_NAME)
+        self.marker_minutes = MinutesBox()
+        self.marker_minutes.setAccessibleName(M.MARKER_MINUTES_NAME)
+        markers_layout.addWidget(self.time_markers)
+        markers_layout.addWidget(self.marker_minutes)
+        markers_layout.addWidget(QLabel(M.MINUTES))
+        markers_layout.addStretch()
+        extras_layout.addWidget(markers_row)
+        self.markers_help = self._label(M.EMPTY_CELL)
+        self.markers_help.setIndent(22)
+        extras_layout.addWidget(self.markers_help)
+        self.mark_unsure = QCheckBox(M.MARK_UNSURE)
+        self.mark_unsure.setAccessibleName(M.MARK_UNSURE)
+        extras_layout.addWidget(self.mark_unsure)
+        self.unsure_levels = QButtonGroup(extras)
+        self.unsure_buttons: dict[str, QRadioButton] = {}
+        levels = QWidget()
+        levels_layout = QVBoxLayout(levels)
+        levels_layout.setContentsMargins(22, 0, 0, 0)
+        levels_layout.setSpacing(2)
+        for key, label in M.UNSURE_LEVELS.items():
+            level = QRadioButton(label)
+            level.setAccessibleName(label)
+            self.unsure_levels.addButton(level)
+            self.unsure_buttons[key] = level
+            levels_layout.addWidget(level)
+        self.unsure_buttons["very"].setChecked(True)
+        extras_layout.addWidget(levels)
+        unsure_help = self._label(M.UNSURE_HELP)
+        unsure_help.setIndent(22)
+        extras_layout.addWidget(unsure_help)
+        self.extras_unavailable = self._label(M.TEXT_EXTRAS_NEED_FORMAT, warning=True)
+        extras_layout.addWidget(self.extras_unavailable)
+        form.addRow(M.TEXT_EXTRAS, extras)
         self.same_folder = QCheckBox(M.SAME_FOLDER)
         self.keep_structure = QCheckBox(M.KEEP_STRUCTURE)
         form.addRow(self.same_folder)
@@ -454,6 +581,9 @@ class MainWindow(QMainWindow):
         self.device_choice.currentIndexChanged.connect(self._device_changed)
         self.prompt.textChanged.connect(self._rules)
         self.vad.toggled.connect(self._rules)
+        self.time_markers.toggled.connect(self._rules)
+        self.marker_minutes.valueChanged.connect(self._rules)
+        self.mark_unsure.toggled.connect(self._rules)
         self.theme_choice.currentIndexChanged.connect(self._theme_changed)
         for first, second in zip(
             (self.output_button, self.formats["txt"], self.formats["docx"], self.options_button),
@@ -714,6 +844,13 @@ class MainWindow(QMainWindow):
         if "formats" in settings:
             for key, checkbox in self.formats.items():
                 checkbox.setChecked(key in settings["formats"])
+        for key, box in (("time_markers", self.time_markers), ("mark_unsure", self.mark_unsure)):
+            if key in settings:
+                box.setChecked(settings[key] is True)
+        if "marker_minutes" in settings:
+            self.marker_minutes.setValue(settings["marker_minutes"])
+        if settings.get("unsure_level") in self.unsure_buttons:
+            self.unsure_buttons[settings["unsure_level"]].setChecked(True)
         self.prompt.setPlainText(settings.get("prompt", ""))
         self.threads_choice.setValue(settings.get("threads", default_threads()))
         geometry = settings.get("geometry")
@@ -754,6 +891,10 @@ class MainWindow(QMainWindow):
                     "prompt": self.prompt.toPlainText(),
                     "same_folder": self.same_folder.isChecked(),
                     "keep_structure": self.keep_structure.isChecked(),
+                    "time_markers": self.time_markers.isChecked(),
+                    "marker_minutes": self.marker_minutes.value(),
+                    "mark_unsure": self.mark_unsure.isChecked(),
+                    "unsure_level": self._unsure_level(),
                     "theme": self.theme_choice.currentData(),
                     "geometry": bytes(self.saveGeometry().toBase64().data()).decode("ascii"),
                 }
@@ -1061,6 +1202,23 @@ class MainWindow(QMainWindow):
             warning = M.INSTALLER_TEST_WARNING
         self.warning.setText(warning or M.EMPTY_CELL)
         self.warning.setVisible(bool(warning))
+        text_output = self.formats["txt"].isChecked() or self.formats["docx"].isChecked()
+        self.extras_unavailable.setVisible(not text_output)
+        for box in (self.time_markers, self.mark_unsure):
+            box.setEnabled(text_output)
+        self.marker_minutes.setEnabled(text_output and self.time_markers.isChecked())
+        for level in self.unsure_buttons.values():
+            level.setEnabled(text_output and self.mark_unsure.isChecked())
+        step = round(self.marker_minutes.value() * 60)
+        locale = self.marker_minutes.locale()
+        self.markers_help.setText(
+            M.MARKERS_HELP.format(
+                first=_clock(step),
+                second=_clock(2 * step),
+                low=_minutes(locale, MARKER_MINUTES_MIN),
+                high=_minutes(locale, MARKER_MINUTES_MAX),
+            )
+        )
         self.choices_summary.setText(
             M.CHOICES_SUMMARY.format(
                 model=M.MODEL_NAMES.get(model_id, M.NO_MODEL_SELECTED),
@@ -1068,6 +1226,12 @@ class MainWindow(QMainWindow):
                 device=M.devices(gpu_backend())["cpu" if cpu_only else gpu_backend()],
             )
             + (", " + M.SILENCE_ON if self.vad.isChecked() else "")
+            + (
+                ", " + M.MARKERS_ON.format(minutes=self.marker_minutes.text())
+                if text_output and self.time_markers.isChecked()
+                else ""
+            )
+            + (", " + M.UNSURE_ON if text_output and self.mark_unsure.isChecked() else "")
         )
         output_text = (
             M.SAVING_NEXT_TO
@@ -1342,7 +1506,17 @@ class MainWindow(QMainWindow):
             collision=cast(CollisionPolicy, self.collision_choice.currentData()),
             same_folder=self.same_folder.isChecked(),
             keep_structure=self.keep_structure.isChecked(),
+            time_markers=self.time_markers.isChecked(),
+            marker_minutes=self.marker_minutes.value(),
+            mark_unsure=self.mark_unsure.isChecked(),
+            unsure_level=self._unsure_level(),
         )
+
+    def _unsure_level(self) -> UnsureLevel:
+        for key, level in self.unsure_buttons.items():
+            if level.isChecked():
+                return cast(UnsureLevel, key)
+        return "very"
 
     def start_batch(self, *, retry_failed: bool = False) -> None:
         if not self.ready or self.running or not self.start_button.isEnabled():

@@ -97,6 +97,32 @@ def leftovers(home: Path) -> list[str]:
     ]
 
 
+def settings_kept(before: dict, after: dict) -> bool:
+    """Every saved choice is the same; the GPU check cache is judged on its own."""
+    return {k: v for k, v in before.items() if k != "backend_probe"} == {
+        k: v for k, v in after.items() if k != "backend_probe"
+    }
+
+
+def probe_cache_kept(before: dict, after: dict, engine: str) -> bool:
+    """The GPU check cache is kept, or redone once because the engine file changed.
+
+    Dusty repeats its GPU check when the engine file's SHA-256 differs from the
+    cached one (engine/backend.py), as it does after an upgrade whose engine was
+    signed differently. Then the new entry must name the new engine, the same
+    graphics driver, and a passing check.
+    """
+    old, new = before.get("backend_probe") or {}, after.get("backend_probe") or {}
+    if new == old:
+        return True
+    return (
+        old.get("engine") != engine
+        and new.get("engine") == engine
+        and new.get("driver") == old.get("driver")
+        and new.get("ok") is True
+    )
+
+
 def redact(text: str, out: Path) -> str:
     text = text.replace(str(out), "<out>")
     return text.replace(str(Path.home()), "<home>")
@@ -379,7 +405,8 @@ class Harness:
             saved.get("model_id") == "tiny"
             and all(saved.get(k) == v for k, v in PREFERENCES.items()),
         )
-        self.data_before = snapshot(data, skip=("logs",))
+        self.data_before = snapshot(data, skip=("logs", "settings.json"))
+        self.settings_before = saved
         self.log_before = (data / "logs/dusty.log").read_bytes()
         self.outputs_before = snapshot(outputs)
         self.inputs_before = snapshot(inputs)
@@ -440,21 +467,40 @@ class Harness:
 
     def compare(self, scenario: str, home: Path, outputs: Path, inputs: Path) -> None:
         data = home / DATA
-        changed = differences(self.data_before, snapshot(data, skip=("logs",)))
+        changed = differences(self.data_before, snapshot(data, skip=("logs", "settings.json")))
         self.record(
             scenario,
-            "data folder except logs",
-            "identical: settings, queue, models (content, inode, time)",
+            "data folder except logs and settings",
+            "identical: queue, models (content, inode, time)",
             f"{len(changed)} changed {changed}",
             not changed,
         )
+        after = self.settings(home)
+        self.record(
+            scenario,
+            "settings kept",
+            "every saved choice identical",
+            "same" if settings_kept(self.settings_before, after) else "changed",
+            settings_kept(self.settings_before, after),
+        )
+        engine = sha256(self.new / "Contents/Helpers/bin/metal/whisper-cli")
+        old_probe = self.settings_before.get("backend_probe") or {}
+        new_probe = after.get("backend_probe") or {}
+        self.record(
+            scenario,
+            "GPU check cache",
+            "kept, or redone once for a changed engine file",
+            "kept" if new_probe == old_probe else f"redone, ok {new_probe.get('ok')}",
+            probe_cache_kept(self.settings_before, after, engine),
+        )
         parts = sorted(p.name for p in (data / "models").glob("*.part"))
+        models = [name for name in changed if name == "models" or name.startswith("models/")]
         self.record(
             scenario,
             "no new download",
             "no .part file, model inode and time kept",
-            str(parts),
-            not parts and not changed,
+            str(parts + models),
+            not parts and not models,
         )
         log = (data / "logs/dusty.log").read_bytes()
         self.record(

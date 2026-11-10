@@ -11,6 +11,7 @@ from typing import Any
 from uuid import UUID
 
 from dusty.core import BatchOptions, FailureCode, Job, JobStatus
+from dusty.core.types import MARKER_MINUTES_DEFAULT
 
 _RETRY_SECONDS = 0.5
 _RETRY_INTERVAL = 0.025
@@ -158,6 +159,11 @@ def load_batch(path: Path) -> tuple[BatchOptions, list[Job]] | None:
             collision=raw["collision"],
             same_folder=raw["same_folder"],
             keep_structure=raw["keep_structure"],
+            # Queues saved before 1.2 have no transcript extras: they stay off.
+            time_markers=raw.get("time_markers", False),
+            marker_minutes=raw.get("marker_minutes", MARKER_MINUTES_DEFAULT),
+            mark_unsure=raw.get("mark_unsure", False),
+            unsure_level=raw.get("unsure_level", "very"),
         )
         jobs = []
         for item in data["jobs"]:

@@ -116,15 +116,21 @@ def test_upgrade_audits_the_new_installed_version():
     assert "current_installer_fresh_download_wfp='passed'" in final
 
 
-@pytest.mark.parametrize("tag", ["v0.5.0-m5.6", "v1.0.0", "v1.0.1", "v1.1.0"])
+@pytest.mark.parametrize("tag", ["v0.5.0-m5.6", "v1.0.0", "v1.0.1", "v1.1.0", "v1.2.0"])
 def test_final_release_rejects_missing_or_false_upgrade_and_wfp_evidence(tmp_path, tag):
-    previous = {"v1.0.0": "", "v1.0.1": "v1.0.0", "v1.1.0": "v1.0.1"}.get(tag, "v0.5.0-m5.14")
+    previous = {"v1.0.0": "", "v1.0.1": "v1.0.0", "v1.1.0": "v1.0.1", "v1.2.0": "v1.1.3"}.get(
+        tag, "v0.5.0-m5.14"
+    )
     source = tmp_path / "input/installer"
     (source / "output").mkdir(parents=True)
     for name in ("output/setup.exe", "THIRD_PARTY_NOTICES.md", "installer-jedi-source.zip"):
         (source / name).write_bytes(b"gated asset")
     (source / "sbom.cdx.json").write_text('{"bomFormat":"CycloneDX"}')
-    mac = mac_inputs(tmp_path / "mac", tag[1:]) if tag == "v1.1.0" else None
+    mac = (
+        mac_inputs(tmp_path / "mac", tag[1:], previous[1:] if tag == "v1.2.0" else None)
+        if tag in {"v1.1.0", "v1.2.0"}
+        else None
+    )
     with pytest.raises(ValueError, match="receipts"):
         stage(tmp_path / "input", tmp_path / "missing", tag, previous, mac)
     (source / "acceptance").mkdir()
@@ -153,6 +159,9 @@ def test_final_release_rejects_missing_or_false_upgrade_and_wfp_evidence(tmp_pat
     stage(tmp_path / "input", tmp_path / "accepted", tag, previous, mac)
     if tag == "v1.0.0":
         assert (tmp_path / "accepted/Dusty-1.0.0-Setup.exe").is_file()
+    if tag == "v1.2.0":
+        assert (tmp_path / "accepted/Dusty-1.2.0-Setup.exe").is_file()
+        assert (tmp_path / "accepted/Dusty-1.2.0-macos-arm64.dmg").is_file()
     if tag == "v1.1.0":
         assert (tmp_path / "accepted/Dusty-1.1.0-Setup.exe").is_file()
         # The previous tag comes from the release workflow's validate job.
@@ -242,6 +251,14 @@ def test_public_release_validation_requires_preceding_published_release():
     assert needs_receipts("v1.1.0")
     # 1.1.0, 1.1.1 and 1.1.2 were never released, so 1.1.3 also follows 1.0.1.
     assert validate("v1.1.3", [v101, v100, draft, engine]) == ("v1.0.1", "")
+    # 1.2.0 follows the published 1.1.3 on both platforms.
+    v113 = {**prior, "tagName": "v1.1.3"}
+    assert validate("v1.2.0", [v113, v101, v100, draft, engine]) == ("v1.1.3", "")
+    assert validate("v1.2.0", [v100, v113, v101]) == ("v1.1.3", "")
+    with pytest.raises(ValueError, match="higher version"):
+        validate("v1.2.0", [v113, {**prior, "tagName": "v1.2.0"}])
+    with pytest.raises(ValueError, match="previous public"):
+        validate("v1.2.0", [{**v113, "isDraft": True}])
     assert not needs_receipts("v0.5.0-m5.1")
     assert not needs_receipts("v0.5.0-m5.2")
     assert needs_receipts("v0.5.0-m5.3")
@@ -273,8 +290,13 @@ def ffmpeg_sources(source):
     (source / "build_ffmpeg.sh").write_bytes((ROOT / "native/build_ffmpeg.sh").read_bytes())
 
 
-def mac_inputs(folder: Path, display: str) -> Path:
-    """The release files the macos CI job keeps, as tools.release_assets expects them."""
+def mac_inputs(folder: Path, display: str, previous: str | None = None) -> Path:
+    """The release files the macos CI job keeps, as tools.release_assets expects them.
+
+    previous is the version the upgrade scenario installed first, from 1.2.0 on;
+    its rows have the shape tools/mac_upgrade_check.py writes, such as
+    {"step": "old app --version", "observed": "exit 0, Dusty 1.1.3"}.
+    """
     folder.mkdir(parents=True)
     name = f"Dusty-{display}-macos-arm64.dmg"
     image = folder / name
@@ -296,6 +318,13 @@ def mac_inputs(folder: Path, display: str) -> Path:
         {"scenario": scenario, "step": "self-test", "result": "pass"}
         for scenario in ("1 first run", "2 upgrade", "3 remove and reinstall", "4 moved app")
     ] + [{"scenario": "4 moved app", "step": "quarantine", "result": "info"}]
+    if previous is not None:
+        rows += [
+            {"scenario": "2 upgrade", "step": "old app --version", "result": "pass"}
+            | {"observed": f"exit 0, Dusty {previous}"},
+            {"scenario": "2 upgrade", "step": "new app --version", "result": "pass"}
+            | {"observed": f"exit 0, Dusty {display}"},
+        ]
     (folder / "results.json").write_text(json.dumps(rows))
     (folder / "sbom.cdx.json").write_text('{"bomFormat":"CycloneDX"}')
     (folder / "THIRD_PARTY_NOTICES.md").write_text("Mac notices")
@@ -448,3 +477,40 @@ def test_release_workflow_stages_windows_and_mac_with_notes():
     ):
         assert name in notes
     assert set(re.findall(r"[Dd]usty-([0-9.]+)-", notes)) == {__version__}
+
+
+@pytest.mark.parametrize(
+    "damage",
+    ["same build", "no previous rows", "old row failed", "new version wrong", "no previous tag"],
+)
+def test_mac_upgrade_must_start_from_the_published_previous_release(tmp_path, no_receipts, damage):
+    windows = windows_inputs(tmp_path / "windows")
+    mac = mac_inputs(tmp_path / "mac", "1.2.0", "1.1.3")
+    stage(windows, tmp_path / "accepted", "v1.2.0", "v1.1.3", mac)
+    rows = json.loads((mac / "results.json").read_text())
+    old = next(row for row in rows if row["step"] == "old app --version")
+    new = next(row for row in rows if row["step"] == "new app --version")
+    previous = "v1.1.3"
+    if damage == "same build":
+        old["observed"] = "exit 0, Dusty 1.2.0"
+    elif damage == "no previous rows":
+        rows = [row for row in rows if "app --version" not in row["step"]]
+    elif damage == "old row failed":
+        old["result"] = "fail"
+    elif damage == "new version wrong":
+        new["observed"] = "exit 0, Dusty 1.1.3"
+    else:
+        previous = ""
+    (mac / "results.json").write_text(json.dumps(rows))
+    with pytest.raises(
+        ValueError, match="previous public release tag|published Dusty 1.1.3|did not pass"
+    ):
+        stage(windows, tmp_path / "release", "v1.2.0", previous, mac)
+    assert not (tmp_path / "release").exists()
+
+
+def test_the_first_mac_release_could_upgrade_only_from_itself(tmp_path, no_receipts):
+    # 1.1.3 had no earlier Mac release, so its receipts need no previous Mac version.
+    windows = windows_inputs(tmp_path / "windows")
+    stage(windows, tmp_path / "release", "v1.1.3", "v1.0.1", mac_inputs(tmp_path / "mac", "1.1.3"))
+    assert (tmp_path / "release/Dusty-1.1.3-macos-arm64.dmg").is_file()
