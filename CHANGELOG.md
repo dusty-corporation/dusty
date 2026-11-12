@@ -2,6 +2,12 @@
 
 All notable changes to Dusty will be documented here. This project follows Keep a Changelog.
 
+## [1.2.1] - Unreleased
+
+No change for users. Transcripts, settings and saved queues are exactly as in
+Dusty 1.2.0. The source was reorganised internally, and every build is now
+checked against the files 1.2.0 wrote.
+
 ## [1.2.0] - 2026-11-09
 
 The first release that upgrades an installed Dusty for Mac. Installing it over

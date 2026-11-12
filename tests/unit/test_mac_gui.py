@@ -189,9 +189,11 @@ def test_native_menu_roles_and_standard_shortcuts(window, monkeypatch):
     window.notices_action.trigger()
     assert seen[1][0] is NoticesDialog
     help_menu = next(a for a in window.menuBar().actions() if a.text() == M.HELP_MENU)
+    # Extension commands come before About; public Dusty has none.
     assert [a.text() for a in help_menu.menu().actions()] == [
         M.HELP_TITLE,
         M.PRIVACY_TITLE,
+        *(command.label for command in window.extensions.commands),
         M.ABOUT,
         M.THIRD_PARTY_NOTICES,
     ]

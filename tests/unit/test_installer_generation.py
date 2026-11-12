@@ -104,6 +104,12 @@ def test_installer_uses_complete_licenses_and_unchanged_manifest(tmp_path):
             "%1", M.format_size(manifest_data["vad"][0]["size_bytes"])
         )
         expected["silero-vad"] = voice
+        # The installer offers transcription models only; extension models are
+        # downloaded in the app when the user switches their option on.
+        from dusty.models import load_manifest
+
+        for extra in load_manifest(manifest).extra.values():
+            assert extra.file_name not in text
         for value in expected.values():
             assert value.replace("'", "''") in text
     assert "Finish without a model" in text
@@ -283,9 +289,28 @@ def test_silent_test_failure_has_nonzero_completion_without_false_gpu_result():
     assert "WithoutButton.Visible := True" in failure
 
 
-def test_installer_registers_only_five_current_user_wer_names_and_removes_them():
-    template = (ROOT / "installer/dusty.iss.template").read_text(encoding="utf-8")
-    wizard = (ROOT / "installer/wizard.iss").read_text(encoding="utf-8")
+@pytest.mark.parametrize("helpers", [(), ("dusty-notes",)], ids=["public", "with a helper"])
+def test_installer_registers_only_its_current_user_wer_names_and_removes_them(
+    tmp_path, monkeypatch, helpers
+):
+    from types import SimpleNamespace
+
+    from tools import helper_programs
+
+    # Public Dusty registers its five programs, as 1.2.0 did; an add-on helper
+    # program (tools/helper_programs.py) is added after them.
+    monkeypatch.setattr(
+        helper_programs,
+        "load_programs",
+        lambda root=None: [SimpleNamespace(name=n) for n in helpers],
+    )
+    bundle = tmp_path / "bundle"
+    (bundle / "resources").mkdir(parents=True)
+    shutil.copyfile(ROOT / "resources/models.json", bundle / "resources/models.json")
+    (bundle / "THIRD_PARTY_NOTICES.md").write_text("Audited app notices\n")
+    template = generate(tmp_path / "generated", bundle).read_text(encoding="utf-8")
+    wizard = template
+    assert "@@" not in template
     assert (
         r"WerAddExcludedApplication@{syswow64}\wer.dll stdcall loadwithalteredsearchpath"
         in template
@@ -305,7 +330,11 @@ def test_installer_registers_only_five_current_user_wer_names_and_removes_them()
         "whisper-cli.exe",
         "ffmpeg.exe",
         "ffprobe.exe",
+        *(f"{name}.exe" for name in helpers),
     ]
+    last = 4 + len(helpers)
+    assert f"array[0..{last}] of Boolean" in template
+    assert wizard.count(f"for I := 0 to {last} do") == 2
     assert "AddCrashExclusion(CrashExcludedName(I), False)" in wizard
     assert "RemoveCrashExclusion(CrashExcludedName(I), False)" in wizard
     assert "if Result then Result := RegisterCrashExclusions" in template
@@ -313,3 +342,17 @@ def test_installer_registers_only_five_current_user_wer_names_and_removes_them()
     assert "RemoveCrashExclusions(False)" in template
     assert "if not InstallationBegan then" in wizard
     assert "RemoveCrashExclusions(True)" in wizard
+
+
+def test_installer_identity_is_dustys_unless_a_build_passes_another(tmp_path):
+    """Upgrades in place need the same AppId; another edition may pass its own."""
+    bundle = tmp_path / "bundle"
+    (bundle / "resources").mkdir(parents=True)
+    shutil.copyfile(ROOT / "resources/models.json", bundle / "resources/models.json")
+    (bundle / "THIRD_PARTY_NOTICES.md").write_text("Audited app notices\n")
+    text = generate(tmp_path / "default", bundle).read_text(encoding="utf-8")
+    assert "\nAppId={{7B3110E8-7983-41AC-A0ED-F6EB13DBB72A}\nAppName=Dusty\n" in text
+    other = generate(
+        tmp_path / "other", bundle, app_id="{00000000-0000-0000-0000-000000000001}", app_name="X"
+    ).read_text(encoding="utf-8")
+    assert "\nAppId={{00000000-0000-0000-0000-000000000001}\nAppName=X\n" in other

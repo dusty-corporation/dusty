@@ -3,11 +3,20 @@
 import argparse
 import json
 import struct
+import sys
 from pathlib import Path
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from tools.helper_programs import load_programs  # noqa: E402
 
 
 def check(bundle: Path) -> list[str]:
     findings = []
+    # Add-on helper programs are offline like the GUI (tools/helper_programs.py).
+    programs = load_programs()
+    offline = [bundle / "dusty", *(bundle / program.name for program in programs)]
     for path in bundle.rglob("*"):
         name = path.name.lower()
         if path.is_file() and (
@@ -17,7 +26,7 @@ def check(bundle: Path) -> list[str]:
         if path.is_file() and path.suffix.lower() == ".bin":
             findings.append("Model weights found in application bundle")
         if (
-            path.is_relative_to(bundle / "dusty")
+            any(path.is_relative_to(folder) for folder in offline)
             and path.is_file()
             and (
                 name
@@ -40,7 +49,11 @@ def check(bundle: Path) -> list[str]:
             findings.append(
                 f"Prohibited Windows/Mesa runtime: {path.relative_to(bundle).as_posix()}"
             )
-    for name, subsystem in (("dusty/dusty.exe", 2), ("dusty-fetch/dusty-fetch.exe", 3)):
+    for name, subsystem in (
+        ("dusty/dusty.exe", 2),
+        ("dusty-fetch/dusty-fetch.exe", 3),
+        *((program.windows_executable, 3) for program in programs),
+    ):
         path = bundle / name
         if not path.is_file():
             findings.append(f"Missing executable: {name}")

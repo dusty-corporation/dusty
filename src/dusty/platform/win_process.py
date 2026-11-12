@@ -6,7 +6,7 @@ import os
 import subprocess
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from ctypes import wintypes
 from pathlib import Path
 
@@ -15,6 +15,7 @@ from dusty.platform.process import ProcessResult, _read_lines, approved_executab
 
 CREATE_SUSPENDED = 0x00000004
 CREATE_NO_WINDOW = 0x08000000
+CREATE_UNICODE_ENVIRONMENT = 0x00000400
 STARTF_USESTDHANDLES = 0x00000100
 JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000
 JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION = 0x00000400
@@ -137,6 +138,20 @@ def _check(value: int, operation: str) -> None:
         raise OSError(code, f"Windows process operation failed: {operation}")
 
 
+def environment_block(environment: Mapping[str, str]) -> ctypes.Array:
+    """A CreateProcessW Unicode environment block.
+
+    NAME=value entries sorted by name, each ended by NUL, with a final NUL.
+    """
+    entries = []
+    for name, value in sorted(environment.items(), key=lambda item: item[0].upper()):
+        if not name or "=" in name or "\0" in name or "\0" in value:
+            raise ValueError("Invalid environment entry")
+        entries.append(f"{name}={value}")
+    text = "\0".join(entries) + "\0\0"
+    return ctypes.create_unicode_buffer(text, len(text))
+
+
 def run_job_process(
     args: list[str],
     *,
@@ -146,6 +161,7 @@ def run_job_process(
     cancel: Cancellation | None = None,
     timeout_sec: float | None = None,
     on_poll: Callable[[], None] | None = None,
+    environment: Mapping[str, str] | None = None,
 ) -> ProcessResult:
     """Run a child only after attaching it to a kill-on-close Job Object."""
     if not args or not Path(args[0]).is_absolute():
@@ -198,6 +214,7 @@ def run_job_process(
         startup.hStdOutput = msvcrt.get_osfhandle(stdout_fd)
         startup.hStdError = msvcrt.get_osfhandle(write_fd)
         command_line = ctypes.create_unicode_buffer(subprocess.list2cmdline(args))
+        block = None if environment is None else environment_block(environment)
         _check(
             _kernel32.CreateProcessW(
                 args[0],
@@ -205,8 +222,10 @@ def run_job_process(
                 None,
                 None,
                 True,
-                CREATE_NO_WINDOW | CREATE_SUSPENDED,
-                None,
+                CREATE_NO_WINDOW
+                | CREATE_SUSPENDED
+                | (CREATE_UNICODE_ENVIRONMENT if block is not None else 0),
+                block,
                 str(executable.parent),
                 ctypes.byref(startup),
                 ctypes.byref(process),

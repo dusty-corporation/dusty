@@ -106,10 +106,24 @@ def _read(path: Path) -> Any:
 
 
 def _options_dict(options: BatchOptions) -> dict[str, object]:
-    return {
-        key: str(value) if isinstance(value, Path) else value
-        for key, value in asdict(options).items()
-    }
+    values = asdict(options)
+    # Saved only while one is on, so a queue without them is as before.
+    extension_options = sorted(values.pop("extension_options"))
+    if extension_options:
+        values["extension_options"] = extension_options
+    return {key: str(value) if isinstance(value, Path) else value for key, value in values.items()}
+
+
+def _extension_options(raw: object) -> frozenset[str]:
+    """Options installed and supported on this computer now; others are dropped."""
+    from dusty import extensions
+
+    if not isinstance(raw, list) or not all(isinstance(key, str) for key in raw):
+        raise ValueError("Invalid extension options")
+    found = extensions.active()
+    return frozenset(
+        key for key in raw if (option := found.option(key)) is not None and option.supported()
+    )
 
 
 def save_batch(path: Path, options: BatchOptions, jobs: list[Job]) -> None:
@@ -164,6 +178,7 @@ def load_batch(path: Path) -> tuple[BatchOptions, list[Job]] | None:
             marker_minutes=raw.get("marker_minutes", MARKER_MINUTES_DEFAULT),
             mark_unsure=raw.get("mark_unsure", False),
             unsure_level=raw.get("unsure_level", "very"),
+            extension_options=_extension_options(raw.get("extension_options", [])),
         )
         jobs = []
         for item in data["jobs"]:
@@ -269,4 +284,9 @@ def _validate_settings(settings: dict[str, Any]) -> None:
         if not isinstance(settings["formats"], list):
             raise ValueError("Invalid saved formats")
         preferences["formats"] = tuple(settings["formats"])
+    if "extension_options" in settings:
+        options = settings["extension_options"]
+        if not isinstance(options, list) or not all(isinstance(key, str) for key in options):
+            raise ValueError("Invalid saved extension options")
+        preferences["extension_options"] = frozenset(options)
     BatchOptions(**preferences)

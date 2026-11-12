@@ -69,10 +69,13 @@ from tools.check_macos_bundle import (
     parse_macho,
     version_text,
 )
+from tools.extension_files import extension_catalogs, extension_model_files
+from tools.helper_programs import ADDON_MODULES, load_programs
 from tools.macos_notices import NoticesError, write_notices
 
 ROOT = Path(__file__).resolve().parents[1]
 BUNDLE_ID = "org.dusty.Dusty"
+DISPLAY_NAME = "Dusty"
 SPEC = ROOT / "packaging/dusty-macos.spec"
 ADHOC_ENTITLEMENTS = ROOT / "packaging/macos/adhoc.entitlements"
 BOOTLOADERS = {"Contents/MacOS/Dusty", FETCH_DIR + "/dusty-fetch"}
@@ -351,7 +354,14 @@ def make_icns(work: Path) -> Path:
     return target
 
 
-def run_pyinstaller(work: Path, audit: Path, icon: Path) -> tuple[Path, Path]:
+def run_pyinstaller(
+    work: Path,
+    audit: Path,
+    icon: Path,
+    bundle_id: str = BUNDLE_ID,
+    display_name: str = DISPLAY_NAME,
+) -> tuple[Path, Path, dict[str, Path]]:
+    """The built app, dusty-fetch and each add-on helper program by name."""
     env = {key: value for key, value in os.environ.items() if not key.startswith("DUSTY_")}
     env["PYTHONPATH"] = str(ROOT / "src")
     env["PYINSTALLER_STRICT_BUNDLE_CODESIGN_ERROR"] = "1"
@@ -375,21 +385,27 @@ def run_pyinstaller(work: Path, audit: Path, icon: Path) -> tuple[Path, Path]:
             str(icon),
             "--audit",
             str(audit),
+            "--bundle-id",
+            bundle_id,
+            "--display-name",
+            display_name,
         ],
         cwd=ROOT,
         env=env,
         log=audit / "pyinstaller.log",
     )
-    return dist / "Dusty.app", dist / "dusty-fetch"
+    helpers = {program.name: dist / program.name for program in load_programs()}
+    return dist / "Dusty.app", dist / "dusty-fetch", helpers
 
 
 def check_analysis_origins(audit: Path, root: Path = ROOT) -> None:
     """Dusty modules must come from this checkout's src, never another checkout."""
     analysis = json.loads((audit / "analysis.json").read_text(encoding="utf-8"))
     source = (root / "src").resolve()
-    for group in ("gui_pure", "fetch_pure"):
+    groups = ["gui_pure", "fetch_pure", *(f"{item.group}_pure" for item in load_programs(root))]
+    for group in groups:
         for name, path, _ in analysis[group]:
-            if name.split(".")[0] in {"dusty", "dusty_fetch"} and not Path(
+            if name.split(".")[0] in {"dusty", "dusty_fetch", *ADDON_MODULES} and not Path(
                 path
             ).resolve().is_relative_to(source):
                 raise BuildError(f"{name} was analysed from outside {source}")
@@ -440,7 +456,8 @@ def stage_natives(app: Path, bin_dir: str, natives: list[Native]) -> list[dict]:
 
 def stage_resources(app: Path, native_root: Path, version: str, bin_dir: str) -> None:
     resources = app / RESOURCES
-    for name in ("models.json", "selftest.wav"):
+    for name in ("models.json", "selftest.wav", *extension_catalogs()):
+        (resources / name).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / "resources" / name, resources / name)
     # dusty_fetch.tls reads the pinned roots from the app's Contents/Resources/tls.
     shutil.copytree(ROOT / "resources/tls", app / TLS_DIR)
@@ -474,12 +491,13 @@ def stage_resources(app: Path, native_root: Path, version: str, bin_dir: str) ->
     (app / "Contents/THIRD_PARTY_NOTICES.md").symlink_to("Resources/THIRD_PARTY_NOTICES.md")
     manifest = json.loads((resources / "models.json").read_text(encoding="utf-8"))
     forbidden = {item["file_name"] for group in ("models", "vad") for item in manifest[group]}
+    forbidden |= extension_model_files(resources)
     if any(path.name in forbidden or path.suffix == ".bin" for path in iter_files(app)):
         raise BuildError("Model weights must not be bundled")
 
 
-def set_minimum_os(bundle: Path, scope: Path) -> str:
-    minimum = minimum_os(scope)
+def set_minimum_os(bundle: Path, scope: Path, exclude: tuple[Path, ...] = ()) -> str:
+    minimum = minimum_os(scope, exclude)
     if minimum is None:
         raise BuildError(f"No Mach-O minimum OS found under {scope}")
     info_path = bundle / "Contents/Info.plist"
@@ -532,12 +550,17 @@ def signing_order(app: Path) -> list[Path]:
 
 
 def codesign_args(
-    identity: str, entitlements: Path | None, *, executable: bool, loose: bool
+    identity: str,
+    entitlements: Path | None,
+    *,
+    executable: bool,
+    loose: bool,
+    bundle_id: str = BUNDLE_ID,
 ) -> list[str]:
     args = ["/usr/bin/codesign", "--force", "--sign", identity, "--options", "runtime"]
     args.append("--timestamp=none" if identity == "-" else "--timestamp")
     if loose:
-        args += ["--prefix", BUNDLE_ID + "."]
+        args += ["--prefix", bundle_id + "."]
     if entitlements is not None and executable:
         args += ["--entitlements", str(entitlements)]
     return args
@@ -551,8 +574,9 @@ def loads_bundled_code(app: Path, target: Path) -> bool:
         return False
     image = parse_macho(target.read_bytes())
     relative = target.relative_to(app).as_posix()
+    bootloaders = BOOTLOADERS | {program.mac_executable for program in load_programs()}
     return image.filetype == MH_EXECUTE and (
-        relative in BOOTLOADERS or any(name.startswith("@") for name in image.dylibs)
+        relative in bootloaders or any(name.startswith("@") for name in image.dylibs)
     )
 
 
@@ -566,13 +590,22 @@ def entitlements_for(
     return None
 
 
-def sign_bundle(app: Path, identity: str = "-", entitlements: Path | None = None) -> list[str]:
+def sign_bundle(
+    app: Path,
+    identity: str = "-",
+    entitlements: Path | None = None,
+    bundle_id: str = BUNDLE_ID,
+) -> list[str]:
     """Sign inside-out; return the bundle paths that received entitlements."""
     entitled = []
     for target in signing_order(app):
         chosen = entitlements_for(app, target, identity, entitlements)
         args = codesign_args(
-            identity, chosen, executable=chosen is not None, loose=target.is_file()
+            identity,
+            chosen,
+            executable=chosen is not None,
+            loose=target.is_file(),
+            bundle_id=bundle_id,
         )
         run([*args, str(target)], cwd=app.parent)
         if chosen is not None:
@@ -599,7 +632,10 @@ def build(
     bin_choice: str = "helpers",
     identity: str = "-",
     entitlements: Path | None = None,
+    bundle_id: str = BUNDLE_ID,
+    display_name: str = DISPLAY_NAME,
 ) -> dict:
+    """The bundle id and name default to Dusty's; another build may pass its own."""
     if sys.platform != "darwin" or os.uname().machine != "arm64":
         raise BuildError("Building Dusty.app needs macOS on Apple Silicon")
     started = time.monotonic()
@@ -618,32 +654,50 @@ def build(
     natives.append(build_lifeline(work))
     verify_source(natives[-1])
     icon = make_icns(work)
-    built_app, built_fetch = run_pyinstaller(work, audit, icon)
+    built_app, built_fetch, built_helpers = run_pyinstaller(
+        work, audit, icon, bundle_id, display_name
+    )
     check_analysis_origins(audit)
     app = output / "Dusty.app"
     shutil.move(built_app, app)
     (app / "Contents/Helpers").mkdir()
     shutil.copytree(built_fetch, app / places["fetch_dir"], symlinks=True)
     relocated = relocate_data_files(app, places["fetch_dir"], places["fetch_data"])
+    # Add-on helper programs are placed like dusty-fetch (tools/helper_programs.py).
+    programs = load_programs()
+    helper_places: dict[str, dict] = {}
+    for program in programs:
+        shutil.copytree(built_helpers[program.name], app / program.mac_dir, symlinks=True)
+        helper_places[program.name] = {
+            "dir": program.mac_dir,
+            "data": program.mac_data,
+            "relocated_data": relocate_data_files(app, program.mac_dir, program.mac_data),
+        }
     if plistlib.loads((app / "Contents/Info.plist").read_bytes()).get("CFBundleIconFile") != (
         "Dusty.icns"
     ):
         raise BuildError("Unexpected bundle icon name")
     records = stage_natives(app, places["bin_dir"], natives)
     stage_resources(app, native_root, version, places["bin_dir"])
-    minimum = set_minimum_os(app, app)
+    # A helper program that needs a later macOS is gated by its add-on at run time
+    # instead of raising the app's own minimum.
+    minimum = set_minimum_os(
+        app, app, tuple(app / item.mac_dir for item in programs if item.macos_minimum)
+    )
     order = signing_order(app)
-    entitled = sign_bundle(app, identity, entitlements)
+    entitled = sign_bundle(app, identity, entitlements, bundle_id)
     verify_signature(app, audit / "codesign-verify.txt")
     manifest = {
         "version": version,
-        "bundle_id": BUNDLE_ID,
+        "bundle_id": bundle_id,
+        "display_name": display_name,
         "native_generation": native_generation(native_root),
         "layout": places,
         "bin_dir": places["bin_dir"],
         "natives": records,
         "minimum_os": minimum,
         "fetch_relocated_data": relocated,
+        "programs": helper_places,
         "identity": "adhoc" if identity == "-" else "identity",
         "entitlements": str(entitlements or ADHOC_ENTITLEMENTS) if entitled else None,
         "entitled": entitled,
@@ -673,6 +727,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--identity", default="-", help="codesign identity (default: ad hoc)")
     parser.add_argument("--entitlements", type=Path, help="Entitlements plist (default: none)")
+    parser.add_argument("--bundle-id", default=BUNDLE_ID, help="app identity (default: Dusty's)")
+    parser.add_argument("--display-name", default=DISPLAY_NAME, help="app name shown by macOS")
     args = parser.parse_args(argv)
     try:
         manifest = build(
@@ -681,6 +737,8 @@ def main(argv: list[str] | None = None) -> int:
             bin_choice=args.bin_dir,
             identity=args.identity,
             entitlements=args.entitlements,
+            bundle_id=args.bundle_id,
+            display_name=args.display_name,
         )
     except BuildError as error:
         print(f"Build failed: {error}", file=sys.stderr)

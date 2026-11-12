@@ -55,6 +55,10 @@ class QueueModel(QAbstractTableModel):
             status = (
                 M.gpu_fallback(sys.platform)
                 if job.gpu_fallback and job.status == JobStatus.DONE
+                else job.stage_failed
+                if job.stage_failed and job.status == JobStatus.DONE
+                else job.stage_status
+                if job.stage_status and job.status == JobStatus.PROCESSING
                 else M.phase_text(job.status.value, job.progress)
             )
             if job.id == self.waiting_choice:

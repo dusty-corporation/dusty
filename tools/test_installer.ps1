@@ -29,6 +29,11 @@ $sentinelHash = (Get-FileHash -LiteralPath $sentinel).Hash
 
 $werSubkey = 'Software\Microsoft\Windows\Windows Error Reporting\ExcludedApplications'
 $werNames = @('dusty.exe','dusty-fetch.exe','whisper-cli.exe','ffmpeg.exe','ffprobe.exe')
+# Add-on helper programs are excluded too (tools/helper_programs.py); public Dusty has none.
+$helperPrograms = Join-Path $PSScriptRoot '..\packaging\addons\programs.json'
+if (Test-Path -LiteralPath $helperPrograms) {
+    $werNames += @((Get-Content -Raw -LiteralPath $helperPrograms | ConvertFrom-Json).programs | ForEach-Object { $_.name + '.exe' })
+}
 function Read-WerValues([Microsoft.Win32.RegistryKey]$Hive) {
     $result = @{}
     $key = $Hive.OpenSubKey($werSubkey)

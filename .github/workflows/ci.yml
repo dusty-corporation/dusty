@@ -228,6 +228,8 @@ jobs:
           uv run pytest -q tests/integration/test_mac_upgrade.py
       - name: Audit the app bundle, signatures and notices
         run: uv run python -m tools.check_macos_bundle build/mac-app/Dusty.app --json build/mac-app/bundle-check.json
+      - name: Smoke-test helper programs
+        run: uv run python -m tools.check_helper_programs --mac-app build/mac-app/Dusty.app
       - name: Build and verify the disk image
         run: uv run python -m tools.build_macos_dmg build/mac-app/Dusty.app build/mac-dmg
       - name: Fetch the published Dusty to upgrade from
@@ -308,6 +310,8 @@ jobs:
         run: uv run python tools/check_bundle.py dist/Dusty
       - name: Offline PE imports and exact platform hashes
         run: uv run python tools/check_pe_imports.py dist/Dusty/dusty --native dist/Dusty/bin
+      - name: Offline PE imports and smoke test of helper programs
+        run: uv run python -m tools.check_helper_programs --windows-bundle dist/Dusty
       - name: Smoke-test packaged Qt window
         run: uv run python tools/smoke_packaged_gui.py dist/Dusty
       - name: Verify packaged Windows executable versions

@@ -1,5 +1,7 @@
 # PyInstaller 6.16.0 macOS spec: Dusty.app (offline GUI) and the dusty-fetch onedir
 # (isolated downloader), built as two separate analyses like packaging/dusty.spec.
+# Add-on helper programs (tools/helper_programs.py) are built the same way and
+# placed like dusty-fetch; public Dusty has none, and its GUI embeds no add-on module.
 # Run it through tools/build_macos_app.py, which places dusty-fetch under
 # Dusty.app/Contents/Helpers, moves its data files into Contents/Resources,
 # stages the native programs and TLS roots, sets the minimum OS from the actual
@@ -10,14 +12,22 @@ import argparse
 import json
 import re
 import shutil
+import sys
 import tomllib
 from importlib.util import find_spec
 from pathlib import Path
 
 root = Path(SPECPATH).parent
+sys.path.insert(0, str(root))
+from tools.helper_programs import gui_module_findings, load_programs  # noqa: E402
+
+programs = load_programs(root)
 options = argparse.ArgumentParser(prog="dusty-macos.spec")
 options.add_argument("--icon", type=Path, required=True)
 options.add_argument("--audit", type=Path, required=True)
+# The app's bundle id and name; another build may pass its own.
+options.add_argument("--bundle-id", default="org.dusty.Dusty")
+options.add_argument("--display-name", default="Dusty")
 spec_args = options.parse_args()
 audit = spec_args.audit
 audit.mkdir(parents=True, exist_ok=True)
@@ -31,7 +41,7 @@ source_version = re.search(
 if source_version is None or source_version.group(1) != version:
     raise SystemExit("pyproject.toml and dusty.__version__ disagree")
 
-BUNDLE_ID = "org.dusty.Dusty"
+BUNDLE_ID = spec_args.bundle_id
 # The interpreter running PyInstaller decides which PySide6 is analysed; on macOS
 # its extensions are <site-packages>/PySide6/Qt*.abi3.so.
 qt = Path(find_spec("PySide6").submodule_search_locations[0])
@@ -54,11 +64,15 @@ gui = Analysis(
         "urllib.response", "ftplib", "smtplib", "imaplib", "poplib", "nntplib", "telnetlib",
         "socketserver", "xmlrpc", "webbrowser", *unused_qt, "PySide6.QtNetwork", "PySide6.QtWebEngineCore",
         "PySide6.QtWebEngineWidgets", "PySide6.QtWebEngineQuick",
+        *[name for program in programs for name in program.gui_excludes],
     ],
     # User runtime hooks run before PyInstaller's standard ones: the guard is first.
     runtime_hooks=[str(root / "packaging/runtime_guard.py")],
 )
 shutil.copyfile(WARNFILE, audit / "warn-gui.txt")
+gui_findings = gui_module_findings([name for name, _, _ in gui.pure], programs)
+if gui_findings:
+    raise SystemExit("\n".join(gui_findings))
 fetch = Analysis(
     [str(root / "packaging/fetch_entry.py")],
     pathex=[str(root / "src")],
@@ -66,23 +80,43 @@ fetch = Analysis(
     runtime_hooks=[str(root / "packaging/runtime_fetch_crash.py")],
 )
 shutil.copyfile(WARNFILE, audit / "warn-fetch.txt")
-(audit / "analysis.json").write_text(
-    json.dumps(
+helpers = {}
+for program in programs:
+    helper = Analysis(
+        [str(root / program.entry)],
+        pathex=[str(root / "src")],
+        excludes=program.all_excludes("darwin"),
+        runtime_hooks=[str(root / "packaging/runtime_guard.py")],
+    )
+    helper.binaries = [
+        item for item in helper.binaries if not program.drops(Path(item[0]).name, "darwin")
+    ]
+    # Package metadata folders are not needed at run time (their license texts ship
+    # in Resources/licenses), and codesign reads a "*.dist-info" folder as a bundle.
+    helper.datas = [item for item in helper.datas if ".dist-info" not in item[0]]
+    shutil.copyfile(WARNFILE, audit / f"warn-{program.name}.txt")
+    helpers[program] = helper
+record = {
+    "version": version,
+    "gui_pure": gui.pure,
+    "fetch_pure": fetch.pure,
+    "gui_binaries": gui.binaries,
+    "fetch_binaries": fetch.binaries,
+    "gui_datas": gui.datas,
+    "fetch_datas": fetch.datas,
+    "gui_scripts": gui.scripts,
+    "fetch_scripts": fetch.scripts,
+}
+for program, helper in helpers.items():
+    record.update(
         {
-            "version": version,
-            "gui_pure": gui.pure,
-            "fetch_pure": fetch.pure,
-            "gui_binaries": gui.binaries,
-            "fetch_binaries": fetch.binaries,
-            "gui_datas": gui.datas,
-            "fetch_datas": fetch.datas,
-            "gui_scripts": gui.scripts,
-            "fetch_scripts": fetch.scripts,
-        },
-        indent=2,
-    ),
-    encoding="utf-8",
-)
+            f"{program.group}_pure": helper.pure,
+            f"{program.group}_binaries": helper.binaries,
+            f"{program.group}_datas": helper.datas,
+            f"{program.group}_scripts": helper.scripts,
+        }
+    )
+(audit / "analysis.json").write_text(json.dumps(record, indent=2), encoding="utf-8")
 
 app = EXE(
     PYZ(gui.pure), gui.scripts, [], exclude_binaries=True, name="Dusty", console=False,
@@ -94,6 +128,12 @@ downloader = EXE(
 )
 gui_files = COLLECT(app, gui.binaries, gui.datas, name="Dusty")
 fetch_files = COLLECT(downloader, fetch.binaries, fetch.datas, name="dusty-fetch")
+for program, helper in helpers.items():
+    program_exe = EXE(
+        PYZ(helper.pure), helper.scripts, [], exclude_binaries=True, name=program.name,
+        console=True, target_arch="arm64", argv_emulation=False,
+    )
+    COLLECT(program_exe, helper.binaries, helper.datas, name=program.name)
 # No usage descriptions: the GUI needs no network, camera, microphone or other
 # protected resource. The downloader is a plain onedir tool, not a bundle: the
 # app's runtime_paths and dusty_fetch.tls expect Contents/Helpers/dusty-fetch/
@@ -110,8 +150,8 @@ BUNDLE(
         "CFBundleVersion": version,
         "CFBundleShortVersionString": version,
         "NSHumanReadableCopyright": "Copyright 2026 Dusty contributors. Apache License 2.0.",
-        "CFBundleName": "Dusty",
-        "CFBundleDisplayName": "Dusty",
+        "CFBundleName": spec_args.display_name,
+        "CFBundleDisplayName": spec_args.display_name,
         "LSApplicationCategoryType": "public.app-category.productivity",
         "NSHighResolutionCapable": True,
         "NSPrincipalClass": "NSApplication",

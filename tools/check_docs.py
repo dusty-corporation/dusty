@@ -27,7 +27,9 @@ def strings(value: object):
 def check(root: Path = ROOT) -> list[str]:
     """This checks concrete contracts, not the factual meaning of all prose."""
     findings = []
-    labels = set(strings(vars(M)))
+    from dusty import extensions
+
+    labels = set(strings(vars(M))) | set(strings(extensions.loaded().texts))
     prefixes = {s.split("{", 1)[0].strip() for s in labels if "{" in s}
     user_files = sorted((root / "docs/user").glob("*.md"))
     for path in user_files:

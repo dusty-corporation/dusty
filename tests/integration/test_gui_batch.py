@@ -147,13 +147,14 @@ def test_ui_cancel_current_and_collision_apply_to_all(
     qtbot.waitUntil(lambda: window.model.jobs[0].status == JobStatus.TRANSCRIBING, timeout=15000)
     qtbot.mouseClick(window.cancel_current_button, Qt.MouseButton.LeftButton)
     qtbot.waitUntil(lambda: not window.running, timeout=30000)
-    assert window.model.jobs[0].status == JobStatus.CANCELLED
-    assert window.model.jobs[1].status == JobStatus.DONE
+    failures = [job.failure for job in window.model.jobs]
+    assert window.model.jobs[0].status == JobStatus.CANCELLED, failures
+    assert window.model.jobs[1].status == JobStatus.DONE, failures
     assert existing.read_bytes() == b"keep this"
     assert seen == [True]
     assert (window.output_dir / "jfk (1).docx").exists()
     assert (window.output_dir / "other (1).docx").exists()
-    assert window.model.jobs[2].status == JobStatus.DONE
+    assert window.model.jobs[2].status == JobStatus.DONE, failures
 
 
 def test_close_mid_batch_saves_resume_and_sync_warning(

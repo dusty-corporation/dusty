@@ -35,6 +35,7 @@ class ModelRegistry:
             else:
                 names = {model.file_name for model in self.manifest.models.values()}
                 names.add(self.manifest.vad_file_name)
+                names.update(item.file_name for item in self.manifest.extra.values())
                 if file_name not in names:
                     raise ValueError("Unknown catalog file")
                 self._verified.pop(self.directory / file_name, None)
@@ -65,6 +66,13 @@ class ModelRegistry:
     def model_path(self, model_id: str) -> Path:
         model = self.manifest.models[model_id]
         return self._verify(model.file_name, model.size_bytes, model.sha256)
+
+    def extra_path(self, model_id: str) -> Path:
+        """An extension model, verified like the others."""
+        item = self.manifest.extra.get(model_id)
+        if item is None:
+            raise ModelMissing("No such extension model in the catalog")
+        return self._verify(item.file_name, item.size_bytes, item.sha256)
 
     def vad_path(self) -> Path:
         return self._verify(

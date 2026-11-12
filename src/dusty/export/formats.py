@@ -6,14 +6,22 @@ import re
 import textwrap
 import unicodedata
 import zipfile
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from html import escape
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from dusty import __version__
 from dusty.core import Segment, Transcript
 from dusty.core.types import UnsureLevel
+
+if TYPE_CHECKING:
+    from dusty.extensions import Decoration
+
+# A label for a segment, from an extension's decorations (docs/dev/extensions.md).
+Labels = Callable[[Segment], str | None]
 
 UNSURE_MARK = "[?]"
 UNSURE_NOTE = "Words marked [?] may be wrong. Unmarked words can be wrong too."
@@ -31,11 +39,13 @@ class TextExtras:
     """Optional additions to TXT and DOCX; both off writes exactly the plain files.
 
     ``marker_sec`` is the time marker interval in whole seconds. ``unsure_below``
-    marks words whose confidence is below it.
+    marks words whose confidence is below it. ``labels``, from an extension,
+    starts a paragraph where a segment's label changes, with the label first.
     """
 
     marker_sec: int | None = None
     unsure_below: float | None = None
+    labels: Labels | None = None
 
     @classmethod
     def choose(
@@ -53,11 +63,15 @@ class TextExtras:
 
     @property
     def active(self) -> bool:
-        return self.marker_sec is not None or self.unsure_below is not None
+        return (
+            self.marker_sec is not None or self.unsure_below is not None or self.labels is not None
+        )
 
 
-# A run of paragraph text; ``unsure`` runs are words that may be wrong.
-Run = tuple[str, bool]
+# A run of paragraph text. Its style is True for words that may be wrong,
+# LABEL for a paragraph's label, and False for plain text.
+LABEL = "label"
+Run = tuple[str, bool | str]
 
 
 def _clean(text: str) -> str:
@@ -108,12 +122,12 @@ def _segment_runs(segment: Segment, unsure_below: float | None) -> list[Run]:
 
 def _clean_runs(runs: list[Run]) -> list[Run]:
     """Collapse whitespace across runs as _clean does, and merge equal neighbours."""
-    chars: list[tuple[str, bool]] = []
+    chars: list[tuple[str, bool | str]] = []
     for text, unsure in runs:
         for char in text:
             if char.isspace():
                 if chars and chars[-1][0] != " ":
-                    chars.append((" ", False))
+                    chars.append((" ", LABEL if unsure == LABEL else False))
             else:
                 chars.append((char, unsure))
     while chars and chars[-1][0] == " ":
@@ -127,6 +141,21 @@ def _clean_runs(runs: list[Run]) -> list[Run]:
     return merged
 
 
+def labels_for(transcript: Transcript, decorations: Sequence["Decoration"]) -> Labels | None:
+    """Each segment's label: the first decoration's that gives one."""
+    if not decorations:
+        return None
+
+    def label(segment: Segment) -> str | None:
+        for decoration in decorations:
+            text = decoration.label(transcript, segment)
+            if text is not None:
+                return text
+        return None
+
+    return label
+
+
 def _ends_sentence(text: str) -> bool:
     """Read from the engine's plain text, never from runs with [?] marks in them."""
     return text.rstrip().rstrip(_CLOSERS).endswith(_SENTENCE_ENDS)
@@ -137,7 +166,8 @@ def _blocks(
 ) -> list[tuple[float, list[Run] | None]]:
     """Paragraphs as (start, runs) and time markers as (time, None).
 
-    Paragraphs break at pauses of 2 s or more, as in plain files. A marker goes
+    Paragraphs break at pauses of 2 s or more, as in plain files, and where the
+    label changes; each paragraph then starts with its label. A marker goes
     before the first sentence or paragraph that starts at or after each multiple
     of the interval, waiting at most 30 s (or a third of the interval) for one.
     It shows the real start of the text after it.
@@ -147,6 +177,7 @@ def _blocks(
     first_start = 0.0
     previous_end = 0.0
     previous_text = ""
+    current_label: str | None = None
     interval = extras.marker_sec
     next_marker = float(interval) if interval else 0.0
     slack = min(30.0, interval / 3) if interval else 0.0
@@ -154,6 +185,8 @@ def _blocks(
         if not _clean(segment.text):
             continue
         pause = bool(current) and segment.start - previous_end >= 2.0
+        name = extras.labels(segment) if extras.labels else None
+        turn = bool(current) and extras.labels is not None and name != current_label
         marker = bool(
             interval
             and segment.start >= next_marker
@@ -164,7 +197,7 @@ def _blocks(
                 or segment.start >= next_marker + slack
             )
         )
-        if current and (marker or pause):
+        if current and (marker or pause or turn):
             blocks.append((first_start, _clean_runs(current)))
             current = []
         if marker and interval:
@@ -173,6 +206,10 @@ def _blocks(
                 next_marker += interval
         if not current:
             first_start = segment.start
+            current_label = name
+            if name is not None:
+                current.append((name + ":", LABEL))
+                current.append((" ", False))
         else:
             current.append((" ", False))
         current.extend(_segment_runs(segment, extras.unsure_below))
@@ -210,10 +247,11 @@ def _timestamp(seconds: float, *, separator: str) -> str:
     return f"{hours:02}:{minutes:02}:{secs:02}{separator}{millis:03}"
 
 
-def _segment_cues(segment: Segment) -> list[tuple[float, float, str]]:
+def _segment_cues(segment: Segment, prefix: str = "") -> list[tuple[float, float, str]]:
     text = _clean(segment.text)
     if not text:
         return []
+    text = prefix + text
     lines = textwrap.wrap(text, width=42, break_long_words=True, break_on_hyphens=False)
     chunks = ["\n".join(lines[index : index + 2]) for index in range(0, len(lines), 2)]
     total_length = sum(len(chunk.replace("\n", "")) for chunk in chunks)
@@ -228,12 +266,18 @@ def _segment_cues(segment: Segment) -> list[tuple[float, float, str]]:
     return cues
 
 
-def _captions(transcript: Transcript, *, vtt: bool) -> bytes:
+def _captions(transcript: Transcript, *, vtt: bool, labels: Labels | None) -> bytes:
     separator = "." if vtt else ","
     lines = ["WEBVTT", ""] if vtt else []
     cue_index = 0
     for segment in transcript.segments:
-        for start, end, text in _segment_cues(segment):
+        name = labels(segment) if labels else None
+        prefix = f"{name}: " if name is not None and not vtt else ""
+        cues = _segment_cues(segment, prefix)
+        if name is not None and vtt:
+            voice = re.sub(r"[<>&\s]+", " ", name).strip()
+            cues = [(start, end, f"<v {voice}>{text}") for start, end, text in cues]
+        for start, end, text in cues:
             cue_index += 1
             if not vtt:
                 lines.append(str(cue_index))
@@ -246,17 +290,24 @@ def _captions(transcript: Transcript, *, vtt: bool) -> bytes:
     return ("\r\n".join(lines) + ("\r\n" if lines else "")).encode("utf-8")
 
 
-def render_srt(transcript: Transcript) -> bytes:
-    return _captions(transcript, vtt=False)
+def render_srt(transcript: Transcript, *, labels: Labels | None = None) -> bytes:
+    """``labels`` start each cue with "label: "."""
+    return _captions(transcript, vtt=False, labels=labels)
 
 
-def render_vtt(transcript: Transcript) -> bytes:
-    return _captions(transcript, vtt=True)
+def render_vtt(transcript: Transcript, *, labels: Labels | None = None) -> bytes:
+    """``labels`` become each cue's voice."""
+    return _captions(transcript, vtt=True, labels=labels)
 
 
 def render_json(
-    transcript: Transcript, source: Path, *, created_utc: datetime | None = None
+    transcript: Transcript,
+    source: Path,
+    *,
+    created_utc: datetime | None = None,
+    decorations: Sequence["Decoration"] = (),
 ) -> bytes:
+    """``decorations`` add their fields to each segment and then to the transcript."""
     created = created_utc or datetime.now(UTC)
     value = {
         "schema": "dusty.transcript",
@@ -270,12 +321,28 @@ def render_json(
         "source_file_name": source.name,
         "created_utc": created.astimezone(UTC).isoformat().replace("+00:00", "Z"),
         "segments": [
-            {"index": part.index, "start": part.start, "end": part.end, "text": _clean(part.text)}
+            _json_segment(transcript, part, decorations)
             for part in transcript.segments
             if _clean(part.text)
         ],
     }
+    for decoration in decorations:
+        value |= decoration.json_transcript(transcript)
     return (json.dumps(value, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+
+
+def _json_segment(
+    transcript: Transcript, part: Segment, decorations: Sequence["Decoration"]
+) -> dict[str, object]:
+    value: dict[str, object] = {
+        "index": part.index,
+        "start": part.start,
+        "end": part.end,
+        "text": _clean(part.text),
+    }
+    for decoration in decorations:
+        value |= decoration.json_segment(transcript, part)
+    return value
 
 
 _EXTRA_STYLES = (
@@ -350,7 +417,10 @@ def render_docx(
         xml = ""
         for text, unsure in clean:
             run = '<w:rFonts w:cs="Arial"/>' if rtl else ""
-            if unsure:
+            # Schema order inside w:rPr: rFonts, b, highlight, rtl.
+            if unsure == LABEL:
+                run += "<w:b/>"
+            elif unsure:
                 run += '<w:highlight w:val="yellow"/>'
             if rtl:
                 run += "<w:rtl/>"

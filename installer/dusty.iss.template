@@ -1,7 +1,7 @@
 ; Draft M5 prework. Compile with pinned Inno Setup 6.7.3; no publishing.
 [Setup]
-AppId={{7B3110E8-7983-41AC-A0ED-F6EB13DBB72A}
-AppName=Dusty
+AppId=@@INSTALLER_APP_ID@@
+AppName=@@INSTALLER_APP_NAME@@
 AppVersion=@@VERSION@@
 VersionInfoVersion=@@NUMERIC_VERSION@@
 DefaultDirName={localappdata}\Programs\Dusty
@@ -194,7 +194,7 @@ var
 #endif
   ModelBytes: array of Int64;
   InstallationReady, SilentFailed, InstallationBegan: Boolean;
-  AddedCrashExclusions: array[0..4] of Boolean;
+  AddedCrashExclusions: array[0..@@LAST_CRASH_INDEX@@] of Boolean;
   RemoveModels: Boolean;
   LastFetchCode: Integer;
   DownloadActive: Boolean;

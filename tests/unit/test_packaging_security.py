@@ -167,3 +167,44 @@ def test_crt_staging_prunes_unused_and_records_replacement(tmp_path: Path, monke
     source.write_bytes(source.read_bytes() + b"changed")
     with pytest.raises(ValueError, match="the maintainer's pinned copy"):
         stage_microsoft_runtime.stage(bundle, redist, receipt)
+
+
+def test_helper_runtime_files_come_from_the_pinned_copies(tmp_path: Path, monkeypatch) -> None:
+    """A wheel's renamed msvcp140 and a CRT PyInstaller left out are staged."""
+    redist = tmp_path / "VS/VC/redist"
+    folder = redist / "MSVC/14.44.35112/x64/Microsoft.VC143.CRT"
+    folder.mkdir(parents=True)
+    shutil.copyfile(Path(sys.base_prefix) / "vcruntime140.dll", folder / "msvcp140.dll")
+    shutil.copyfile(Path(sys.base_prefix) / "vcruntime140.dll", folder / "msvcp140_1.dll")
+    bundle = tmp_path / "bundle"
+    internal = bundle / "dusty-helper/_internal"
+    (internal / "vendored.libs").mkdir(parents=True)
+    renamed = internal / "vendored.libs/msvcp140-a4c2229bdc2a2a630acdc095b4d86008.dll"
+    # A real PE that differs from the pinned file: staging reads the version of
+    # every collected copy before it replaces it.
+    shutil.copyfile(Path(sys.base_prefix) / "vcruntime140_1.dll", renamed)
+    (internal / "helper.pyd").write_bytes(b"MZ-test")
+    monkeypatch.setattr(stage_microsoft_runtime, "microsoft_vendor", lambda p: p.suffix == ".dll")
+    monkeypatch.setattr(
+        stage_microsoft_runtime,
+        "imports",
+        lambda p: ({renamed.name: [], "msvcp140_1.dll": []} if p.name == "helper.pyd" else {}),
+    )
+    files = {
+        name: {
+            "sha256": stage_microsoft_runtime.sha256(folder / name),
+            "version": stage_microsoft_runtime.file_version(folder / name),
+        }
+        for name in ("msvcp140.dll", "msvcp140_1.dll")
+    }
+    monkeypatch.setattr(
+        stage_microsoft_runtime,
+        "runtime_pins",
+        lambda: {"folder": "MSVC/14.44.35112/x64/Microsoft.VC143.CRT", "files": files},
+    )
+    receipt = tmp_path / "receipt.json"
+    stage_microsoft_runtime.stage(bundle, redist, receipt)
+    assert renamed.read_bytes() == (folder / "msvcp140.dll").read_bytes()
+    assert (internal / "msvcp140_1.dll").read_bytes() == (folder / "msvcp140_1.dll").read_bytes()
+    records = {Path(item["path"]).name for item in json.loads(receipt.read_text())["files"]}
+    assert records == {renamed.name, "msvcp140_1.dll"}

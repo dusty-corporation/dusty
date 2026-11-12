@@ -1,6 +1,7 @@
 """Invoke pinned whisper-cli and parse its JSON into platform-neutral types."""
 
 import json
+import math
 import sys
 import time
 from collections.abc import Callable
@@ -141,19 +142,41 @@ def _words(tokens: object, text: str) -> tuple[Word, ...]:
         spoken = any(char.isalnum() for char in piece)
         sure = float(probability) if spoken else 1.0
         previous = words[-1][0] if words else ""
+        start, end = _token_times(token)
         if (
             not words
             or piece[:1].isspace()
             or _no_space_script(piece)
             or _no_space_script(previous[-1:])
         ):
-            words.append([piece, sure])
+            words.append([piece, sure, start, end])
         else:
             words[-1][0] += piece
             words[-1][1] = min(words[-1][1], sure)
-    if "".join(piece for piece, _ in words).split() != text.split():
+            words[-1][3] = end if words[-1][3] is not None else None
+            if start is None:
+                words[-1][2] = None
+    if "".join(word[0] for word in words).split() != text.split():
         return ()
-    return tuple(Word(piece, confidence) for piece, confidence in words)
+    return tuple(
+        Word(piece, confidence, start, end if start is not None else None)
+        for piece, confidence, start, end in words
+    )
+
+
+def _token_times(token: dict) -> tuple[float | None, float | None]:
+    """A token's start and end in seconds, or None for both when they are missing."""
+    offsets = token.get("offsets")
+    if not isinstance(offsets, dict):
+        return None, None
+    begin, finish = offsets.get("from"), offsets.get("to")
+    if not (isinstance(begin, int | float) and isinstance(finish, int | float)):
+        return None, None
+    if isinstance(begin, bool) or isinstance(finish, bool):
+        return None, None
+    if not (math.isfinite(finish) and 0 <= begin <= finish):
+        return None, None
+    return begin / 1000, finish / 1000
 
 
 def parse_whisper_json(
@@ -206,6 +229,7 @@ def run_whisper(
     cancel: Cancellation | None = None,
     on_progress: Callable[[float], None] | None = None,
     timeout_sec: float = WHISPER_LIMIT_SEC,
+    carry_prompt: bool = False,
 ) -> EngineRun:
     """Pass prompts as one argument and never retain raw native stderr."""
     if backend == "metal":
@@ -246,6 +270,10 @@ def run_whisper(
         args.extend(["--vad", "-vm", str(vad_model)])
     if prompt:
         args.extend(["--prompt", prompt])
+        if carry_prompt:
+            # Keep steering with the prompt through the whole recording, not
+            # only its first window (an engine hint of an extension).
+            args.append("--carry-initial-prompt")
     state = ProgressState(started_at=time.monotonic())
     previous_progress = 0.0
 

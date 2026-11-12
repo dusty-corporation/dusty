@@ -1,4 +1,4 @@
-param([string]$Bundle = 'dist/Dusty')
+param([string]$Bundle = 'dist/Dusty', [string]$AppId = '', [string]$AppName = '')
 
 $ErrorActionPreference = 'Stop'
 if ($env:GITHUB_ACTIONS -ne 'true') { throw 'Compiler bootstrap runs on disposable CI only' }
@@ -38,7 +38,11 @@ $runtimeFiles = @($sourceProof.runtime_files | ForEach-Object {
 @{files=$runtimeFiles;source_commit=$sourceProof.commit;source_review_sha256=(Get-FileHash -LiteralPath (Join-Path $repo 'packaging/licenses/inno/runtime-source.json')).Hash.ToLowerInvariant();compiler_bootstrap_sha256=$pins.compiler_sha256} | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $work 'runtime-inputs.json') -Encoding utf8NoBOM
 # The pinned ISCC launcher resource is intentionally 0.0.0.0. Its loaded
 # compiler engine supplies the authoritative version in the compilation banner.
-& (Join-Path $repo '.venv/Scripts/python.exe') (Join-Path $repo 'installer/generate_iss.py') --bundle $Bundle
+# Empty values keep Dusty's installer id and name; another build may pass its own.
+$identity = @()
+if ($AppId) { $identity += @('--app-id', $AppId) }
+if ($AppName) { $identity += @('--app-name', $AppName) }
+& (Join-Path $repo '.venv/Scripts/python.exe') (Join-Path $repo 'installer/generate_iss.py') --bundle $Bundle @identity
 if ($LASTEXITCODE -ne 0) { throw 'Installer input generation failed' }
 $compilerOutput = @(& $iscc (Join-Path $work 'dusty.iss') 2>&1)
 $compilerOutput | ForEach-Object { Write-Host $_ }

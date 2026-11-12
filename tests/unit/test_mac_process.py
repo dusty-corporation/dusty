@@ -372,6 +372,22 @@ def test_target_gets_minimal_environment(program: str, monkeypatch: pytest.Monke
     assert stdout == ["LC_ALL=C"]
 
 
+def test_an_explicit_environment_replaces_the_runners_choice(
+    program: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        mac_process, "child_environment", lambda executable: {"LC_ALL": "C", "CHOSEN": "no"}
+    )
+    monkeypatch.setenv("DUSTY_TEST_CANARY", "must not reach the target")
+    result, stdout, _ = run_lines(
+        [program, "env"], environment={"LC_ALL": "C", "PYTHONPATH": "/a:/b"}
+    )
+    assert result.exit_code == 0
+    assert sorted(stdout) == ["LC_ALL=C", "PYTHONPATH=/a:/b"]
+    with pytest.raises(ValueError):
+        run_job_process([program, "env"], environment={"A=B": "x"})
+
+
 def test_lifeline_passes_the_runner_environment_unchanged(
     program: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:

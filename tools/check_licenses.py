@@ -27,13 +27,23 @@ ALLOWED = {
     "LGPL-2.1-or-later",
     "LGPL-3.0-only",
     "LGPL-3.0-or-later",
+    # Permissive notices some locked packages name for bundled parts.
+    "0BSD",
+    "CC0-1.0",
 }
 ALIASES = {
     "MIT License": "MIT",
     "Apache Software License": "Apache-2.0",
+    # Spellings some locked packages use in their metadata.
+    "Apache 2.0": "Apache-2.0",
+    "3-Clause BSD License": "BSD-3-Clause",
     "ISC License (ISCL)": "ISC",
     "GNU Lesser General Public License v2 or later (LGPLv2+)": "LGPL-2.1-or-later",
 }
+# Distributions whose metadata declares no license field. Each was reviewed from its
+# own license files: packaging 25.0 ships LICENSE, LICENSE.APACHE and LICENSE.BSD and
+# says it is available under either.
+REVIEWED_UNDECLARED = {("packaging", "25.0"): "Apache-2.0 OR BSD-2-Clause"}
 LGPL_DYNAMIC = {"pyside6", "pyside6-addons", "pyside6-essentials", "shiboken6"}
 PYINSTALLER_BOOTLOADER = "GPL-2.0-or-later WITH PyInstaller-bootloader-exception"
 INSTALLER_ONLY = {
@@ -111,6 +121,8 @@ def check(root: Path) -> list[str]:
         if dist.version != version:
             findings.append(f"{name}: installed version differs from lockfile")
         license_text = dist.metadata.get("License-Expression") or dist.metadata.get("License")
+        if not license_text:
+            license_text = REVIEWED_UNDECLARED.get((name, dist.version))
         if not allowed_license(name, license_text):
             findings.append(f"{name}: unapproved or unknown license: {license_text}")
     return findings
@@ -370,12 +382,17 @@ def check_macos_bundle(app: Path, inventory_path: Path) -> list[str]:
         ):
             findings.append(f"Missing or changed required license text: {name}")
     # Pinned upstream texts for the Mac bundle (packaging/macos/licenses, D-MAC-020).
+    from tools.macos_notices import ADDON_TEXTS, addon_texts
+
     mac_texts = Path(__file__).resolve().parents[1] / "packaging/macos/licenses"
-    retained = json.loads((mac_texts / "sources.json").read_text(encoding="utf-8"))
-    for name, record in sorted(retained.items()):
-        path = resources / "licenses/macos" / name
-        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != record["sha256"]:
-            findings.append(f"Missing or changed retained Mac license text: {name}")
+    # Add-on helper programs keep theirs apart, staged under licenses/macos/addons/.
+    for folder, prefix in ((mac_texts, ""), *((texts, ADDON_TEXTS) for texts in addon_texts())):
+        retained = json.loads((folder / "sources.json").read_text(encoding="utf-8"))
+        for name, record in sorted(retained.items()):
+            path = resources / "licenses/macos" / prefix / name
+            digest = hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else ""
+            if digest != record["sha256"]:
+                findings.append(f"Missing or changed retained Mac license text: {prefix}{name}")
     findings.extend(f"Open license item: {item}" for item in inventory.get("open_items", []))
     return findings
 

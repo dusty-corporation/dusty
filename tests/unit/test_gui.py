@@ -177,9 +177,11 @@ def test_folder_scan_duplicate_reorder_remove(window, qtbot, tmp_path, monkeypat
     assert window.model.rowCount() == 1
     remaining = window.model.jobs[0].source
     window.add_paths([remaining])
-    qtbot.waitUntil(lambda: not window.scanner.isRunning())
+    # The scan thread can end before its queued result reaches the window, so
+    # wait for what that result does, the status line, as well as the thread.
+    duplicate = remaining.name + " is already in the list"
+    qtbot.waitUntil(lambda: duplicate in window.status.text() and not window.scanner.isRunning())
     assert window.model.rowCount() == 1
-    assert remaining.name + " is already in the list" in window.status.text()
 
 
 def test_backend_defaults_language_translation_and_hint_rules(window, qtbot, tmp_path) -> None:

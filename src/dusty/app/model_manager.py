@@ -7,6 +7,7 @@ import sys
 import threading
 import time
 from collections.abc import Callable
+from pathlib import Path
 
 from PySide6.QtCore import Qt, QThread, QTimer, Signal, Slot
 from PySide6.QtGui import QPalette
@@ -22,6 +23,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from dusty import extensions
 from dusty.models import ModelCorrupt, ModelMissing, ModelRegistry
 from dusty.platform.process import run_job_process
 from dusty.runtime_paths import RuntimePaths, resolve_fetch_command
@@ -33,8 +35,29 @@ from .dialogs import TextDialog
 VOICE_ID = "silero-vad"
 
 
+def extra_ids() -> tuple[str, ...]:
+    """Ids of the extension models, which transcribe nothing themselves."""
+    return tuple(model.id for model in extensions.active().models)
+
+
+def _texts(model_id: str) -> tuple[str, str, str, str]:
+    """Name, quality, note and best use of a model."""
+    extra = extensions.active().model(model_id)
+    if extra is not None:
+        return extra.name, extra.quality, extra.note, extra.best_for
+    name = M.VOICE_MODEL if model_id == VOICE_ID else M.MODEL_TECHNICAL[model_id]
+    note = M.model_note(sys.platform)[model_id]
+    return name, M.MODEL_QUALITY[model_id], note, M.MODEL_BEST_FOR[model_id]
+
+
 def model_name(model_id: str) -> str:
-    return M.VOICE_MODEL if model_id == VOICE_ID else M.MODEL_TECHNICAL[model_id]
+    return _texts(model_id)[0]
+
+
+def model_catalog(paths: RuntimePaths, model_id: str) -> Path:
+    """The catalog file the downloader reads for a model."""
+    extra = extensions.active().model(model_id)
+    return paths.resources_dir / (extra.catalog if extra is not None else "models.json")
 
 
 def format_size(size_bytes: int) -> str:
@@ -47,6 +70,8 @@ def model_files(registry: ModelRegistry) -> dict[str, tuple[str, int]]:
         key: (item.file_name, item.size_bytes) for key, item in registry.manifest.models.items()
     }
     result[VOICE_ID] = (registry.manifest.vad_file_name, registry.manifest.vad_size_bytes)
+    for key, item in registry.manifest.extra.items():
+        result[key] = (item.file_name, item.size_bytes)
     return result
 
 
@@ -54,7 +79,13 @@ def inspect_models(registry: ModelRegistry) -> dict[str, str]:
     statuses = {}
     for key in model_files(registry):
         try:
-            registry.vad_path() if key == VOICE_ID else registry.model_path(key)
+            (
+                registry.vad_path()
+                if key == VOICE_ID
+                else registry.extra_path(key)
+                if key in registry.manifest.extra
+                else registry.model_path(key)
+            )
             statuses[key] = "installed"
         except ModelMissing:
             statuses[key] = "not_installed"
@@ -163,7 +194,7 @@ class ModelWorker(QThread):
                             "--dest",
                             str(self.paths.models_dir),
                             "--manifest",
-                            str(self.paths.resources_dir / "models.json"),
+                            str(model_catalog(self.paths, key)),
                             "--failure-log",
                             str(self.paths.user_dir / "logs" / "dusty.log"),
                         ],
@@ -283,17 +314,16 @@ class ModelManager(TextDialog):
         self.table.setColumnWidth(3, 115)
         self.ids = tuple(self.statuses)
         for row, key in enumerate(self.ids):
-            label = model_name(key)
+            label, quality, note, best_for = _texts(key)
             if key == recommended:
                 label = M.RECOMMENDED.format(name=label)
             title = QTableWidgetItem()
             title.setData(Qt.ItemDataRole.UserRole, key)
-            note = M.model_note(sys.platform)[key]
             if sys.platform == "darwin":
                 # The visible lines are a cell widget; VoiceOver reads the item text.
                 title.setData(
                     Qt.ItemDataRole.AccessibleTextRole,
-                    f"{label}. {M.MODEL_QUALITY[key]}. {note}",
+                    f"{label}. {quality}. {note}",
                 )
             self.table.setItem(row, 0, title)
             cell = QWidget()
@@ -301,7 +331,7 @@ class ModelManager(TextDialog):
             layout = QVBoxLayout(cell)
             layout.setContentsMargins(8, 4, 8, 4)
             layout.setSpacing(1)
-            for index, text in enumerate((label, M.MODEL_QUALITY[key], note)):
+            for index, text in enumerate((label, quality, note)):
                 line = QLabel(text)
                 line.setTextFormat(Qt.TextFormat.PlainText)
                 font = line.font()
@@ -311,7 +341,7 @@ class ModelManager(TextDialog):
                 line.setFont(font)
                 layout.addWidget(line)
             self.table.setCellWidget(row, 0, cell)
-            self.table.setItem(row, 1, QTableWidgetItem(M.MODEL_BEST_FOR[key]))
+            self.table.setItem(row, 1, QTableWidgetItem(best_for))
             self.table.setItem(
                 row,
                 2,
@@ -413,7 +443,7 @@ class ModelManager(TextDialog):
         key = self.selected_id()
         ids: tuple[str, ...] = (key,)
         # The default silence option requires this same bundled-manifest asset.
-        if key != VOICE_ID and self.statuses[VOICE_ID] != "installed":
+        if key not in (VOICE_ID, *extra_ids()) and self.statuses[VOICE_ID] != "installed":
             ids += (VOICE_ID,)
         if DownloadDialog(ids, self.registry, self).exec() == QDialog.DialogCode.Accepted:
             self.progress.setValue(0)

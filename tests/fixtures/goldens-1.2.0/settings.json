@@ -1,0 +1,25 @@
+{
+  "backend": "auto",
+  "collision": "ask",
+  "formats": [
+    "txt",
+    "docx"
+  ],
+  "keep_structure": false,
+  "language": "auto",
+  "mark_unsure": true,
+  "marker_minutes": 5.0,
+  "model_id": "small",
+  "preferred_language": "auto",
+  "prompt": "Mill Street",
+  "same_folder": false,
+  "schema_version": 1,
+  "task": "transcribe",
+  "theme": "system",
+  "threads": 4,
+  "time_markers": true,
+  "unsure_level": "very",
+  "vad": false,
+  "vad_user_set": true,
+  "welcome_seen": true
+}

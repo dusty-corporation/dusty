@@ -15,9 +15,16 @@ from PySide6.QtWidgets import QApplication, QDialog, QLabel
 from test_downloader import CERTS, DATA
 from test_downloader import tls as tls
 
+from dusty import extensions
 from dusty.app import messages as M
 from dusty.app.dialogs import TextDialog
-from dusty.app.model_manager import VOICE_ID, DownloadDialog, ModelManager, ModelWorker, format_size
+from dusty.app.model_manager import (
+    VOICE_ID,
+    DownloadDialog,
+    ModelManager,
+    ModelWorker,
+    format_size,
+)
 from dusty.app.window import MainWindow
 from dusty.app.workers import Prepared
 from dusty.models import ModelRegistry, load_manifest
@@ -185,7 +192,10 @@ def test_catalog_statuses_space_and_confirmation_download_progress(models, qtbot
     view.apply_prepared(Prepared((), False, {}, vad_installed=False))
     dialog = models.create(voice=True, registry=view.registry)
     dialog.models_changed.connect(view._models_changed)
-    assert set(dialog.ids) == set(models.registry.manifest.models) | {VOICE_ID}
+    assert set(dialog.ids) == set(models.registry.manifest.models) | {
+        VOICE_ID,
+        *models.registry.manifest.extra,
+    }
     assert all(state == "not_installed" for state in dialog.statuses.values())
     assert dialog.free_space.text() == M.FREE_SPACE.format(gb=2.5)
     confirm = DownloadDialog(("tiny", VOICE_ID), models.registry, dialog)
@@ -575,13 +585,24 @@ def test_manager_name_quality_note_and_best_for_are_distinct(models, qtbot):
     for row, key in enumerate(dialog.ids):
         labels = dialog.table.cellWidget(row, 0).findChildren(QLabel)
         assert len(labels) == 3
-        name = M.VOICE_MODEL if key == VOICE_ID else M.MODEL_TECHNICAL[key]
+        # An extension model's row shows the texts it registered.
+        extra = extensions.active().model(key)
+        name, quality, note, best_for = (
+            (extra.name, extra.quality, extra.note, extra.best_for)
+            if extra is not None
+            else (
+                M.VOICE_MODEL if key == VOICE_ID else M.MODEL_TECHNICAL[key],
+                M.MODEL_QUALITY[key],
+                M.model_note(sys.platform)[key],
+                M.MODEL_BEST_FOR[key],
+            )
+        )
         assert labels[0].text() == (M.RECOMMENDED.format(name=name) if key == "small" else name)
         assert labels[0].font().bold()
-        assert labels[1].text() == M.MODEL_QUALITY[key]
-        assert labels[2].text() == M.model_note(sys.platform)[key]
+        assert labels[1].text() == quality
+        assert labels[2].text() == note
         assert labels[2].font().pointSizeF() < labels[1].font().pointSizeF()
-        assert dialog.table.item(row, 1).text() == M.MODEL_BEST_FOR[key]
+        assert dialog.table.item(row, 1).text() == best_for
     assert dialog.review_notice.text() == M.MODEL_REVIEW
     assert dialog.cancel_button.isVisible() and not dialog.cancel_button.isEnabled()
 

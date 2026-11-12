@@ -24,7 +24,18 @@ def pascal(value: str) -> str:
     return "'" + value.replace("'", "''") + "'"
 
 
-def generate(output: Path, bundle: Path) -> Path:
+# The installer identity of Dusty; another build may pass its own.
+INSTALLER_APP_ID = "{7B3110E8-7983-41AC-A0ED-F6EB13DBB72A}"
+INSTALLER_APP_NAME = "Dusty"
+
+
+def generate(
+    output: Path,
+    bundle: Path,
+    *,
+    app_id: str = INSTALLER_APP_ID,
+    app_name: str = INSTALLER_APP_NAME,
+) -> Path:
     manifest = load_manifest(bundle / "resources/models.json")
     raw = json.loads((bundle / "resources/models.json").read_text(encoding="utf-8"))
     output.mkdir(parents=True, exist_ok=True)
@@ -78,6 +89,9 @@ def generate(output: Path, bundle: Path) -> Path:
             f"  ModelDetails[{index}] := {detail};",
             f"  AddModelRow({index});",
         ]
+    from tools.helper_programs import load_programs
+
+    programs = load_programs(ROOT)
     template = (ROOT / "installer/dusty.iss.template").read_text(encoding="utf-8")
     template = template.replace(
         "@@WIZARD_CODE@@", (ROOT / "installer/wizard.iss").read_text(encoding="utf-8")
@@ -140,6 +154,16 @@ def generate(output: Path, bundle: Path) -> Path:
         "INNO_LICENSE": str(ROOT / "packaging/licenses/inno/license.txt"),
         "INSTALLER_NOTICES": str((output / "THIRD_PARTY_NOTICES.md").resolve()),
         "JEDI_SOURCE": str((output / "installer-jedi-source.zip").resolve()),
+        # Add-on helper programs are excluded from Windows Error Reporting like the
+        # five Dusty programs (tools/helper_programs.py); public Dusty has none.
+        "EXTRA_CRASH_NAMES": "".join(
+            f"\n    {5 + index}: Result := {pascal(program.name + '.exe')};"
+            for index, program in enumerate(programs)
+        ),
+        "LAST_CRASH_INDEX": str(4 + len(programs)),
+        # Inno Setup reads a leading "{" as a constant, so the id's own is doubled.
+        "INSTALLER_APP_ID": "{" + app_id if app_id.startswith("{") else app_id,
+        "INSTALLER_APP_NAME": app_name,
     }
     for key, value in values.items():
         template = template.replace("@@" + key + "@@", value)
@@ -169,11 +193,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bundle", type=Path, default=ROOT / "dist/Dusty")
     parser.add_argument("--output", type=Path, default=ROOT / "build/installer")
+    parser.add_argument(
+        "--app-id", default=INSTALLER_APP_ID, help="installer identity (default: Dusty's)"
+    )
+    parser.add_argument("--app-name", default=INSTALLER_APP_NAME, help="installed app name")
     args = parser.parse_args()
     output = args.output.resolve()
     if not output.is_relative_to(ROOT):
         raise ValueError("Installer output must stay in the repository")
-    print(generate(output, args.bundle.resolve()))
+    print(generate(output, args.bundle.resolve(), app_id=args.app_id, app_name=args.app_name))
 
 
 if __name__ == "__main__":

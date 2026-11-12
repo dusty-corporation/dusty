@@ -48,7 +48,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from dusty import __version__
+from dusty import __version__, extensions
 from dusty.core import BatchOptions, FailureCode, Job, JobStatus
 from dusty.core.types import (
     MARKER_MINUTES_DEFAULT,
@@ -87,7 +87,7 @@ from .dialogs import (
     TextDialog,
     WelcomeDialog,
 )
-from .model_manager import VOICE_ID, ModelManager
+from .model_manager import VOICE_ID, ModelManager, extra_ids
 from .presentation import TERMINAL, counts, eta_seconds, overall_progress
 from .table import ProgressDelegate, QueueModel
 from .theme import application_icon, apply_theme
@@ -226,6 +226,12 @@ class MainWindow(QMainWindow):
         self.installed: tuple[str, ...] = ()
         self.vulkan_ok = False
         self.vad_installed = False
+        # Extensions (docs/dev/extensions.md) and the ids of their installed models.
+        self.extensions = extensions.active()
+        self.extra_installed: frozenset[str] = frozenset()
+        # In memory only: the options each file of this session was written with,
+        # so an extension action can render again into the same files.
+        self._finished_options: dict[UUID, BatchOptions] = {}
         self._explicit_model = False
         self.model_manager: ModelManager | None = None
         self.ready = False
@@ -517,6 +523,25 @@ class MainWindow(QMainWindow):
         self.extras_unavailable = self._label(M.TEXT_EXTRAS_NEED_FORMAT, warning=True)
         extras_layout.addWidget(self.extras_unavailable)
         form.addRow(M.TEXT_EXTRAS, extras)
+        # One check box per extension option; none without extensions.
+        self.extension_boxes: dict[str, QCheckBox] = {}
+        self.extension_unavailable: dict[str, QLabel] = {}
+        for option in self.extensions.options:
+            option_box = QWidget()
+            option_layout = QVBoxLayout(option_box)
+            option_layout.setContentsMargins(0, 0, 0, 0)
+            option_layout.setSpacing(4)
+            check = QCheckBox(option.label)
+            check.setAccessibleName(option.label)
+            option_layout.addWidget(check)
+            option_help = self._label(option.help)
+            option_help.setIndent(22)
+            option_layout.addWidget(option_help)
+            unavailable = self._label(extensions.reason(option), warning=True)
+            option_layout.addWidget(unavailable)
+            form.addRow(option.row, option_box)
+            self.extension_boxes[option.key] = check
+            self.extension_unavailable[option.key] = unavailable
         self.same_folder = QCheckBox(M.SAME_FOLDER)
         self.keep_structure = QCheckBox(M.KEEP_STRUCTURE)
         form.addRow(self.same_folder)
@@ -584,6 +609,8 @@ class MainWindow(QMainWindow):
         self.time_markers.toggled.connect(self._rules)
         self.marker_minutes.valueChanged.connect(self._rules)
         self.mark_unsure.toggled.connect(self._rules)
+        for check in self.extension_boxes.values():
+            check.toggled.connect(self._rules)
         self.theme_choice.currentIndexChanged.connect(self._theme_changed)
         for first, second in zip(
             (self.output_button, self.formats["txt"], self.formats["docx"], self.options_button),
@@ -615,6 +642,11 @@ class MainWindow(QMainWindow):
             M.PRIVACY_TITLE,
             lambda: TextDialog(M.PRIVACY_TITLE, (M.PRIVACY, M.ACCURACY), self).exec(),
         )
+        # Extension commands, none in public Dusty, come before About.
+        self.extension_commands = [
+            help_menu.addAction(command.label, lambda run=command.run: run(self))
+            for command in self.extensions.commands
+        ]
         self.about_action = help_menu.addAction(M.ABOUT, self.show_about)
         if sys.platform == "darwin":
             self._mac_menus(file_menu, tools, help_menu)
@@ -690,7 +722,8 @@ class MainWindow(QMainWindow):
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
 
     def show_about(self) -> None:
-        AboutDialog(__version__, self.open_notices, self).exec()
+        lines = [line for about in self.extensions.about if (line := about())]
+        AboutDialog(__version__, self.open_notices, self, extra=tuple(lines)).exec()
 
     def open_notices(self) -> None:
         NoticesDialog(self._notices_path(), self).exec()
@@ -727,6 +760,7 @@ class MainWindow(QMainWindow):
         )
         self.ready = True
         self.vad_installed = prepared.vad_installed
+        self.extra_installed = frozenset(prepared.extra_installed)
         self._explicit_model = bool(self.settings.get("model_id"))
         self.model_choice.blockSignals(True)
         self.model_choice.clear()
@@ -847,6 +881,10 @@ class MainWindow(QMainWindow):
         for key, box in (("time_markers", self.time_markers), ("mark_unsure", self.mark_unsure)):
             if key in settings:
                 box.setChecked(settings[key] is True)
+        # Extension options are held under one key, and only while on.
+        chosen = settings.get("extension_options", [])
+        for key, box in self.extension_boxes.items():
+            box.setChecked(isinstance(chosen, list) and key in chosen)
         if "marker_minutes" in settings:
             self.marker_minutes.setValue(settings["marker_minutes"])
         if settings.get("unsure_level") in self.unsure_buttons:
@@ -899,6 +937,18 @@ class MainWindow(QMainWindow):
                     "geometry": bytes(self.saveGeometry().toBase64().data()).decode("ascii"),
                 }
             )
+            # Only options that are on; those of extensions not installed here stay.
+            previous = settings.get("extension_options", [])
+            kept = {
+                key
+                for key in (previous if isinstance(previous, list) else [])
+                if isinstance(key, str) and key not in self.extension_boxes
+            }
+            kept |= {key for key, box in self.extension_boxes.items() if box.isChecked()}
+            if kept:
+                settings["extension_options"] = sorted(kept)
+            else:
+                settings.pop("extension_options", None)
             save_settings(self.paths.user_dir / "settings.json", settings)
             self.settings = settings
             return True
@@ -920,8 +970,31 @@ class MainWindow(QMainWindow):
         worker.finished.connect(lambda: QTimer.singleShot(0, self._background_finished))
 
     def download_recommended(self) -> None:
-        target = self._recommendation if not self.installed else VOICE_ID
+        missing = self._extension_missing()
+        target = (
+            self._recommendation
+            if not self.installed
+            else VOICE_ID
+            if (self.vad.isChecked() and not self.vad_installed) or missing is None
+            else missing.model
+        )
         self.open_model_manager(focus_id=target)
+
+    def _extension_on(self, option: extensions.Option) -> bool:
+        return option.supported() and self.extension_boxes[option.key].isChecked()
+
+    def _extension_missing(self) -> extensions.Option | None:
+        """The first extension option that is on and needs a model not installed."""
+        return next(
+            (
+                option
+                for option in self.extensions.options
+                if option.model is not None
+                and option.model not in self.extra_installed
+                and self._extension_on(option)
+            ),
+            None,
+        )
 
     def open_model_manager(self, *, focus_id: str | None = None) -> None:
         if not self.ready or self.running:
@@ -946,9 +1019,14 @@ class MainWindow(QMainWindow):
         previous = self.model_choice.currentData()
         old_installed = self.installed
         self.installed = tuple(
-            key for key, state in statuses.items() if state == "installed" and key != VOICE_ID
+            key
+            for key, state in statuses.items()
+            if state == "installed" and key not in (VOICE_ID, *extra_ids())
         )
         self.vad_installed = statuses.get(VOICE_ID) == "installed"
+        self.extra_installed = frozenset(
+            key for key in extra_ids() if statuses.get(key) == "installed"
+        )
         self.model_choice.blockSignals(True)
         self.model_choice.clear()
         for key in self.installed:
@@ -1042,7 +1120,35 @@ class MainWindow(QMainWindow):
             self.table.selectRow(index.row())
         menu = QMenu(self.table)
         menu.addActions(self.move_actions)
+        job, actions = self._job_actions()
+        if job is not None and actions:
+            menu.addSeparator()
+            for item in actions:
+                entry = menu.addAction(item.label)
+                entry.triggered.connect(
+                    lambda checked=False, chosen=job, run=item: self.run_action(run, chosen)
+                )
         menu.exec(self.table.viewport().mapToGlobal(point))
+
+    def _job_actions(self) -> tuple[Job | None, list[extensions.Action]]:
+        """The one selected file finished in this session, and the actions it has."""
+        rows = self._selected_rows()
+        if len(rows) != 1 or self.running:
+            return None, []
+        job = self.model.jobs[rows[0]]
+        if (
+            job.status != JobStatus.DONE
+            or not job.written
+            or self._finished_options.get(job.id) is None
+        ):
+            return None, []
+        return job, [item for item in self.extensions.actions if item.available(job)]
+
+    def run_action(self, action: extensions.Action, job: Job) -> None:
+        options = self._finished_options.get(job.id)
+        if options is None or self.running:
+            return
+        action.run(self, job, options)
 
     def _toggle_advanced(self, expanded: bool) -> None:
         self.advanced.setVisible(expanded)
@@ -1083,6 +1189,7 @@ class MainWindow(QMainWindow):
     def _device_prepared(self, prepared: Prepared) -> None:
         self.vulkan_ok = prepared.vulkan_ok
         self.vad_installed = prepared.vad_installed
+        self.extra_installed = frozenset(prepared.extra_installed)
         if "backend_probe" in prepared.settings:
             self.settings["backend_probe"] = prepared.settings["backend_probe"]
         self.ready = True
@@ -1155,13 +1262,18 @@ class MainWindow(QMainWindow):
         )
         self.resume_model_button.setEnabled(bool(model and not invalid and not self.running))
         needs_voice = self.vad.isChecked() and not self.vad_installed
+        missing = self._extension_missing()
         if model and needs_voice:
             warning = M.VAD_MISSING
-        prompt = self.ready and (not self.installed or needs_voice)
+        elif model and missing is not None:
+            warning = missing.model_missing
+        prompt = self.ready and (not self.installed or needs_voice or missing is not None)
         self.download_recommended_button.setText(
             M.DOWNLOAD_RECOMMENDED.format(name=M.MODEL_TECHNICAL[recommended])
             if not self.installed
             else M.DOWNLOAD_VOICE
+            if needs_voice or missing is None
+            else missing.download
         )
         self.download_recommended_button.setVisible(bool(prompt) and not self.running)
         self.download_recommended_button.setEnabled(not self.running)
@@ -1170,6 +1282,8 @@ class MainWindow(QMainWindow):
             hint = M.NO_MODELS if not self.installed else M.CHOOSE_MODEL
         elif needs_voice:
             hint = M.VAD_MISSING
+        elif missing is not None:
+            hint = missing.model_missing
         elif not self.output_dir and not self.same_folder.isChecked():
             hint = M.CHOOSE_OUTPUT_FIRST
         elif self.model.jobs and all(
@@ -1206,6 +1320,12 @@ class MainWindow(QMainWindow):
         self.extras_unavailable.setVisible(not text_output)
         for box in (self.time_markers, self.mark_unsure):
             box.setEnabled(text_output)
+        for option in self.extensions.options:
+            supported = option.supported()
+            self.extension_boxes[option.key].setEnabled(supported)
+            self.extension_unavailable[option.key].setVisible(not supported)
+            if not supported:
+                self.extension_unavailable[option.key].setText(extensions.reason(option))
         self.marker_minutes.setEnabled(text_output and self.time_markers.isChecked())
         for level in self.unsure_buttons.values():
             level.setEnabled(text_output and self.mark_unsure.isChecked())
@@ -1232,6 +1352,11 @@ class MainWindow(QMainWindow):
                 else ""
             )
             + (", " + M.UNSURE_ON if text_output and self.mark_unsure.isChecked() else "")
+            + "".join(
+                ", " + option.summary
+                for option in self.extensions.options
+                if self._extension_on(option)
+            )
         )
         output_text = (
             M.SAVING_NEXT_TO
@@ -1258,6 +1383,7 @@ class MainWindow(QMainWindow):
                 and model
                 and not invalid
                 and not needs_voice
+                and missing is None
                 and not self._missing_resume_model
                 and not self.running
                 and self.model.jobs
@@ -1398,6 +1524,10 @@ class MainWindow(QMainWindow):
                 job.outputs = []
                 job.backend_used = None
                 job.gpu_fallback = False
+                job.stage_status = None
+                job.stage_failed = None
+                job.transcript = None
+                job.written = {}
                 reset += 1
         self.model.set_jobs(self.model.jobs + list(result.jobs))
         if result.rejected:
@@ -1510,6 +1640,9 @@ class MainWindow(QMainWindow):
             marker_minutes=self.marker_minutes.value(),
             mark_unsure=self.mark_unsure.isChecked(),
             unsure_level=self._unsure_level(),
+            extension_options=frozenset(
+                option.key for option in self.extensions.options if self._extension_on(option)
+            ),
         )
 
     def _unsure_level(self) -> UnsureLevel:
@@ -1554,6 +1687,8 @@ class MainWindow(QMainWindow):
             if not retry_failed or job.status == JobStatus.FAILED
         ]
         self.batch = BatchWorker(self.paths, self.registry, jobs, options, self.vulkan_ok)
+        for job in jobs:
+            self._finished_options[job.id] = options
         self._tasks.append(self.batch)
         self.batch.changed.connect(self._job_changed)
         self.batch.collision.connect(self._collision)
@@ -1672,6 +1807,11 @@ class MainWindow(QMainWindow):
         job = self.model.jobs[index.row()]
         if job.failure:
             self.show_error(job.failure, filename=job.source.name)
+        else:
+            chosen, actions = self._job_actions()
+            default = next((item for item in actions if item.default), None)
+            if chosen is job and default is not None:
+                self.run_action(default, job)
 
     def open_output(self) -> None:
         folder = next(

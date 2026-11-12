@@ -160,7 +160,10 @@ def load_asset(manifest: Path, model_id: str, policy: HostPolicy) -> Asset:
         data = json.loads(manifest.read_text(encoding="utf-8"))
         if data["schema_version"] != 1:
             raise ValueError
-        entries = data["models"] + data.get("vad", [])
+        # An extension model's own catalog file says so and has only its
+        # "models" entry; only those may name a dusty-*.onnx file.
+        extension = data.get("kind") == "extension"
+        entries = data["models"] + ([] if extension else data.get("vad", []))
         found = [entry for entry in entries if entry["id"] == model_id]
         if len(found) != 1:
             raise ValueError
@@ -171,7 +174,9 @@ def load_asset(manifest: Path, model_id: str, policy: HostPolicy) -> Asset:
         if (
             not re.fullmatch(r"[a-z0-9][a-z0-9._+-]{0,63}", model_id)
             or not isinstance(name, str)
-            or not re.fullmatch(r"ggml-[A-Za-z0-9._-]+\.bin", name)
+            or not re.fullmatch(
+                r"dusty-[a-z0-9._-]+\.onnx" if extension else r"ggml-[A-Za-z0-9._-]+\.bin", name
+            )
             or type(size) is not int
             or not 0 < size < 2**31
             or not isinstance(digest, str)

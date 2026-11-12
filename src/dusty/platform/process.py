@@ -8,7 +8,7 @@ generic launch API.
 
 import os
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -36,18 +36,24 @@ class JobRunner(Protocol):
         cancel: Cancellation | None = None,
         timeout_sec: float | None = None,
         on_poll: Callable[[], None] | None = None,
+        environment: Mapping[str, str] | None = None,
     ) -> ProcessResult: ...
 
 
 def approved_executable(path: Path) -> Path:
     """One launch boundary for processing binaries and the isolated downloader."""
-    from dusty.runtime_paths import resolve_fetch_command, resolve_paths
+    from dusty import extensions
+    from dusty.runtime_paths import resolve_fetch_command, resolve_helper_command, resolve_paths
     from dusty.work_area import canonical, linked
 
     executable = canonical(path)
     allowed = {
         canonical(Path(sys.executable)),
         canonical(Path(resolve_fetch_command()[0])),
+        *(
+            canonical(Path(resolve_helper_command(helper.name, helper.module)[0]))
+            for helper in extensions.active().helpers
+        ),
     }
     if linked(path) or not (
         executable in allowed or executable.is_relative_to(canonical(resolve_paths().bin_dir))
@@ -99,8 +105,13 @@ def run_job_process(
     cancel: Cancellation | None = None,
     timeout_sec: float | None = None,
     on_poll: Callable[[], None] | None = None,
+    environment: Mapping[str, str] | None = None,
 ) -> ProcessResult:
-    """Run one approved program with the platform's kill-on-close boundary."""
+    """Run one approved program with the platform's kill-on-close boundary.
+
+    ``environment``, when given, is the child's complete environment; otherwise
+    each platform chooses as before.
+    """
     return platform_runner()(
         args,
         cwd=cwd,
@@ -109,4 +120,5 @@ def run_job_process(
         cancel=cancel,
         timeout_sec=timeout_sec,
         on_poll=on_poll,
+        environment=environment,
     )

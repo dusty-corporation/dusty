@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "options": {
+    "model_id": "small",
+    "output_dir": "/transcripts",
+    "formats": [
+      "txt",
+      "srt"
+    ],
+    "language": "en",
+    "task": "transcribe",
+    "backend": "auto",
+    "threads": 4,
+    "vad": true,
+    "prompt": "Mill Street",
+    "collision": "keep_both",
+    "same_folder": false,
+    "keep_structure": false,
+    "time_markers": true,
+    "marker_minutes": 2.5,
+    "mark_unsure": true,
+    "unsure_level": "somewhat"
+  },
+  "jobs": [
+    {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "source": "/recordings/one.m4a",
+      "relative_dir": null,
+      "status": "done",
+      "failure": null,
+      "progress": 1.0,
+      "outputs": [
+        "/transcripts/one.txt",
+        "/transcripts/one.srt"
+      ],
+      "backend_used": "cpu",
+      "gpu_fallback": false,
+      "duration_sec": 60.0,
+      "elapsed_sec": 12.5
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000002",
+      "source": "/recordings/two.wav",
+      "relative_dir": "day 2",
+      "status": "failed",
+      "failure": "NO_AUDIO",
+      "progress": 0.0,
+      "outputs": [],
+      "backend_used": null,
+      "gpu_fallback": false,
+      "duration_sec": 0.0,
+      "elapsed_sec": 0.0
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000003",
+      "source": "/recordings/three.mp3",
+      "relative_dir": null,
+      "status": "queued",
+      "failure": null,
+      "progress": 0.0,
+      "outputs": [],
+      "backend_used": null,
+      "gpu_fallback": false,
+      "duration_sec": 0.0,
+      "elapsed_sec": 0.0
+    }
+  ]
+}

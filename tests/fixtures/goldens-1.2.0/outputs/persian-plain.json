@@ -1,0 +1,32 @@
+{
+  "schema": "dusty.transcript",
+  "schema_version": 1,
+  "app_version": "1.2.0",
+  "model_id": "small",
+  "backend": "cpu",
+  "task": "transcribe",
+  "language": "fa",
+  "duration_sec": 46.0,
+  "source_file_name": "persian.m4a",
+  "created_utc": "2026-01-02T03:04:05Z",
+  "segments": [
+    {
+      "index": 0,
+      "start": 0.0,
+      "end": 3.5,
+      "text": "سلام، خوش آمدید."
+    },
+    {
+      "index": 1,
+      "start": 3.8,
+      "end": 8.0,
+      "text": "امروز درباره برنامه سال آینده صحبت می کنیم."
+    },
+    {
+      "index": 2,
+      "start": 40.0,
+      "end": 46.0,
+      "text": "آیا سوالی هست؟"
+    }
+  ]
+}

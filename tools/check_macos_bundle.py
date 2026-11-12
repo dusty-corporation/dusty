@@ -32,6 +32,8 @@ from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from tools.helper_programs import Program, gui_module_findings, load_programs
+
 ROOT = Path(__file__).resolve().parents[1]
 TOOL_ENV = {"PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "LANG": "C", "LC_ALL": "C"}
 
@@ -353,10 +355,17 @@ def symlink_findings(app: Path) -> list[str]:
     return findings
 
 
-def plist_findings(info: dict, *, version: str, minimum: tuple[int, int, int] | None) -> list[str]:
+def plist_findings(
+    info: dict,
+    *,
+    version: str,
+    minimum: tuple[int, int, int] | None,
+    bundle_id: str = "org.dusty.Dusty",
+) -> list[str]:
+    """``bundle_id`` is the one the build recorded; public Dusty's by default."""
     findings = []
     expected = {
-        "CFBundleIdentifier": "org.dusty.Dusty",
+        "CFBundleIdentifier": bundle_id,
         "CFBundleExecutable": "Dusty",
         "CFBundlePackageType": "APPL",
         "CFBundleShortVersionString": version,
@@ -746,9 +755,53 @@ def pyz_path_findings(executable: Path, tokens: list[bytes]) -> list[str]:
     return findings
 
 
-def minimum_os(root: Path) -> tuple[int, int, int] | None:
-    versions = [image.minos for _, image in iter_macho(root) if image.minos]
+def minimum_os(root: Path, exclude: tuple[Path, ...] = ()) -> tuple[int, int, int] | None:
+    versions = [
+        image.minos
+        for path, image in iter_macho(root)
+        if image.minos and not any(is_inside(path, part) for part in exclude)
+    ]
     return max(versions) if versions else None
+
+
+def program_findings(app: Path, program: Program, modules: Iterable[str]) -> list[str]:
+    """An add-on helper program: present, executable, only its own modules, its macOS."""
+    findings = []
+    executable = app / program.mac_executable
+    label = f"Helper program {program.name}"
+    if executable.is_symlink() or not executable.is_file():
+        findings.append(f"Missing required bundle file: {program.mac_executable}")
+    elif not os.access(executable, os.X_OK):
+        findings.append(f"Not executable: {program.mac_executable}")
+    for name in sorted(set(modules)):
+        if name.split(".")[0] in program.forbidden_modules or name in GUI_FORBIDDEN_EXACT:
+            findings.append(f"{label} embeds prohibited module {name}")
+    for required in program.required_modules:
+        if required not in set(modules):
+            findings.append(f"{label} is missing module {required}")
+    helper = minimum_os(app / program.mac_dir)
+    if program.macos_minimum and helper is not None and helper > program.macos_minimum:
+        findings.append(
+            f"{label} needs macOS {version_text(helper)}, above "
+            f"{version_text(program.macos_minimum)}"
+        )
+    for path in iter_files(app / program.mac_dir):
+        if program.drops(path.name, "darwin"):
+            findings.append(f"{label} ships an unused file: {path.relative_to(app).as_posix()}")
+    return findings
+
+
+def helper_folder_findings(app: Path, bin_dir: str, programs: tuple[Program, ...]) -> list[str]:
+    """Contents/Helpers holds the downloader, the natives and the add-on programs only."""
+    helpers = app / "Contents/Helpers"
+    if not helpers.is_dir():
+        return []
+    known = {FETCH_DIR, bin_dir, *(program.mac_dir for program in programs)}
+    return [
+        f"Unexpected helper folder: {path.relative_to(app).as_posix()}"
+        for path in sorted(helpers.iterdir())
+        if path.relative_to(app).as_posix() not in known
+    ]
 
 
 def check(app: Path, audit: Path) -> tuple[list[str], dict]:
@@ -780,12 +833,18 @@ def check(app: Path, audit: Path) -> tuple[list[str], dict]:
     findings += model_findings(
         app, json.loads(models_json.read_text(encoding="utf-8")) if models_json.is_file() else None
     )
-    minimum = minimum_os(app)
+    programs = load_programs()
+    findings += helper_folder_findings(app, bin_dir, programs)
+    # A helper program gated by its add-on at run time does not raise the app's minimum.
+    minimum = minimum_os(app, tuple(app / item.mac_dir for item in programs if item.macos_minimum))
     info_path = app / "Contents/Info.plist"
     version = manifest.get("version", "")
     if info_path.is_file():
         findings += plist_findings(
-            plistlib.loads(info_path.read_bytes()), version=version, minimum=minimum
+            plistlib.loads(info_path.read_bytes()),
+            version=version,
+            minimum=minimum,
+            bundle_id=manifest.get("bundle_id", "org.dusty.Dusty"),
         )
     findings += tls_findings(app)
     tokens = host_path_tokens()
@@ -794,6 +853,8 @@ def check(app: Path, audit: Path) -> tuple[list[str], dict]:
         gui_scripts, gui_modules = pyz_modules(app / GUI_EXECUTABLE)
         fetch_scripts, fetch_modules = pyz_modules(app / FETCH_EXECUTABLE)
         findings += module_findings(gui_modules, fetch_modules)
+        # Public Dusty's GUI holds no add-on module; no GUI holds a helper's own modules.
+        findings += gui_module_findings(gui_modules, programs)
         hooks = [name for name in gui_scripts if name != "pyiboot01_bootstrap"]
         if not hooks or hooks[0] != "runtime_guard":
             findings.append("Offline guard is not the first runtime hook of the GUI")
@@ -801,6 +862,17 @@ def check(app: Path, audit: Path) -> tuple[list[str], dict]:
             findings.append("Downloader unexpectedly installs the offline guard")
         for executable in (app / GUI_EXECUTABLE, app / FETCH_EXECUTABLE):
             findings += pyz_path_findings(executable, tokens)
+    for program in programs:
+        executable = app / program.mac_executable
+        if not executable.is_file():
+            findings += program_findings(app, program, ())
+            continue
+        program_scripts, program_modules = pyz_modules(executable)
+        findings += program_findings(app, program, program_modules)
+        hooks = [name for name in program_scripts if name != "pyiboot01_bootstrap"]
+        if not hooks or hooks[0] != "runtime_guard":
+            findings.append(f"Offline guard is not the first runtime hook of {program.name}")
+        findings += pyz_path_findings(executable, tokens)
     data_findings, notes = embedded_path_report(app, tokens)
     findings += data_findings
     if manifest:

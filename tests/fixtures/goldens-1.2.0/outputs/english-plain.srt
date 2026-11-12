@@ -1,0 +1,39 @@
+1
+00:00:00,000 --> 00:00:04,200
+Good morning, and thank you for coming in
+today.
+
+2
+00:00:04,400 --> 00:00:09,800
+We will start with the budget and then
+talk about the schedule.
+
+3
+00:00:12,500 --> 00:00:18,000
+The first item is the new library building
+on Mill Street.
+
+4
+00:00:31,000 --> 00:00:37,500
+It opened in March, two weeks later than
+planned.
+
+5
+00:00:38,000 --> 00:00:44,000
+Are there any questions before we move on?
+
+6
+00:01:02,000 --> 00:01:10,500
+Yes. How much did the repairs to the roof
+cost in the end?
+
+7
+00:01:11,000 --> 00:01:19,000
+About forty thousand, which is less than
+we feared.
+
+8
+00:01:35,000 --> 00:01:41,000
+Thank you. Let us move on to the schedule
+for next year.
+

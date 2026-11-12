@@ -219,7 +219,9 @@ def test_executable_version_resource_uses_project_metadata(tmp_path, monkeypatch
     assert resource.ffi.fileVersionLS == int(version.rsplit(".", 1)[1]) << 16
     assert version in file.read_text()
     spec = (ROOT / "packaging/dusty.spec").read_text()
-    assert spec.count("version=str(audit / 'version.txt')") == 2
+    # Every executable carries it: dusty, dusty-fetch and each helper program.
+    assert spec.count("EXE(") == 3
+    assert spec.count("version=str(audit / 'version.txt')") == spec.count("EXE(")
 
 
 def test_public_release_validation_requires_preceding_published_release():

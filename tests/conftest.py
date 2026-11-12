@@ -3,6 +3,7 @@
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -151,3 +152,68 @@ def metal_gpu(mac_gpu: SimpleNamespace) -> None:
 def isolate_application_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Subprocesses inherit this too; tests must not write the maintainer's app data."""
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "appdata"))
+
+
+@pytest.fixture(autouse=True)
+def job_trail(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """What every batch did in this test, shown only when the test fails.
+
+    Each job's status changes and failure code, and each external program's
+    file name, exit code, cancel flag and time, in order. Never a path, an
+    argument or any words from a recording, so a failure in CI says which job
+    failed at which status and how its program ended.
+    """
+    from dusty.queue import coordinator
+
+    trail: list[str] = []
+    numbers: dict[object, int] = {}
+    changed = coordinator.Coordinator._changed
+
+    def record_change(self, job, options, jobs, on_change):  # type: ignore[no-untyped-def]
+        number = numbers.setdefault(job.id, len(numbers) + 1)
+        state = job.status.value
+        if job.failure is not None:
+            state += f" {job.failure.value}"
+        if job.gpu_fallback:
+            state += " gpu_fallback"
+        entry = f"job {number}: {state}"
+        if entry not in trail[-1:]:
+            trail.append(entry)
+        return changed(self, job, options, jobs, on_change)
+
+    monkeypatch.setattr(coordinator.Coordinator, "_changed", record_change)
+    if sys.platform in ("darwin", "win32"):
+        # The platform runner below the engine shims, so the shims stay as they are.
+        if sys.platform == "darwin":
+            from dusty.platform import mac_process as runner
+        else:
+            from dusty.platform import win_process as runner
+        run = runner.run_job_process
+
+        def recorded(args, **kwargs):  # type: ignore[no-untyped-def]
+            started = time.monotonic()
+            name = Path(args[0]).name if args else "?"
+            try:
+                result = run(args, **kwargs)
+            except BaseException as error:
+                trail.append(f"{name}: raised {type(error).__name__}")
+                raise
+            cancelled = " cancelled" if getattr(result, "cancelled", False) else ""
+            trail.append(
+                f"{name}: exit {getattr(result, 'exit_code', '?')}{cancelled} "
+                f"after {time.monotonic() - started:.2f} s"
+            )
+            return result
+
+        monkeypatch.setattr(runner, "run_job_process", recorded)
+    request.node.dusty_job_trail = trail
+    return trail
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]):  # type: ignore[no-untyped-def]
+    outcome = yield
+    report = outcome.get_result()
+    trail = getattr(item, "dusty_job_trail", None)
+    if report.failed and trail:
+        report.sections.append((f"Dusty job trail ({report.when})", "\n".join(trail)))

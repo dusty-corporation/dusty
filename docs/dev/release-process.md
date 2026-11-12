@@ -48,8 +48,14 @@ version as not released. 1.1.0, 1.1.1 and 1.1.2 were skipped this way, so the
 first release with Windows and Mac is 1.1.3, and its upgrade gate still starts
 from 1.0.1. To avoid skipping versions, a candidate first runs the same public
 CI in dusty-corporation/dusty-staging, which is free: push the reviewed dry
-run's tree to a branch there and push it to dusty only when every job passes.
-dusty-staging never gets tags or releases.
+run to a candidate branch there with
+`python -m tools.publication.stage_candidate --receipt <receipt> --branch
+candidate-<version>`, and push it to dusty only when every job passes.
+dusty-staging never gets tags or releases. Public snapshots and staging pushes
+come only from a clean commit that is on the development repository's main or
+maintenance branch on GitHub. The exporter writes only the public files, and
+both it and the staging push check the exported tree before anything is used
+or pushed. They refuse anything else.
 
 The gated release contains:
 

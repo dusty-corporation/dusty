@@ -100,6 +100,33 @@ def resolve_fetch_command(
     return [str(app.resolve()), "-m", "dusty_fetch"]
 
 
+def resolve_helper_command(
+    name: str,
+    module: str,
+    *,
+    frozen: bool | None = None,
+    executable: Path | None = None,
+    platform: str | None = None,
+) -> list[str]:
+    """An extension's helper program is its own process, frozen next to dusty-fetch.
+
+    In a source tree it is the real interpreter running ``-m module``. On macOS
+    that is the interpreter the venv links to, started with -S and -P like the
+    downloader; the add-on gives it the exact environment it needs.
+    """
+    installed = bool(getattr(sys, "frozen", False)) if frozen is None else frozen
+    selected_platform = sys.platform if platform is None else platform
+    app = Path(sys.executable) if executable is None else executable
+    if installed:
+        if selected_platform == "darwin":
+            contents = _mac_contents(app)
+            return [str(contents / f"Helpers/{name}/{name}")]
+        return [str((app.parent.parent / f"{name}/{name}.exe").resolve())]
+    if selected_platform == "darwin":
+        return [str(app.resolve()), "-S", "-P", "-m", module]
+    return [str(app.resolve()), "-m", module]
+
+
 def resolve_fetch_environment(
     *,
     frozen: bool | None = None,

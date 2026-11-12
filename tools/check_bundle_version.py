@@ -6,6 +6,7 @@ from pathlib import Path
 import pefile  # type: ignore[import-untyped]
 
 from dusty import __version__
+from tools.helper_programs import load_programs
 from tools.release_version import versions
 
 
@@ -15,7 +16,11 @@ def check(bundle: Path) -> None:
         tag = "v0.5.0-m5." + __version__.split(".dev", 1)[1]
     _, display, numeric = versions(tag)
     major, minor, patch, build = (int(value) for value in numeric.split("."))
-    for name in ("dusty/dusty.exe", "dusty-fetch/dusty-fetch.exe"):
+    for name in (
+        "dusty/dusty.exe",
+        "dusty-fetch/dusty-fetch.exe",
+        *(program.windows_executable for program in load_programs()),
+    ):
         with pefile.PE(str(bundle / name)) as image:
             info = image.VS_FIXEDFILEINFO[0]
             if info.FileVersionMS != (major << 16 | minor) or info.FileVersionLS != (

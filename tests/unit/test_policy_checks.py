@@ -104,6 +104,34 @@ def test_license_checker_rejects_unknown_license() -> None:
     assert not check_licenses.allowed_license("bad-library", "UNKNOWN")
 
 
+def test_license_checker_knows_permissive_expressions_and_spellings() -> None:
+    allowed = check_licenses.allowed_license
+    assert allowed("example-lib", "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0")
+    assert allowed("example-lib", "3-Clause BSD License")
+    assert allowed("example-lib", "Apache 2.0")
+    assert allowed("example-lib", "MIT License")
+    assert not allowed("example-lib", "BSD-3-Clause AND GPL-3.0-only")
+
+
+def test_undeclared_license_needs_the_exact_reviewed_version(tmp_path, monkeypatch) -> None:
+    (tmp_path / "uv.lock").write_text(
+        '[[package]]\nname = "dusty"\nversion = "0.0.1"\n'
+        'dependencies = [{ name = "packaging" }]\n'
+        '[[package]]\nname = "packaging"\nversion = "26.0"\n',
+        encoding="utf-8",
+    )
+
+    class Undeclared:
+        version = "26.0"
+        metadata: dict[str, str] = {}
+
+    monkeypatch.setattr(check_licenses.importlib.metadata, "distribution", lambda _: Undeclared())
+    assert check_licenses.check(tmp_path) == ["packaging: unapproved or unknown license: None"]
+    assert check_licenses.REVIEWED_UNDECLARED == {
+        ("packaging", "25.0"): "Apache-2.0 OR BSD-2-Clause"
+    }
+
+
 def test_pyinstaller_bootloader_exception_is_exact() -> None:
     expression = check_licenses.PYINSTALLER_BOOTLOADER
     assert check_licenses.allowed_license("pyinstaller-bootloader", expression)

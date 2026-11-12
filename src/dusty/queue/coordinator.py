@@ -10,6 +10,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from dusty import extensions
 from dusty.core import BatchOptions, FailureCode, Job, JobStatus
 from dusty.core.types import Cancellation, CollisionPolicy, EngineBackend
 from dusty.engine.binaries import ffmpeg_path, ffprobe_path, gpu_backend, whisper_path
@@ -77,6 +78,33 @@ def cleanup_orphaned_work(work_root: Path) -> None:
             cleanup_owned(candidate, protected=protected, work_root=work_root)
 
 
+def engine_prompt(options: BatchOptions) -> tuple[str, bool]:
+    """The engine prompt, and whether to carry it through the whole recording.
+
+    Without extensions, with their options off, or when the user gave hints of
+    their own, it is the user's prompt exactly as before, never carried. Only
+    without the user's hints does an engine hint that is on give the engine
+    its own prompt, carried when it asks for it. Carrying the user's hints
+    too can start repetition loops (measured in the add-on's trial), and
+    the user's hints are never changed. A hint applies only to its languages
+    and only while its option is supported. Neither text is ever logged.
+    """
+    found = extensions.active()
+    hints = [
+        hint
+        for hint in found.engine_hints
+        if hint.option in options.extension_options
+        and options.language in hint.languages
+        and (option := found.option(hint.option)) is not None
+        and option.supported()
+    ]
+    if not hints:
+        return options.prompt, False
+    if options.prompt.strip():
+        return options.prompt, False
+    return " ".join(hint.prompt for hint in hints), any(hint.carry for hint in hints)
+
+
 class Coordinator:
     """Process a persisted batch, with per-file GPU fallback and cleanup."""
 
@@ -85,6 +113,40 @@ class Coordinator:
         self.registry = registry
         self.state_path = paths.user_dir / "state/queue.json"
         self.work_root = paths.user_dir / "work"
+
+    def _stages(
+        self, job: Job, options: BatchOptions
+    ) -> list[tuple[extensions.Stage, Path | None]]:
+        """The extension stages whose options are on, each with its verified model.
+
+        An option this computer does not support never runs, even from a
+        restored queue. A model removed or damaged after Start costs only what
+        that stage adds, like a stage failure, never the transcript.
+        """
+        found = extensions.active()
+        chosen: list[tuple[extensions.Stage, Path | None]] = []
+        for stage in found.stages:
+            option = found.option(stage.option)
+            if stage.option not in options.extension_options or option is None:
+                continue
+            if not option.supported():
+                _LOG.warning(
+                    "job_id=%s stage_skipped stage=%s reason=unsupported", job.id, stage.option
+                )
+                continue
+            model: Path | None = None
+            if option.model is not None:
+                try:
+                    model = self.registry.extra_path(option.model)
+                except (ModelMissing, ModelCorrupt) as exc:
+                    job.stage_failed = stage.failed
+                    reason = "model_missing" if isinstance(exc, ModelMissing) else "model_corrupt"
+                    _LOG.warning(
+                        "job_id=%s stage_failed stage=%s reason=%s", job.id, stage.option, reason
+                    )
+                    continue
+            chosen.append((stage, model))
+        return chosen
 
     @prevent_sleep()
     def run_batch(
@@ -172,6 +234,10 @@ class Coordinator:
                 job.failure = None
                 job.progress = 0.0
                 job.gpu_fallback = False
+                job.stage_status = None
+                job.stage_failed = None
+                job.transcript = None
+                job.written = {}
                 if skip_existing:
                     job.failure = FailureCode.OUTPUT_EXISTS_SKIPPED
                     job.status = JobStatus.SKIPPED
@@ -242,6 +308,7 @@ class Coordinator:
                 return
             model = self.registry.model_path(options.model_id)
             vad = self.registry.vad_path() if options.vad else None
+            stages = self._stages(job, options)
             probe = probe_audio(ffprobe_path(self.paths.bin_dir), job.source, cancel=cancel)
             if not probe.has_audio:
                 job.failure = FailureCode.NO_AUDIO
@@ -280,6 +347,7 @@ class Coordinator:
                 job.progress = value
                 changed()
 
+            prompt, carry = engine_prompt(options)
             try:
                 result = run_whisper(
                     executable,
@@ -293,9 +361,10 @@ class Coordinator:
                     duration_sec=probe.duration_sec,
                     backend=backend,
                     vad_model=vad,
-                    prompt=options.prompt,
+                    prompt=prompt,
                     cancel=cancel,
                     on_progress=progress,
+                    carry_prompt=carry,
                 )
             except EngineError as exc:
                 if backend == "cpu" or not exc.gpu_error or (cancel and cancel.is_set()):
@@ -315,9 +384,10 @@ class Coordinator:
                     duration_sec=probe.duration_sec,
                     backend="cpu",
                     vad_model=vad,
-                    prompt=options.prompt,
+                    prompt=prompt,
                     cancel=cancel,
                     on_progress=progress,
+                    carry_prompt=carry,
                 )
             job.backend_used = backend
             _LOG.info(
@@ -332,11 +402,55 @@ class Coordinator:
             )
             for name, milliseconds in result.timings_ms.items():
                 _LOG.info("job_id=%s timing_%s_ms=%.3f", job.id, name, milliseconds)
+            transcript = result.transcript
+            # SPEC 5.9 hook after parsing, before export: extension stages.
+            # Text translation is still not implemented.
+            for stage, stage_model in stages:
+                job.status = JobStatus.PROCESSING
+                job.stage_status = stage.status
+                job.progress = 0.0
+                changed()
+                started = time.monotonic()
+                try:
+                    transcript = stage.run(
+                        extensions.StageInput(
+                            job.id,
+                            wav,
+                            transcript,
+                            stage_model,
+                            options.threads,
+                            cancel,
+                            progress,
+                        )
+                    )
+                    _LOG.info(
+                        "job_id=%s stage=%s stage_sec=%.3f",
+                        job.id,
+                        stage.option,
+                        time.monotonic() - started,
+                    )
+                except extensions.StageFailed as exc:
+                    if exc.cancelled:
+                        job.status = JobStatus.CANCELLED
+                        return
+                    # The transcript is still written, without what the stage adds.
+                    job.stage_failed = stage.failed
+                    _LOG.warning(
+                        "job_id=%s stage_failed stage=%s reason=%s",
+                        job.id,
+                        stage.option,
+                        exc.reason,
+                    )
+            job.stage_status = None
             job.status = JobStatus.EXPORTING
             changed()
-            # SPEC 5.9: future extension hook after parsing, before export.
-            # V1 does not execute diarization or text-translation extensions.
-            job.outputs = write_outputs(job, options, result.transcript)
+            job.written = {}
+            job.outputs = write_outputs(job, options, transcript, identities=job.written)
+            # Kept in memory for extension actions only when a stage added something.
+            annotated = bool(transcript.annotations) or any(
+                segment.annotations for segment in transcript.segments
+            )
+            job.transcript = transcript if annotated else None
             job.progress = 1.0
             job.status = JobStatus.DONE
         except ModelMissing:
@@ -374,6 +488,10 @@ class Coordinator:
         finally:
             if job.failure and job.status not in {JobStatus.SKIPPED, JobStatus.CANCELLED}:
                 job.status = JobStatus.FAILED
-            owned.record("audio.wav", "raw.json")
+            owned.record(
+                "audio.wav",
+                "raw.json",
+                *(name for stage in extensions.active().stages for name in stage.work_files),
+            )
             owned.cleanup(self.paths.user_dir)
             changed()

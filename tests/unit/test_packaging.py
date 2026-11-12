@@ -3,6 +3,7 @@
 import hashlib
 import json
 import struct
+import subprocess
 import sys
 from pathlib import Path
 
@@ -17,6 +18,15 @@ WINDOWS_PE_LICENSE_GATE = pytest.mark.skipif(
     sys.platform != "win32",
     reason="Windows-only: bundle license gate parses PE files with pefile",
 )
+
+
+def test_the_bundle_check_starts_as_a_script_from_any_folder(tmp_path: Path) -> None:
+    # CI starts it by its file name, so it must find the tools package itself.
+    script = Path(__file__).resolve().parents[2] / "tools/check_bundle.py"
+    usage = subprocess.check_output(
+        [sys.executable, str(script), "--help"], cwd=tmp_path, stderr=subprocess.STDOUT, text=True
+    )
+    assert "usage" in usage
 
 
 @pytest.mark.parametrize("name", ["Qt6Network.dll", "qt6network.DLL", "Qt6WebEngineCore.dll"])

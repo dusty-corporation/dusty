@@ -25,7 +25,7 @@ import signal
 import sys
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
 from dusty.core.types import Cancellation
@@ -155,6 +155,7 @@ def run_job_process(
     cancel: Cancellation | None = None,
     timeout_sec: float | None = None,
     on_poll: Callable[[], None] | None = None,
+    environment: Mapping[str, str] | None = None,
 ) -> ProcessResult:
     """Run a child only under a lifeline helper that owns its process group."""
     if not args or not Path(args[0]).is_absolute():
@@ -174,8 +175,9 @@ def run_job_process(
         os.fsencode(executable),
         *(os.fsencode(argument) for argument in args[1:]),
     ]
-    environment = _environment_block(child_environment(executable))
-    if any(b"\0" in item for item in (*argv, *environment)):
+    chosen = dict(environment) if environment is not None else child_environment(executable)
+    block = _environment_block(chosen)
+    if any(b"\0" in item for item in (*argv, *block)):
         raise ValueError("Arguments must not contain NUL characters")
 
     opened: list[int] = []  # Every descriptor this call still has to close.
@@ -266,7 +268,7 @@ def run_job_process(
                 ctypes.byref(actions),
                 ctypes.byref(attributes),
                 _array(argv),
-                _array(environment),  # The helper passes it to the target unchanged.
+                _array(block),  # The helper passes it to the target unchanged.
             ),
             "posix_spawn",
         )

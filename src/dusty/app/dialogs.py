@@ -64,11 +64,19 @@ if sys.platform == "win32":
 
 
 class AboutDialog(TextDialog):
-    def __init__(self, version: str, notices: Callable[[], None], parent=None):
+    def __init__(
+        self,
+        version: str,
+        notices: Callable[[], None],
+        parent=None,
+        extra: tuple[str, ...] = (),
+    ):
+        """``extra`` lines, from extensions, follow the version; none in public Dusty."""
         super().__init__(
             M.ABOUT,
             (
                 M.ABOUT_VERSION.format(version=version),
+                *extra,
                 M.ABOUT_DESCRIPTION,
                 M.ABOUT_LICENSE,
                 M.REPOSITORY_ADDRESS,

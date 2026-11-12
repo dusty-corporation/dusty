@@ -19,6 +19,7 @@ from cyclonedx.schema import SchemaVersion
 from cyclonedx.validation.json import JsonStrictValidator
 
 from tools.check_licenses import PYINSTALLER_BOOTLOADER, normalized
+from tools.helper_programs import load_programs
 from tools.stage_microsoft_runtime import is_crt
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -198,26 +199,31 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
         return key
 
     origins = {}
-    for runtime, prefix in (("gui", "dusty"), ("fetch", "dusty-fetch")):
+    # Add-on helper programs are recorded like the GUI and the downloader.
+    programs = load_programs()
+    for runtime, prefix in (
+        ("gui", "dusty"),
+        ("fetch", "dusty-fetch"),
+        *((program.group, program.name) for program in programs),
+    ):
         for group in ("binaries", "datas"):
             for destination, source, _ in analysis[f"{runtime}_{group}"]:
                 origins[f"{prefix}/_internal/{destination}".replace("\\", "/").lower()] = source
     embedded: list[dict] = []
-    for group in ("gui_pure", "fetch_pure", "gui_scripts", "fetch_scripts"):
-        for name, source, _ in analysis[group]:
-            if name.startswith(("pyi_rth_", "_pyi_rth_utils")):
-                key = "pyinstaller-runtime-hooks"
-            else:
-                key = owner(source)
-            embedded.append(
-                {
-                    "module": name,
-                    "component": key,
-                    "executable": "dusty/dusty.exe"
-                    if group.startswith("gui_")
-                    else "dusty-fetch/dusty-fetch.exe",
-                }
-            )
+    executables = {
+        "gui": "dusty/dusty.exe",
+        "fetch": "dusty-fetch/dusty-fetch.exe",
+        **{program.group: program.windows_executable for program in programs},
+    }
+    # Modules first, then scripts, each in program order, as in 1.2.0.
+    for kind in ("pure", "scripts"):
+        for runtime, executable in executables.items():
+            for name, source, _ in analysis[f"{runtime}_{kind}"]:
+                if name.startswith(("pyi_rth_", "_pyi_rth_utils")):
+                    key = "pyinstaller-runtime-hooks"
+                else:
+                    key = owner(source)
+                embedded.append({"module": name, "component": key, "executable": executable})
 
     if any(name in components for name in ("lxml", "python-docx")):
         raise ValueError("Test-only XML/DOCX providers must never be bundled")
@@ -252,7 +258,7 @@ def generate(bundle: Path, analysis_path: Path, output: Path) -> dict:
         if not path.is_file() or path == bundle / "THIRD_PARTY_NOTICES.md":
             continue
         relative = path.relative_to(bundle).as_posix()
-        if relative in {"dusty/dusty.exe", "dusty-fetch/dusty-fetch.exe"}:
+        if relative in set(executables.values()):
             keys = {"dusty", "cpython", "pyinstaller-bootloader", "pyinstaller-runtime-hooks"}
             keys.update(item["component"] for item in embedded if item["executable"] == relative)
         elif relative.startswith("bin/"):

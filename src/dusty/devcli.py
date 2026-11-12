@@ -51,6 +51,7 @@ def transcribe(
     keep_structure: bool = False,
     marker_minutes: float | None = None,
     mark_unsure: UnsureLevel | None = None,
+    extension_options: frozenset[str] = frozenset(),
 ) -> int:
     if not backend_supported(backend):
         print("BACKEND_UNSUPPORTED")
@@ -70,6 +71,21 @@ def transcribe(
     ):
         print("MARKER_MINUTES_INVALID")
         return 2
+    for key in sorted(extension_options):
+        from dusty import extensions
+        from dusty.models import ModelCorrupt, ModelMissing
+
+        option = extensions.active().option(key)
+        code = key.upper().replace("-", "_")
+        if option is None or not option.supported():
+            print(f"{code}_UNSUPPORTED")
+            return 2
+        if option.model is not None:
+            try:
+                registry.extra_path(option.model)
+            except (ModelMissing, ModelCorrupt):
+                print(f"{code}_MODEL_MISSING")
+                return 2
     if is_synced(out):
         print("Warning: this output folder may sync files to a cloud service.")
     if len(prompt) / 4 > 200:
@@ -90,6 +106,7 @@ def transcribe(
         mark_unsure=mark_unsure is not None,
         marker_minutes=MARKER_MINUTES_DEFAULT if marker_minutes is None else marker_minutes,
         unsure_level=mark_unsure or "very",
+        extension_options=extension_options,
     )
     try:
         # Refuse before the GPU probe or any job, with a code instead of a traceback.
@@ -131,6 +148,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--mark-unsure", choices=("very", "somewhat"), help="mark words that may be wrong"
     )
+    from dusty import extensions
+
+    for option in extensions.active().options:
+        parser.add_argument(f"--{option.key}", action="store_true", help=option.label)
     args = parser.parse_args(argv)
     if not backend_supported(args.backend):
         print("BACKEND_UNSUPPORTED")
@@ -151,6 +172,11 @@ def main(argv: list[str] | None = None) -> int:
         keep_structure=args.keep_structure,
         marker_minutes=args.marker_minutes,
         mark_unsure=cast(UnsureLevel | None, args.mark_unsure),
+        extension_options=frozenset(
+            option.key
+            for option in extensions.active().options
+            if getattr(args, option.key.replace("-", "_"))
+        ),
     )
 
 

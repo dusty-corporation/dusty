@@ -59,6 +59,7 @@ def test_run_job_process_forwards_every_argument(monkeypatch: pytest.MonkeyPatch
         cancel=threading.Event(),
         timeout_sec=3.5,
         on_poll=lambda: None,
+        environment={"LC_ALL": "C"},
     )
     assert process.run_job_process(arguments, **parameters) == "forwarded"
     assert calls == [(arguments, parameters)]

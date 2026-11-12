@@ -346,6 +346,8 @@ STATUSES = {
     "preflight": "Preparing",
     "decoding": "Preparing",
     "transcribing": "Transcribing",
+    # An extension stage; the list shows the stage's own status text instead.
+    "processing": "Processing",
     "exporting": "Saving",
     "done": "Done",
     "failed": "Failed",

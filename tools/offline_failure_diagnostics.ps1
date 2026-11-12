@@ -1,5 +1,11 @@
 # Child-process diagnostics for the disposable offline audit runner.
 # Never emit arbitrary child output: it may contain paths or transcript text.
+# Add-on helper programs may be named too (tools/helper_programs.py); public Dusty has none.
+$helperNames = @()
+$helperPrograms = Join-Path $PSScriptRoot '..\packaging\addons\programs.json'
+if (Test-Path -LiteralPath $helperPrograms) {
+    $helperNames = @((Get-Content -Raw -LiteralPath $helperPrograms | ConvertFrom-Json).programs | ForEach-Object { $_.name + '.exe' })
+}
 function Get-SafeOfflineTail([string]$Text) {
     if ([string]::IsNullOrWhiteSpace($Text)) { return '[empty]' }
     $lines = @($Text -split "`r?`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
@@ -40,7 +46,7 @@ function Invoke-TestPython([string[]]$Arguments, [string]$Executable = $pythonPa
     $process.Dispose()
     if ($code -notin $AllowedExitCodes) {
         $name = [IO.Path]::GetFileName($Executable)
-        if (@('python.exe', 'dusty.exe', 'dusty-fetch.exe', 'whisper-cli.exe', 'ffmpeg.exe', 'ffprobe.exe') -cnotcontains $name) {
+        if ((@('python.exe', 'dusty.exe', 'dusty-fetch.exe', 'whisper-cli.exe', 'ffmpeg.exe', 'ffprobe.exe') + $helperNames) -cnotcontains $name) {
             $name = '[other process]'
         }
         $outTail = Get-SafeOfflineTail $stdout

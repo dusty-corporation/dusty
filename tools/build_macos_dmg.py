@@ -60,15 +60,15 @@ def run(args: list[str]) -> str:
     return result.stdout + result.stderr
 
 
-def check_app(app: Path, version: str) -> None:
-    """The source must be a signed Dusty.app of this checkout's version."""
+def check_app(app: Path, version: str, bundle_id: str = BUNDLE_ID) -> None:
+    """The source must be a signed Dusty.app of this checkout's version and identity."""
     if app.name != "Dusty.app" or app.is_symlink() or not app.is_dir():
         raise BuildError("The source must be a Dusty.app folder, not a link")
     info_path = app / "Contents/Info.plist"
     if not info_path.is_file():
         raise BuildError("Dusty.app has no Contents/Info.plist")
     info = plistlib.loads(info_path.read_bytes())
-    if info.get("CFBundleIdentifier") != BUNDLE_ID:
+    if info.get("CFBundleIdentifier") != bundle_id:
         raise BuildError("Dusty.app has an unexpected bundle id")
     if info.get("CFBundleShortVersionString") != version:
         raise BuildError("Dusty.app was built from a different version than this checkout")
@@ -139,14 +139,21 @@ def verify_image(image: Path, scratch: Path, expected: dict[str, str]) -> None:
         )
 
 
-def build_dmg(app: Path, output: Path, *, identity: str = "-", root: Path = ROOT) -> dict:
+def build_dmg(
+    app: Path,
+    output: Path,
+    *,
+    identity: str = "-",
+    root: Path = ROOT,
+    bundle_id: str = BUNDLE_ID,
+) -> dict:
     if sys.platform != "darwin":
         raise BuildError("Building the disk image needs macOS")
     started = time.monotonic()
     output = validate_output(output, root)
     app = app.absolute()
     version = project_version()
-    check_app(app, version)
+    check_app(app, version, bundle_id)
     expected = tree_hashes(app)
     output.mkdir()
     image = output / image_name(version)
@@ -181,7 +188,7 @@ def build_dmg(app: Path, output: Path, *, identity: str = "-", root: Path = ROOT
     manifest = {
         "image": image.name,
         "version": version,
-        "bundle_id": BUNDLE_ID,
+        "bundle_id": bundle_id,
         "format": IMAGE_FORMAT,
         "items": sorted(EXPECTED_ITEMS),
         "app_files": len(expected),
@@ -201,9 +208,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--identity", default="-", help="codesign identity for the image (default: unsigned)"
     )
+    parser.add_argument("--bundle-id", default=BUNDLE_ID, help="expected app identity")
     args = parser.parse_args(argv)
     try:
-        manifest = build_dmg(args.app, args.output, identity=args.identity)
+        manifest = build_dmg(
+            args.app, args.output, identity=args.identity, bundle_id=args.bundle_id
+        )
     except BuildError as error:
         print(f"Disk image failed: {error}", file=sys.stderr)
         return 1

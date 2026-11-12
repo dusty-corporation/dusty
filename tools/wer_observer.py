@@ -4,12 +4,16 @@ import os
 from collections.abc import Mapping
 from pathlib import Path
 
+from tools.helper_programs import load_programs
+
 EXCLUDED_NAMES = (
     "dusty.exe",
     "dusty-fetch.exe",
     "whisper-cli.exe",
     "ffmpeg.exe",
     "ffprobe.exe",
+    # Add-on helper programs, when there are any (tools/helper_programs.py).
+    *(f"{program.name}.exe" for program in load_programs()),
 )
 EXCLUSION_KEY = r"Software\Microsoft\Windows\Windows Error Reporting\ExcludedApplications"
 AREAS = ("ReportQueue", "ReportArchive", "Temp")

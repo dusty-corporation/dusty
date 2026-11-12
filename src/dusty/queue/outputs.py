@@ -4,11 +4,12 @@ import errno
 import hashlib
 import os
 import tempfile
+from dataclasses import replace
 from pathlib import Path
 
 from dusty.core import BatchOptions, Job, Transcript
 from dusty.export import render_docx, render_json, render_srt, render_txt, render_vtt
-from dusty.export.formats import TextExtras
+from dusty.export.formats import TextExtras, labels_for
 from dusty.work_area import canonical, linked
 
 RENDERERS = {
@@ -19,6 +20,28 @@ RENDERERS = {
 
 class OutputExistsError(Exception):
     """A collision requires a user decision or a skip."""
+
+
+class OutputChangedError(Exception):
+    """A file Dusty wrote was changed or removed since, so it is not replaced."""
+
+
+class OutputInUseError(Exception):
+    """A file Dusty wrote is open in another program and cannot be read or replaced."""
+
+
+class PartialRewriteError(Exception):
+    """Some files were replaced before one failed.
+
+    ``updated`` holds the new identities of the files already replaced, so the
+    caller can keep track of what each file now contains; ``in_use`` tells
+    whether the failure was a file held open by another program.
+    """
+
+    def __init__(self, updated: dict[Path, str], *, in_use: bool):
+        super().__init__("Only some outputs were rewritten")
+        self.updated = updated
+        self.in_use = in_use
 
 
 # FAT32 and exFAT volumes have no hard links: macOS reports ENOTSUP and Linux
@@ -88,30 +111,49 @@ def output_targets(job: Job, options: BatchOptions) -> list[Path]:
     return targets
 
 
-def write_outputs(job: Job, options: BatchOptions, transcript: Transcript) -> list[Path]:
-    """Render formats then publish each complete file without silent replacement."""
-    targets = output_targets(job, options)
+def _render(fmt: str, job: Job, options: BatchOptions, transcript: Transcript) -> bytes:
+    """One format, with the decorations of extensions that apply to this transcript."""
+    from dusty import extensions
+
+    decorations = extensions.active().decorations_for(transcript)
+    labels = labels_for(transcript, decorations)
+    if fmt == "json":
+        return render_json(transcript, job.source, decorations=decorations)
     extras = TextExtras.choose(
         time_markers=options.time_markers,
         marker_minutes=options.marker_minutes,
         mark_unsure=options.mark_unsure,
         unsure_level=options.unsure_level,
     )
+    if labels is not None:
+        extras = replace(extras, labels=labels)
+    if fmt == "docx":
+        return render_docx(transcript, job.source, extras=extras)
+    if fmt == "txt":
+        return render_txt(transcript, extras)
+    return RENDERERS[fmt](transcript, labels=labels)
+
+
+def write_outputs(
+    job: Job,
+    options: BatchOptions,
+    transcript: Transcript,
+    *,
+    identities: dict[Path, str] | None = None,
+) -> list[Path]:
+    """Render formats then publish each complete file without silent replacement.
+
+    ``identities``, when given, receives the SHA-256 of each published file.
+    """
+    targets = output_targets(job, options)
     published: list[Path] = []
-    identities: dict[Path, str] = {}
+    written: dict[Path, str] = {}
     try:
         for fmt, target in zip(options.formats, targets, strict=True):
             if linked(target.parent, name_surrogates_only=True):
                 raise OSError("Linked output folder")
             target.parent.mkdir(parents=True, exist_ok=True)
-            if fmt == "json":
-                content = render_json(transcript, job.source)
-            elif fmt == "docx":
-                content = render_docx(transcript, job.source, extras=extras)
-            elif fmt == "txt":
-                content = render_txt(transcript, extras)
-            else:
-                content = RENDERERS[fmt](transcript)
+            content = _render(fmt, job, options, transcript)
             descriptor, name = tempfile.mkstemp(suffix=".dusty-tmp", dir=target.parent)
             temporary = Path(name)
             try:
@@ -127,9 +169,11 @@ def write_outputs(job: Job, options: BatchOptions, transcript: Transcript) -> li
                     else:
                         _publish_exclusive(temporary, target)
                 published.append(target)
-                identities[target] = hashlib.sha256(content).hexdigest()
+                written[target] = hashlib.sha256(content).hexdigest()
             finally:
                 temporary.unlink(missing_ok=True)
+        if identities is not None:
+            identities.update(written)
         return published
     except BaseException:
         if options.collision != "overwrite":
@@ -137,8 +181,58 @@ def write_outputs(job: Job, options: BatchOptions, transcript: Transcript) -> li
                 if not linked(target, name_surrogates_only=True) and target.is_file():
                     with target.open("rb") as stream:
                         unchanged = (
-                            hashlib.file_digest(stream, "sha256").hexdigest() == identities[target]
+                            hashlib.file_digest(stream, "sha256").hexdigest() == written[target]
                         )
                     if unchanged:
                         target.unlink(missing_ok=True)
         raise
+
+
+def rewrite_outputs(
+    job: Job, options: BatchOptions, transcript: Transcript, identities: dict[Path, str]
+) -> dict[Path, str]:
+    """Render again into the files Dusty wrote for this job, for an extension action.
+
+    Every file must still have exactly the bytes Dusty wrote (``identities``);
+    otherwise nothing is replaced. All new contents are written to temporary
+    files first, so a full disk or a render error replaces nothing. Each file is
+    then replaced atomically; if one replacement fails, PartialRewriteError
+    reports the files already replaced. Returns the new identities.
+    """
+    pairs = list(zip(options.formats, job.outputs, strict=True))
+    for _fmt, target in pairs:
+        if target not in identities or linked(target, name_surrogates_only=True):
+            raise OutputChangedError("Output not written by Dusty in this session")
+        try:
+            with target.open("rb") as stream:
+                current = hashlib.file_digest(stream, "sha256").hexdigest()
+        except PermissionError as error:
+            raise OutputInUseError("Output is open in another program") from error
+        except OSError as error:
+            raise OutputChangedError("Output missing") from error
+        if current != identities[target]:
+            raise OutputChangedError("Output changed since Dusty wrote it")
+    staged: list[tuple[Path, Path, str]] = []
+    try:
+        for fmt, target in pairs:
+            content = _render(fmt, job, options, transcript)
+            descriptor, name = tempfile.mkstemp(suffix=".dusty-tmp", dir=target.parent)
+            temporary = Path(name)
+            staged.append((temporary, target, hashlib.sha256(content).hexdigest()))
+            with os.fdopen(descriptor, "wb") as stream:
+                stream.write(content)
+                stream.flush()
+                os.fsync(stream.fileno())
+        updated: dict[Path, str] = {}
+        for temporary, target, digest in staged:
+            try:
+                os.replace(temporary, target)
+            except OSError as error:
+                raise PartialRewriteError(
+                    updated, in_use=isinstance(error, PermissionError)
+                ) from error
+            updated[target] = digest
+        return updated
+    finally:
+        for temporary, _target, _digest in staged:
+            temporary.unlink(missing_ok=True)

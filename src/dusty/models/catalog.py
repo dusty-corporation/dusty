@@ -2,13 +2,16 @@
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
 Backend = Literal["cpu", "vulkan"]
 Task = Literal["transcribe", "translate"]
 EXPECTED_IDS = frozenset({"large-v3-turbo-q8_0", "small", "medium", "small.en", "tiny"})
+# Files of extension models (docs/dev/extensions.md). Their catalog files say
+# "kind": "extension", and dusty_fetch accepts this name only from those.
+EXTRA_FILE_NAME = r"dusty-[a-z0-9._-]+\.onnx"
 SLOW_WARNING = (
     "Without a compatible graphics processor this model will likely take longer "
     "than the recording itself."
@@ -37,14 +40,52 @@ class ModelManifest:
     vad_file_name: str
     vad_sha256: str
     vad_size_bytes: int
+    # Extension models by id, each from its own catalog file.
+    extra: dict[str, "ExtraFile"] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ExtraFile:
+    file_name: str
+    size_bytes: int
+    sha256: str
 
 
 def _valid_hash(value: str) -> bool:
     return bool(re.fullmatch(r"[0-9a-f]{64}", value))
 
 
+def load_extra(path: Path, model_id: str) -> ExtraFile:
+    """One extension model from its catalog file next to the bundled manifest."""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    extension = data.get("schema_version") == 1 and data.get("kind") == "extension"
+    entries = data.get("models") if extension else None
+    if not isinstance(entries, list) or len(entries) != 1:
+        raise ValueError("Invalid extension model catalog")
+    entry = entries[0]
+    if (
+        entry.get("id") != model_id
+        or not isinstance(entry.get("sha256"), str)
+        or not _valid_hash(entry["sha256"])
+        or not isinstance(entry.get("file_name"), str)
+        or not re.fullmatch(EXTRA_FILE_NAME, entry["file_name"])
+        or type(entry.get("size_bytes")) is not int
+        or entry["size_bytes"] <= 0
+    ):
+        raise ValueError("Invalid extension model catalog")
+    return ExtraFile(entry["file_name"], entry["size_bytes"], entry["sha256"])
+
+
 def load_manifest(path: Path) -> ModelManifest:
-    """Load exactly the approved V1 catalog from a local bundled manifest."""
+    """Load exactly the approved V1 catalog from a local bundled manifest.
+
+    Models of installed extensions come from their own catalog files in the
+    same folder; without extensions the manifest is exactly the V1 catalog. A
+    catalog file that is not there leaves its model out; one that is there must
+    be valid.
+    """
+    from dusty import extensions
+
     data = json.loads(path.read_text(encoding="utf-8"))
     if data.get("schema_version") != 1 or data.get("release_tag") != "models-v1":
         raise ValueError("Unsupported model manifest")
@@ -77,12 +118,20 @@ def load_manifest(path: Path) -> ModelManifest:
     vad = data["vad"]
     if len(vad) != 1 or vad[0]["id"] != "silero-vad" or not _valid_hash(vad[0]["sha256"]):
         raise ValueError("Invalid VAD manifest")
+    extra = {
+        model.id: load_extra(path.parent / model.catalog, model.id)
+        for model in extensions.active().models
+        if (path.parent / model.catalog).is_file()
+    }
+    if set(extra) & (set(models) | {"silero-vad"}):
+        raise ValueError("An extension model reuses a model id")
     return ModelManifest(
         release_tag=data["release_tag"],
         models=models,
         vad_file_name=vad[0]["file_name"],
         vad_sha256=vad[0]["sha256"],
         vad_size_bytes=vad[0]["size_bytes"],
+        extra=extra,
     )
 
 

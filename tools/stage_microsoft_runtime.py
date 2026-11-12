@@ -4,6 +4,7 @@ import fnmatch
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 from collections.abc import Callable
@@ -64,6 +65,17 @@ def crt_importers(bundle: Path) -> dict[str, list[str]]:
 def sha256(path: Path) -> str:
     with path.open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+# Some wheels carry their own msvcp140 renamed by delvewheel, such as
+# msvcp140-a4c2229bdc2a2a630acdc095b4d86008.dll, and import it by that name.
+_RENAMED_CRT = re.compile(r"((?:msvcp|vcruntime)140(?:_\d)?)-[0-9a-f]{32}\.dll")
+
+
+def pinned_name(name: str) -> str:
+    """The pinned runtime file a bundled CRT file is copied from."""
+    match = _RENAMED_CRT.fullmatch(name.lower())
+    return match.group(1) + ".dll" if match else name.lower()
 
 
 def is_crt(name: str) -> bool:
@@ -138,16 +150,30 @@ def stage(bundle: Path, redist: Path, receipt: Path) -> None:
             key = target.relative_to(bundle).parts[0] + "/" + target.name.lower()
             if key not in importers:
                 target.unlink()
+    # A family that imports a CRT PyInstaller did not collect gets the pinned copy
+    # next to its other DLLs, such as msvcp140_1 or vcruntime140_1 for a helper program.
+    present = {
+        target.relative_to(bundle).parts[0] + "/" + target.name.lower()
+        for target in bundle.rglob("*")
+        if target.is_file() and is_crt(target.name)
+    }
+    for key in sorted(importers.keys() - present):
+        family, name = key.split("/", 1)
+        folder = bundle / family / "_internal"
+        if not folder.is_dir():
+            raise ValueError(f"No folder for a missing CRT: {key}")
+        # Copied from the pinned folder; the loop below checks it like any other.
+        shutil.copyfile(redist / pins["folder"] / pinned_name(name), folder / name)
     for target in sorted(bundle.rglob("*")):
         if not target.is_file():
             continue
         if is_crt(target.name):
-            source = redist / pins["folder"] / target.name.lower()
+            source = redist / pins["folder"] / pinned_name(target.name)
             if not source.is_file() or not valid_source(source, redist):
                 raise ValueError(
                     f"Required pinned CRT not found in release VC/redist: {target.name}"
                 )
-            pin = pins["files"][target.name.lower()]
+            pin = pins["files"][pinned_name(target.name)]
             if not microsoft_vendor(source) or sha256(source) != pin["sha256"]:
                 raise ValueError(
                     f"CRT source differs from the maintainer's pinned copy: {target.name}"

@@ -36,6 +36,9 @@ import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from tools.extension_files import extension_catalogs
+from tools.helper_programs import load_programs
+
 ROOT = Path(__file__).resolve().parents[1]
 NOTICES = "THIRD_PARTY_NOTICES.md"
 INVENTORY = "notices-inventory.json"
@@ -79,6 +82,8 @@ class StaticLibrary:
 
 MAC_TEXTS = ROOT / "packaging/macos/licenses"  # pinned upstream texts, see sources.json
 LIBPYTHON_TEXTS = "macos/libpython/"
+# Pinned texts of add-on helper programs, staged under licenses/macos/addons/.
+ADDON_TEXTS = "addons/"
 STATIC_LIBRARIES = (
     StaticLibrary("OpenSSL", (b"OpenSSL ",), "Apache-2.0", "openssl-Apache-2.0.txt"),
     StaticLibrary(
@@ -259,6 +264,11 @@ def module_owner(source: str, root: Path = ROOT) -> str:
         return "shiboken6"
     if "/site-packages/PyInstaller/" in text:
         return "pyinstaller-bootloader"
+    # Packages that add-on helper programs bundle (tools/helper_programs.py).
+    for program in load_programs(root):
+        for package in program.notices:
+            if f"/site-packages/{package.module}/" in text:
+                return package.key
     if path.is_relative_to(Path(sys.base_prefix)):
         return "cpython"
     raise NoticesError(f"Embedded module from an unknown provider: {path.name}")
@@ -280,6 +290,19 @@ def attribute(relative: str, bin_dir: str, analysis: dict) -> list[str]:
         return sorted(embedded_owners(analysis, "gui"))
     if relative == "Contents/Helpers/dusty-fetch/dusty-fetch":
         return sorted(embedded_owners(analysis, "fetch"))
+    for program in load_programs():
+        if relative == program.mac_executable:
+            return sorted(embedded_owners(analysis, program.group))
+        for package in program.notices:
+            for folder in (program.mac_dir, program.mac_data):
+                inside = f"{folder}/_internal/"
+                if relative.startswith(inside) and re.match(
+                    rf"{package.module}(/|-[0-9.]+\.dist-info/)", relative.removeprefix(inside)
+                ):
+                    return [package.key]
+    # Extension model catalogs are Dusty's own data, like models.json.
+    if relative in {f"Contents/Resources/{name}" for name in extension_catalogs()}:
+        return ["dusty"]
     name = relative.rsplit("/", 1)[-1]
     if name == "libpython3.12.dylib":
         return ["cpython", "cpython-static-libraries"]
@@ -477,12 +500,43 @@ def components(
             "data",
         ),
     ]
+    items += addon_components()
     return {item.key: item for item in items}
 
 
-def stage_texts(app: Path, texts: Path = MAC_TEXTS) -> dict:
-    """Copy the pinned Mac license texts into Resources/licenses/macos after checking
-    every file against sources.json; an unlisted or changed file stops the build."""
+def addon_texts() -> list[Path]:
+    """The pinned license text folders of add-on helper programs; none in public Dusty."""
+    return sorted({ROOT / program.licenses for program in load_programs() if program.licenses})
+
+
+def addon_components() -> list[Component]:
+    """One component per package an add-on helper program bundles."""
+    items = []
+    for program in load_programs():
+        texts = ROOT / program.licenses
+        for package in program.notices:
+            items.append(
+                Component(
+                    package.key,
+                    package.title,
+                    metadata.version(package.module),
+                    package.license,
+                    package.copyright,
+                    package.url,
+                    sorted(
+                        "macos/" + ADDON_TEXTS + path.relative_to(texts).as_posix()
+                        for path in (texts / package.texts).rglob("*")
+                        if path.is_file()
+                    ),
+                    package.kind,
+                )
+            )
+    return items
+
+
+def stage_texts(app: Path, texts: Path = MAC_TEXTS, prefix: str = "") -> dict:
+    """Copy the pinned Mac license texts into Resources/licenses/macos/<prefix> after
+    checking every file against sources.json; an unlisted or changed file stops the build."""
     sources = json.loads((texts / "sources.json").read_text(encoding="utf-8"))
     present = {
         path.relative_to(texts).as_posix()
@@ -491,7 +545,7 @@ def stage_texts(app: Path, texts: Path = MAC_TEXTS) -> dict:
     }
     if present != set(sources):
         raise NoticesError("packaging/macos/licenses differs from its sources.json")
-    target = app / "Contents/Resources/licenses/macos"
+    target = app / "Contents/Resources/licenses/macos" / prefix
     for relative, record in sorted(sources.items()):
         data = (texts / relative).read_bytes()
         if hashlib.sha256(data).hexdigest() != record["sha256"]:
@@ -752,9 +806,16 @@ def generate(app: Path, *, bin_dir: str, version: str, banner: str, buildconf: s
     return text, inventory
 
 
+def stage_all_texts(app: Path) -> None:
+    """The shared pinned texts, then those of each add-on helper program."""
+    stage_texts(app)
+    for texts in addon_texts():
+        stage_texts(app, texts, ADDON_TEXTS)
+
+
 def write_notices(app: Path, *, bin_dir: str, version: str, audit: Path) -> dict:
     """Write Resources/THIRD_PARTY_NOTICES.md and audit/notices-inventory.json."""
-    stage_texts(app)
+    stage_all_texts(app)
     banner, buildconf = ffmpeg_report(app, bin_dir)
     text, inventory = generate(
         app, bin_dir=bin_dir, version=version, banner=banner, buildconf=buildconf, audit=audit

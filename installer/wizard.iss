@@ -23,7 +23,7 @@ begin
     1: Result := 'dusty-fetch.exe';
     2: Result := 'whisper-cli.exe';
     3: Result := 'ffmpeg.exe';
-    4: Result := 'ffprobe.exe';
+    4: Result := 'ffprobe.exe';@@EXTRA_CRASH_NAMES@@
   end;
 end;
 
@@ -31,7 +31,7 @@ function RemoveCrashExclusions(OnlyNew: Boolean): Boolean;
 var I: Integer;
 begin
   Result := True;
-  for I := 0 to 4 do
+  for I := 0 to @@LAST_CRASH_INDEX@@ do
     if (not OnlyNew or AddedCrashExclusions[I]) and
        RegValueExists(HKCU, 'Software\Microsoft\Windows\Windows Error Reporting\ExcludedApplications', CrashExcludedName(I)) then
       if RemoveCrashExclusion(CrashExcludedName(I), False) <> 0 then Result := False;
@@ -41,7 +41,7 @@ function RegisterCrashExclusions: Boolean;
 var I: Integer;
 begin
   Result := False;
-  for I := 0 to 4 do begin
+  for I := 0 to @@LAST_CRASH_INDEX@@ do begin
     AddedCrashExclusions[I] := not RegValueExists(HKCU,
       'Software\Microsoft\Windows\Windows Error Reporting\ExcludedApplications', CrashExcludedName(I));
     if AddCrashExclusion(CrashExcludedName(I), False) <> 0 then begin

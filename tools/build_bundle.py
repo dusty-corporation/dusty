@@ -12,6 +12,7 @@ import zipfile
 from pathlib import Path
 
 from tools.bundle_version import write_version
+from tools.extension_files import extension_model_files
 from tools.stage_microsoft_runtime import find_redist
 from tools.stage_microsoft_runtime import stage as stage_crt
 
@@ -79,6 +80,7 @@ def stage(bundle: Path) -> None:
     shutil.copytree(ROOT / "resources", bundle / "resources", dirs_exist_ok=True)
     manifest = json.loads((bundle / "resources/models.json").read_text(encoding="utf-8"))
     forbidden = {item["file_name"] for group in ("models", "vad") for item in manifest[group]}
+    forbidden |= extension_model_files(bundle / "resources")
     if any(path.name in forbidden or path.suffix == ".bin" for path in bundle.rglob("*")):
         raise RuntimeError("Model weights must not be bundled")
 

@@ -1,10 +1,10 @@
 """Typed values shared by the headless pipeline and the future GUI."""
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from pathlib import Path
-from typing import Literal, Protocol
+from typing import Any, Literal, Protocol
 from uuid import UUID, uuid4
 
 Backend = Literal["auto", "cpu", "vulkan", "metal"]
@@ -31,6 +31,8 @@ class JobStatus(str, Enum):
     PREFLIGHT = "preflight"
     DECODING = "decoding"
     TRANSCRIBING = "transcribing"
+    # An extension stage after transcription; Job.stage_status names it.
+    PROCESSING = "processing"
     EXPORTING = "exporting"
     DONE = "done"
     FAILED = "failed"
@@ -62,11 +64,18 @@ class Word:
     """One word as the engine wrote it, with its leading space, and how sure it was.
 
     ``confidence`` is the lowest probability of the word's letter or digit
-    tokens, from 0 to 1. Punctuation alone counts as fully sure.
+    tokens, from 0 to 1. Punctuation alone counts as fully sure. ``start`` and
+    ``end`` are the engine's token times in seconds, or None when it gave none.
     """
 
     text: str
     confidence: float
+    start: float | None = None
+    end: float | None = None
+
+
+# Values an extension stage attached, as (key, value) pairs; see annotation().
+Annotations = tuple[tuple[str, Any], ...]
 
 
 @dataclass(frozen=True)
@@ -76,6 +85,7 @@ class Segment:
     end: float
     text: str
     words: tuple[Word, ...] = ()
+    annotations: Annotations = ()
 
 
 @dataclass(frozen=True)
@@ -86,6 +96,18 @@ class Transcript:
     model_id: str
     backend: EngineBackend
     duration_sec: float
+    annotations: Annotations = ()
+
+
+def annotation(item: Segment | Transcript, key: str, default: Any = None) -> Any:
+    """The value an extension stage attached under key, or default."""
+    return next((value for name, value in item.annotations if name == key), default)
+
+
+def annotate[T: (Segment, Transcript)](item: T, key: str, value: Any) -> T:
+    """A copy of item with value under key, replacing any value it had there."""
+    kept: Annotations = tuple(pair for pair in item.annotations if pair[0] != key)
+    return replace(item, annotations=(*kept, (key, value)))
 
 
 @dataclass
@@ -101,6 +123,14 @@ class Job:
     gpu_fallback: bool = False
     duration_sec: float = 0.0
     elapsed_sec: float = 0.0
+    # In memory only, never saved: a transcript an extension stage annotated and
+    # the hash of each output Dusty wrote, so an extension action can render
+    # again in this session without replacing a file someone changed since.
+    transcript: Transcript | None = field(default=None, repr=False, compare=False)
+    written: dict[Path, str] = field(default_factory=dict, repr=False, compare=False)
+    # The status text of the extension stage running, and of one that failed.
+    stage_status: str | None = field(default=None, repr=False, compare=False)
+    stage_failed: str | None = field(default=None, repr=False, compare=False)
 
 
 def default_batch_threads() -> int:
@@ -132,6 +162,8 @@ class BatchOptions:
     marker_minutes: float = MARKER_MINUTES_DEFAULT
     mark_unsure: bool = False
     unsure_level: UnsureLevel = "very"
+    # Keys of the extension options that are on.
+    extension_options: frozenset[str] = frozenset()
 
     def __post_init__(self) -> None:
         if not isinstance(self.model_id, str) or not self.model_id.strip():
@@ -178,3 +210,7 @@ class BatchOptions:
             raise ValueError("Invalid time marker interval")
         if self.unsure_level not in ("very", "somewhat"):
             raise ValueError("Invalid unsure word level")
+        if not isinstance(self.extension_options, frozenset) or any(
+            not isinstance(key, str) or not key for key in self.extension_options
+        ):
+            raise ValueError("Invalid extension options")

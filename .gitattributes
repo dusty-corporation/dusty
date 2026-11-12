@@ -30,3 +30,5 @@
 *.dll binary
 *.exe binary
 *.zip binary
+# Byte for byte output goldens: CRLF and all, never normalised.
+tests/fixtures/goldens-1.2.0/** binary

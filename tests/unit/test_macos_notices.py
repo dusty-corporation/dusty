@@ -126,7 +126,7 @@ def fake_app(tmp_path: Path) -> tuple[Path, Path]:
         "MIT License\n\nCopyright (c) 2023-2026 The ggml authors\n", encoding="utf-8"
     )
     (app / "Contents/Info.plist").write_bytes(plistlib.dumps({"CFBundleExecutable": "Dusty"}))
-    notices.stage_texts(app)
+    notices.stage_all_texts(app)
     return app, audit
 
 
